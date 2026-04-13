@@ -1,0 +1,11 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "python.terminal.activateEnvInSelectedTerminal": true,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.venv": true
+    }
+}
