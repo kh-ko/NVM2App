@@ -60,7 +60,7 @@ class ControlModeEnum(DescriptionEnum):
     POSITION            = (2, "Position")
     CLOSE               = (3, "Close")
     OPEN                = (4, "Open")
-    PRESSURE_CONTROL    = (5, "Pressure Control")
+    PRESSURE            = (5, "Pressure")
     HOLD                = (6, "Hold")
     LEARN               = (7, "Learn")
     INTERLOCK_OPEN      = (8, "Interlock Open")
