@@ -158,6 +158,13 @@ class ServicePort(QObject):
                         LogManager().log(LogType.ERROR, f"[ServicePort] 응답 시간 초과: {command.decode('utf-8')},{elapsed}ms")
                     return None
 
+    def get_port_name(self)-> str | None:
+        with QMutexLocker(self._mutex):
+            if self.serial_port is None or not self.serial_port.isOpen():
+                return None
+                
+            return self.serial_port.portName()
+
     def _close_internal(self):
         if self.serial_port is not None:
             if self.serial_port.isOpen():
