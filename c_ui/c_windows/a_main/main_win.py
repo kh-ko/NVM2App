@@ -3,6 +3,8 @@ from PySide6.QtCore import Qt
 
 from b_core.a_define import app_info
 
+from c_ui.c_windows.a_main.main_top_toolbar import MainTopToolBar
+
 class MainWin(QMainWindow):
     """
     애플리케이션의 메인 윈도우 클래스입니다.
@@ -14,6 +16,8 @@ class MainWin(QMainWindow):
         self.setWindowTitle(app_info.APP_DISPLAY_TITLE)
         self.resize(1024, 690)  # 초기 윈도우 크기 설정
 
+        self.main_toolbar = MainTopToolBar("Main Toolbar")
+        self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         # 4. 상태바(Status Bar) 초기화
         self.statusBar().showMessage("준비 완료")
 

@@ -28,6 +28,7 @@ class Parameter(QObject):
         self.max : Union[int, float, None] = max
         self.ref_list : Optional[Type[DescriptionEnum]] = ref_list
         self.description : str = description
+        
         self._value : str = ""
         self._is_not_support : bool = False
         self._is_edited : bool = False
