@@ -1,5 +1,3 @@
-
-
 import json
 import os
 from PySide6.QtWidgets import (
@@ -18,6 +16,7 @@ from c_ui.b_components.a_custom.custom_splitter import CustomSplitter
 from c_ui.b_components.a_custom.custom_combobox import CustomComboBox
 from c_ui.b_components.a_custom.custom_toolbar import CustomToolBar
 from c_ui.b_components.a_custom.custom_panel import CustomPanel
+from c_ui.b_components.a_custom.custom_line_edit import CustomLineEdit
 
 class ConnectionSettingWin(QMainWindow):
     """
@@ -46,12 +45,80 @@ class ConnectionSettingWin(QMainWindow):
     def init_ui(self):
         self.toolbar = CustomToolBar(self) # 이전에 만든 Custom 툴바 클래스
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
-        self.toolbar.add_action("추가", self.add_connection_info)
-        self.toolbar.add_action("저장", self.save_connection_info)
-        self.toolbar.add_action("삭제", self.delete_connection_info)
+        self.toolbar.add_action("Create", self.add_connection_info)
+        self.toolbar.add_action("Save", self.save_connection_info)
+        self.toolbar.add_action("Delete", self.delete_connection_info)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
+        main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+
+        # Splitter
+        self.splitter = CustomSplitter(Qt.Horizontal)
+        main_layout.addWidget(self.splitter)
+
+        # Left: List Widget
+        self.list_widget = CustomListWidget()
+        self.list_widget.currentRowChanged.connect(self.on_change_item)
+        self.splitter.addWidget(self.list_widget)
+
+        # Right: Panel
+        self.panel = CustomPanel("Detail")
+        self.splitter.addWidget(self.panel)
+        
+        self.name_edit = CustomLineEdit("Name")
+        self.panel.add_widget(self.name_edit)
+
+        self.network_combo = CustomComboBox("Network")
+        self.network_combo.addItem("RS232", 0)
+        self.network_combo.addItem("RS485", 1)
+        self.network_combo.addItem("TCP/IP", 2)
+        self.network_combo.setEnabled(False)
+        self.panel.add_widget(self.network_combo)
+
+        self.address_edit = CustomLineEdit("Address")
+        self.address_edit.setText("192.168.1.1")
+        self.address_edit.setEnabled(False)
+        self.panel.add_widget(self.address_edit)
+
+        self.baudrate_combo = CustomComboBox("Baudrate")
+        for br in [9600, 19200, 38400, 57600, 115200]:
+            self.baudrate_combo.addItem(str(br), br)
+        self.panel.add_widget(self.baudrate_combo)
+
+        self.databits_combo = CustomComboBox("Data Bits")
+        for db in [5, 6, 7, 8]:
+            self.databits_combo.addItem(str(db), db)
+        self.panel.add_widget(self.databits_combo)
+
+        self.parity_combo = CustomComboBox("Parity")
+        self.parity_combo.addItem("NoParity", 0)
+        self.parity_combo.addItem("EvenParity", 2)
+        self.parity_combo.addItem("OddParity", 3)
+        self.parity_combo.addItem("SpaceParity", 4)
+        self.parity_combo.addItem("MarkParity", 5)
+        self.panel.add_widget(self.parity_combo)
+
+        self.stopbits_combo = CustomComboBox("Stop Bits")
+        self.stopbits_combo.addItem("OneStop", 1)
+        self.stopbits_combo.addItem("TwoStop", 2)
+        self.stopbits_combo.addItem("OneAndHalfStop", 3)
+        self.panel.add_widget(self.stopbits_combo)
+
+        self.termination_combo = CustomComboBox("Termination")
+        self.termination_combo.addItem("CR+LF", 0)
+        self.termination_combo.addItem("LF", 1)
+        self.termination_combo.addItem("CR", 2)
+        self.panel.add_widget(self.termination_combo)
+
+        #self.is_select_check = QCheckBox()
+        #self.form_layout.addRow("Is Select:", self.is_select_check)
+        self.panel.add_stretch()
+
+        self.splitter.setSizes([200, 550])
+
+        self._load_connection_infos()
 
     def _load_connection_infos(self):
         pass

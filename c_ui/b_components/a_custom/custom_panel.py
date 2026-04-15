@@ -1,5 +1,6 @@
-import sys
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QFrame, QPushButton
+
+from c_ui.b_components.a_custom.custom_title import CustomTitle
 
 class CustomPanel(QWidget):
     def __init__(self, title="", parent=None): # title의 기본값을 빈 문자열로 설정
@@ -13,9 +14,8 @@ class CustomPanel(QWidget):
 
         # 2. 타이틀 및 구분선 추가
         if title:
-            lbl_title = QLabel(title)
+            lbl_title = CustomTitle(title)
             # 패널의 기본 스타일이 상속되어 테두리가 생길 수 있으므로 border: none 추가
-            lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #333; border: none;")
             self.card_layout.addWidget(lbl_title)
 
             line = QFrame()

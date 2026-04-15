@@ -64,6 +64,7 @@ class MainTopToolBar(QToolBar):
                 border: 1px solid {border_color};
                 spacing: 4px; 
                 padding: 2px;
+                min-height: 30px;
             }}
             
             /* ---- 이동 손잡이(Handle) 색상 및 형태 직접 제어 ---- */

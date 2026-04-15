@@ -23,7 +23,9 @@ def setup_fonts(app):
         font_families = QFontDatabase.applicationFontFamilies(font_id)
         if font_families:
             # 기본 폰트 패밀리 지정 (폰트 크기: 12px)
-            app.setFont(QFont(font_families[0], 12))
+            custom_font = QFont(font_families[0])
+            custom_font.setPixelSize(14)
+            app.setFont(custom_font)        
     else:
         print(f"[경고] 기본 폰트 로드 실패: {path_def.ASSET_COMMON_FONT_FILE}")
 
