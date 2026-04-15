@@ -2,50 +2,14 @@ from PySide6.QtWidgets import QToolBar, QToolButton, QMenu
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 
-from c_ui.b_components.a_custom.custom_lamp_tool_button import CustomLampToolButton
-
-class MainTopToolBar(QToolBar):
+class CustomToolBar(QToolBar):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMovable(True)   
-        self.setFloatable(True) 
-        
-        self.local_btn = CustomLampToolButton(self)
-        self.local_btn.setText("Local")
-        self.local_btn.set_accent(True)
-        self.addWidget(self.local_btn)
-
-        self.remote_btn = CustomLampToolButton(self)
-        self.remote_btn.setText("Remote")
-        self.remote_btn.set_accent(False)
-        self.addWidget(self.remote_btn)
-
-        self.addSeparator()
-        # 1. Connection 툴버튼 생성
-        self.conn_btn = QToolButton(self)
-        self.conn_btn.setText("Connection")
-        self.conn_btn.setProperty("menuBtn", "true") # 커스텀 CSS(마우스 오버 등) 적용
-        self.conn_btn.setPopupMode(QToolButton.InstantPopup) # 클릭 시 즉시 메뉴 펼침
-
-        # 2. 하위 메뉴(QMenu) 생성
-        self.conn_menu = QMenu(self.conn_btn)
-
-        # 3. 메뉴에 들어갈 액션 생성 (외부 윈도우에서 이벤트를 연결할 수 있도록 self로 선언)
-        self.action_connect = QAction("Connect", self)
-        self.action_disconnect = QAction("Disconnect", self)
-        self.action_settings = QAction("Settings", self)
-
-        # 4. 메뉴에 액션 및 구분선 조립
-        self.conn_menu.addAction(self.action_connect)
-        self.conn_menu.addAction(self.action_disconnect)
-        self.conn_menu.addSeparator() # Settings 전에 가로 구분선 추가
-        self.conn_menu.addAction(self.action_settings)
-
-        # 5. 완성된 메뉴를 툴버튼에 달고, 툴바에 위젯으로 추가
-        self.conn_btn.setMenu(self.conn_menu)
-        self.addWidget(self.conn_btn)
-
+        self.setMovable(False)   
+        self.setFloatable(False) 
         self.__color_design()
+
+        self._actions = {}
 
     def __color_design(self):
         # 1. 여기서 모든 색상을 동적으로 제어합니다.
@@ -64,6 +28,7 @@ class MainTopToolBar(QToolBar):
                 border: 1px solid {border_color};
                 spacing: 4px; 
                 padding: 2px;
+                min-height: 30px;
             }}
             
             /* ---- 이동 손잡이(Handle) 색상 및 형태 직접 제어 ---- */
@@ -104,6 +69,19 @@ class MainTopToolBar(QToolBar):
                 image: none; /* 드롭다운 기본 화살표 아이콘 제거 (원할 경우 생략 가능) */
             }}
             
+            QToolButton {{
+                color: white;              /* 글자 색상을 흰색으로 설정 */
+                background: transparent;   /* 배경은 투명하게 */
+                border: none;              /* 테두리 제거 */
+                padding: 8px 12px;         /* 클릭 영역 및 툴바 높이 확보를 위한 패딩 */
+                border-radius: 4px;        /* 둥근 모서리 */
+            }}
+
+            /* 마우스가 올라갔을 때(Hover)의 효과 */
+            QToolButton:hover {{
+                background-color: {btn_hover_color}; 
+            }}
+
             QToolButton#qt_toolbar_ext_button {{
                 qproperty-toolButtonStyle: ToolButtonTextOnly;
                 qproperty-text: "{ext_icon_text}";
@@ -144,11 +122,12 @@ class MainTopToolBar(QToolBar):
             }}
         """)
 
-    def reg_connection_connect_slot(self, slot):
-        self.action_connect.triggered.connect(slot)
-    
-    def reg_connection_disconnect_slot(self, slot):
-        self.action_disconnect.triggered.connect(slot)
-    
-    def reg_connection_settings_slot(self, slot):
-        self.action_settings.triggered.connect(slot)
+    def add_action(self, name, slot):
+        action = self.addAction(name)
+        action.triggered.connect(slot)
+        self._actions[name] = action
+
+    def set_action_enabled(self, name, enabled):
+        # 딕셔너리에 해당 이름의 액션이 존재하는지 확인
+        if name in self._actions:
+            self._actions[name].setEnabled(enabled)
