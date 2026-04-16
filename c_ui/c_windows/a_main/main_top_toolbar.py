@@ -12,7 +12,7 @@ class MainTopToolBar(QToolBar):
         
         self.local_btn = CustomLampToolButton(self)
         self.local_btn.setText("Local")
-        self.local_btn.set_accent(True)
+        self.local_btn.set_accent(False)
         self.addWidget(self.local_btn)
 
         self.remote_btn = CustomLampToolButton(self)

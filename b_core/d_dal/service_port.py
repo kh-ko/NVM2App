@@ -75,7 +75,7 @@ class ServicePort(QObject):
 
                 self.serial_port.errorOccurred.connect(self._on_serial_error)
 
-                new_info = f"{port_name}-{baudrate}-{data_bits}-{p_str}-{s_str}-{t_str}-{t_str}"
+                new_info = f"{port_name}-{baudrate}-{data_bits}-{p_str}-{s_str}-{t_str}"
                 self._set_connect_info(new_info)
                 LogManager().log(LogType.INFO, f"[ServicePort] [{port_name}] 연결 성공: {new_info}")
                 return True

@@ -15,15 +15,23 @@ from b_core.b_datatype.parameter import Parameter
 
 class ParamManager:
     _instance = None
-    _lock = threading.Lock()
+    _creation_lock = threading.Lock()
 
     def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            with cls._lock:
-                if not cls._instance:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._init_manager()
+        # 멀티스레드 환경에서 동시에 생성되는 것을 방지
+        with cls._creation_lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
         return cls._instance
+
+    def __init__(self):
+        # 중복 초기화 방어
+        if self._initialized:
+            return
+
+        self._initialized = True
+        self._init_manager()
 
     def _init_manager(self):
         self._param_map: Dict[tuple, Parameter] = {}  # (path, name) 검색용

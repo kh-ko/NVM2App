@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QFrame, QPushButton
 
 from c_ui.b_components.a_custom.custom_title import CustomTitle
@@ -21,18 +22,19 @@ class CustomPanel(QWidget):
             line = QFrame()
             line.setFixedHeight(1) # 선의 두께를 명시적으로 1px로 지정
             # 스타일시트로 배경색 지정 및 위아래 여백 설정
-            line.setStyleSheet("background-color: #e0e0e0; border: none; margin-top: 5px; margin-bottom: 5px;")
+            line.setStyleSheet("background-color: #dcdcdc; border: none; margin-top: 5px; margin-bottom: 5px;")
             self.card_layout.addWidget(line)
 
         # 3. 위젯들이 추가될 컨테이너의 기본 디자인 적용
         self.__color_design()
 
     def __color_design(self):
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        
         # QWidget#Panel 에만 스타일이 적용되도록 제한 (#Panel)
         self.setStyleSheet("""
             QWidget#Panel {
                 background-color: white;
-                border-radius: 6px; /* 카드 느낌을 살리기 위해 살짝 둥글게 수정 (원치 않으시면 0px로 변경) */
                 border: 1px solid #dcdcdc;
             }
         """)

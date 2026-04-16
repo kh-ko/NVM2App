@@ -13,7 +13,7 @@
     {
         "baudrate": 38400,
         "dataBits": 7,
-        "isSelect": false,
+        "isSelect": true,
         "name": "38400",
         "parity": 2,
         "stopBits": 1,
@@ -24,9 +24,12 @@
     {
         "baudrate": 115200,
         "dataBits": 8,
-        "isSelect": true,
+        "isSelect": false,
         "name": "115200",
         "parity": 0,
-        "stopBits": 1
+        "stopBits": 1,
+        "network": 1,
+        "address": "0",
+        "termination": 0
     }
 ]
