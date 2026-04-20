@@ -1,6 +1,7 @@
-from b_core.d_dal.service_port import ServicePort
 from PySide6.QtWidgets import QStatusBar, QLabel, QProgressBar, QSizePolicy
 
+from b_core.c_manager.parameter_manager import ParamManager
+from b_core.d_dal.service_port import ServicePort
 from c_ui.b_components.a_custom.custom_description import CustomDescription
 
 class UserStatusBar(QStatusBar):
@@ -32,7 +33,7 @@ class UserStatusBar(QStatusBar):
 
         self.progress_bar.hide() # 평소에는 숨겨두고 필요할 때만 보여주는 것이 일반적입니다.
 
-        self.set_progress(50)
+        self.set_progress(0)
         # 3. StatusBar에 위젯 추가
         # addWidget: 왼쪽부터 차례대로 배치됩니다.
         self.addWidget(self.lbl_connection_info)
@@ -43,6 +44,10 @@ class UserStatusBar(QStatusBar):
         self.addPermanentWidget(self.progress_bar)
 
         ServicePort().connect_info_changed.connect(self.set_connection_info)
+        sn_param = ParamManager().get_by_full_path("System.Identification.Serial Number")
+
+        if sn_param is not None:
+            sn_param.sig_value_changed.connect(self.set_serial_number)
 
         self.__design()
 
@@ -82,11 +87,14 @@ class UserStatusBar(QStatusBar):
         else:
             self.lbl_connection_info.setText(f"{message}")
 
-    def set_serial_number(self, message: str):
-        self.lbl_serial_number.setText(f"S/N: {message}")
+    def set_serial_number(self, value: str):
+        self.lbl_serial_number.setText(f"S/N: {value}")
 
     def set_scan_rate(self, ms: int):
-        self.lbl_scan_rate.setText(f"scan-rate: {ms}ms")
+        if ms < 0:
+            self.lbl_scan_rate.setText(f"scan-rate: -")
+        else:
+            self.lbl_scan_rate.setText(f"scan-rate: {ms}ms")
 
     def set_progress(self, value: int):
         if value > 0 and value < 100:

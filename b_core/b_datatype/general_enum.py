@@ -14,12 +14,17 @@ class ParamAccType(Enum):
     WO = auto()
     
 class ParamDisplayType(Enum):
-    ENUM     = auto()
-    TEXT     = auto()
-    NUMBER   = auto()
-    HEX      = auto()
-    BITMAP   = auto()
-    DIGI_NUM = auto()
+    ENUM      = auto()
+    TEXT      = auto()
+    NUMBER    = auto()
+    HEX       = auto()
+    BITMAP    = auto()
+    DIGI_NUM  = auto()
+    SENS_PRES = auto()
+    H_SFS     = auto()
+    L_SFS     = auto()
+    REAL      = auto()
+    POSI      = auto()
 
 class ParamDataType(Enum):
     INT8   = auto()

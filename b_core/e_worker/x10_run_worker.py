@@ -1,8 +1,6 @@
-
-
 import time
 from collections import deque
-from PySide6.QtCore import QObject, QThread
+from PySide6.QtCore import QCoreApplication, QObject, QThread, QMutex, QMutexLocker
 
 from b_core.d_dal.service_port import ServicePort
 from b_core.b_datatype import param_enum as p_enum
@@ -18,12 +16,13 @@ class X10WorkerThread(QThread):
         self.svc_port : ServicePort = ServicePort()
         self._cmd_bytes : bytes = b"x:10"
         self.data_queue = deque(maxlen=200)
+        self.queue_mutex = QMutex()
 
     def run(self):
         self._is_running = True
         
         while self._is_running:
-            response : str | None = self.svc_port.request(self._cmd_bytes, False)
+            response : str | None = self.svc_port.request(self._cmd_bytes, False, False)
             
             if response is not None and response.startswith("x:10") and len(response) >= 39:
                 try:
@@ -75,12 +74,17 @@ class X10WorkerThread(QThread):
                     elif control_mode == p_enum.ControlModeEnum.PRESSURE.value:
                         target_pres_sfs_used = target_value / 1000000.0
                     
-                    self.data_queue.append(X10Data(current_ms, act_posi_pfs, act_pres_sfs, target_posi_pfs_used, target_pres_sfs_used, speed, access_mode, control_mode, pres_contoller_selector, 
+                    parsed_data = X10Data(current_ms, act_posi_pfs, act_pres_sfs, target_posi_pfs_used, target_pres_sfs_used, speed, access_mode, control_mode, pres_contoller_selector, 
                                             is_simulator_on, is_PFO_on, is_test_mode_on, 
                                             is_field_bus_error, is_saving, is_id_missing, is_pfo_missing, 
                                             is_firmware_error, is_unknow_interface, is_no_sensor_signal, is_no_analog_signal, 
                                             is_sensor_error, is_isolation_valve, is_slave_offline, is_network_failure, 
-                                            is_svc_request, is_learn_not_present, is_air_not_ready, is_pfo_not_ready))
+                                            is_svc_request, is_learn_not_present, is_air_not_ready, is_pfo_not_ready)
+
+                    # ★ 자물쇠를 채우고 안전하게 큐에 저장
+                    with QMutexLocker(self.queue_mutex):
+                        self.data_queue.append(parsed_data)
+                    
                 except Exception as e:
                     LogManager().log(LogType.ERROR, f"X10WorkerThread._run() Error: {str(e)}")
             else:
@@ -89,28 +93,43 @@ class X10WorkerThread(QThread):
     def stop(self):
         self._is_running = False
 
-class X10Worker(QObject):
+class X10RunWorker(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._thread = X10WorkerThread(self)
 
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._destroyed)
+
+        self.destroyed.connect(self._destroyed)
+
     def start(self):
-        if not self._thread.isRunning():
+        if self._thread is not None and not self._thread.isRunning():
             self._thread.start()
 
     def stop(self):
-        if self._thread.isRunning():
+        if self._thread is not None and self._thread.isRunning():
             self._thread.stop()
             self._thread.wait()
 
     def pop_all_data(self):
+        if self._thread is None:
+            return []
+
         data_list = []
-        while self._thread.data_queue:
-            try:
+        with QMutexLocker(self._thread.queue_mutex):
+            while self._thread.data_queue:
                 data_list.append(self._thread.data_queue.popleft())
-            except IndexError:
-                break
         return data_list
 
-    def __del__(self):
-        self.stop()            
+    def _destroyed(self):
+        app = QCoreApplication.instance()
+        if app is not None:
+            try:
+                app.aboutToQuit.disconnect(self._destroyed)
+            except (TypeError, RuntimeError):
+                pass
+
+        self.stop()
+        self._thread = None            

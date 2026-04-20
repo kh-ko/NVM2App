@@ -236,3 +236,161 @@ class SysErrorCodeEnum(DescriptionEnum):
     WRONG_IDENT_CODE_AXIS_3_AND_AXIS_2                                                  = (706, "Wrong ident code axis 3 AND axis 2")
     WRONG_IDENT_CODE_AXIS_3_AND_AXIS_2_AND_AXIS_1                                       = (707, "Wrong ident code axis 3 AND axis 2 AND axis 1")
 
+class SensInSrcEnum(DescriptionEnum):
+    ANALOG      = (0, "Analog")
+    DIGITAL     = (1, "Digital")
+    SIMULATION  = (2, "Simulation")
+
+class SensorScaleEnum(DescriptionEnum):
+    LINEAR      = (0, "Linear")
+    LOGARITHMIC = (1, "Logarithmic")
+
+class SensUnitEnum(DescriptionEnum):
+    PA      = (0, "Pa")
+    KPA     = (1, "kPa")
+    BAR     = (2, "bar")
+    MBAR    = (3, "mbar")
+    TORR    = (4, "Torr")
+    MTORR   = (5, "mTorr")
+    PSIA    = (6, "psia")
+    PSIG    = (7, "psig")
+
+class SensCrossModeEnum(DescriptionEnum):
+    SOFT_SWITCH     = (0, "Soft Switch")
+    HARD_SWITCH     = (1, "Hard Switch")
+    TARGET_PRESSURE = (2, "Target Pressure")
+
+class PosiRampModeEnum(DescriptionEnum):
+    USE_RAMP_TIME   = (0, "Use Ramp Time")
+    USE_RAMP_SLOPE  = (1, "Use Ramp Slope")
+
+class RampTypeEnum(DescriptionEnum):
+    LINEAR          = (0, "Linear")
+    LOGARITHMIC     = (1, "Logarithmic")
+    EXPONENTIAL     = (2, "Exponential")
+
+class PresCtrlSelEnum(DescriptionEnum):
+    NONE            = (0, "None")
+    CONTROLLER_1    = (1, "Controller 1")
+    CONTROLLER_2    = (2, "Controller 2")
+    CONTROLLER_3    = (3, "Controller 3")
+    CONTROLLER_4    = (4, "Controller 4")
+
+class MFCFlowUnitEnum(DescriptionEnum):
+    SLM     = (0, "slm")
+    SCCM    = (1, "sccm")
+    MBAR_LS = (2, "mbar l/s")
+    PA_M3_S = (3, "Pa m^3/s")
+
+class PresCtrlAlgoEnum(DescriptionEnum):
+    ADAPTIVE    = (0, "Adaptive")
+    PI          = (1, "PI")
+    SOFT_PUMP   = (2, "Soft Pump")
+
+class LearnDataSelEnum(DescriptionEnum):
+    LEARN_BANK_1 = (0, "Learn Bank 1")
+    LEARN_BANK_2 = (1, "Learn Bank 2")
+    LEARN_BANK_3 = (2, "Learn Bank 3")
+    LEARN_BANK_4 = (3, "Learn Bank 4")
+
+class CtrlDirEnum(DescriptionEnum):
+    DOWNSTREAM = (0, "Downstream")
+    UPSTREAM   = (1, "Upstream")
+
+class PresScalerEnum(DescriptionEnum):
+    LINEAR      = (0, "Linear")
+    LOGARITHMIC = (1, "Logarithmic")
+
+class PresRampModeEnum(DescriptionEnum):
+    USE_RAMP_TIME   = (0, "Use Ramp Time")
+    USE_RAMP_SLOPE  = (1, "Use Ramp Slope")
+
+class PresRampStartValueEnum(DescriptionEnum):
+    PREVIOUS_RAMP_VALUE = (0, "Previous Ramp Value")
+    ACTUAL_PRESSURE_VALUE = (1, "Actual Pressure Value")
+
+class AutoCtrlModeEnum(DescriptionEnum):
+    THRESHOLD        = (0, "Threshold")
+    PRESSURE_DIRECTION = (1, "Pressure Direction")
+
+class PresCtrlSelBitmap(DescriptionEnum):
+    CONTROLLER_1    = (0, "Controller 1")
+    CONTROLLER_2    = (1, "Controller 2")
+    CONTROLLER_3    = (2, "Controller 3")
+    CONTROLLER_4    = (3, "Controller 4")
+
+class PresCtrlThresCondEnum(DescriptionEnum):
+    LOWER_OR_EQUAL    = (0, "Lower Or Equal")
+    EQUAL             = (1, "Equal")
+
+class RS232OpModeEnum(DescriptionEnum):
+    RS232 = (0, "RS232")
+    RS485 = (1, "RS485")
+    SERVICE_INTERFACE_OVER_RS232 = (2, "Service Interface Over RS232")
+
+class RS232BaudRateEnum(DescriptionEnum):
+    BAUD_1200    = (0, "1200")
+    BAUD_2400    = (1, "2400")
+    BAUD_4800    = (2, "4800")
+    BAUD_9600    = (3, "9600")
+    BAUD_19200   = (4, "19200")
+    BAUD_38400   = (5, "38400")
+    BAUD_57600   = (6, "57600")
+    BAUD_115200  = (7, "115200")
+    BAUD_230400  = (8, "230400")
+    BAUD_460800  = (9, "460800")
+    BAUD_921600  = (10, "921600")
+    BAUD_1000000 = (11, "1000000")
+
+class RS232CommandSetEnum(DescriptionEnum):
+    NV1 = (0, "NV 1")
+    NV2 = (1, "NV 2")
+
+class RS232CommandTerminationEnum(DescriptionEnum):
+    CR = (0, "CR")
+    LF = (1, "LF")
+    CR_LF = (2, "CR+LF")
+
+class RS232DataBitLengthEnum(DescriptionEnum):
+    DATA_BITS_7 = (0, "7 Data Bits")
+    DATA_BITS_8 = (1, "8 Data Bits")
+
+class RS232NetworkEnum(DescriptionEnum):
+    MULTIPLE_DEVICES = (0, "Multiple Devices")
+    POINT_TO_POINT   = (1, "Point to Point")
+
+class RS232ParityBitEnum(DescriptionEnum):
+    NONE = (0, "None")
+    ODD = (1, "Even")
+    EVEN = (2, "Odd")
+
+class RS232StopBitEnum(DescriptionEnum):
+    STOP_BIT_1 = (0, "1 Stop Bit")
+    STOP_BIT_2 = (1, "2 Stop Bits")
+
+class RS232TopologyEnum(DescriptionEnum):
+    FULL_DUPLEX = (0, "Full Duplex")
+    HALF_DUPLEX = (1, "Half Duplex")
+
+class RS232PositionUnitEnum(DescriptionEnum):
+    ZERO_TO_1 = (0, "0-1")
+    ZERO_TO_10 = (1, "0-10")
+    ZERO_TO_90 = (2, "0-90")
+    ZERO_TO_100 = (3, "0-100")
+    ZERO_TO_1000 = (4, "0-1000")
+    ZERO_TO_10000 = (5, "0-10000")
+    ZERO_TO_100000 = (6, "0-100000")
+    USER_SPECIFIC = (7, "User specific")
+
+class RS232PressureUnitEnum(DescriptionEnum):
+    PA = (0, "Pa")
+    KPA = (1, "kPa")
+    BAR = (2, "bar")
+    MBAR = (3, "mbar")
+    TORR = (4, "Torr")
+    MTORR = (5, "mTorr")
+    PSI = (6, "psi")
+    USER_SPECIFIC = (7, "User specific")
+
+
+

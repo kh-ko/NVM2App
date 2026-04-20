@@ -1,4 +1,3 @@
-
 from b_core.d_dal.service_port import ServicePort
 import json
 import os
@@ -8,7 +7,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtSerialPort import QSerialPort
 from b_core.a_define import file_folder_path
 
-from b_core.e_worker.comport_scan_worker import PortScanThread
+from b_core.e_worker.comport_scan_run_worker import PortScanThread
 
 from c_ui.b_components.a_custom.custom_list import CustomListWidget
 from c_ui.b_components.a_custom.custom_splitter import CustomSplitter
@@ -16,6 +15,7 @@ from c_ui.b_components.a_custom.custom_combobox import CustomComboBox
 from c_ui.b_components.a_custom.custom_toolbar import CustomToolBar
 from c_ui.b_components.a_custom.custom_panel import CustomPanel
 from c_ui.b_components.a_custom.custom_line_edit import CustomLineEdit
+from b_core.e_worker.comport_scan_run_worker import ComportScanRunWorker
 
 class ConnectionConnectWin(QMainWindow):      
     """
@@ -48,7 +48,8 @@ class ConnectionConnectWin(QMainWindow):
         self.json_path = file_folder_path.RSRC_CONNECTIONS_JSON_FILE
         self.connection_data = []
         self.selected_index = -1
-        self.scan_thread = None
+        self.scan_worker = ComportScanRunWorker(self.handle_ports_found, self.handle_port_checked, self.handle_scan_stopped, parent=self)
+
         self._is_closing = False
 
         self._init_ui()
@@ -124,7 +125,7 @@ class ConnectionConnectWin(QMainWindow):
 
     def on_clicked_scan(self):
         if self.selected_index >= 0:
-            self.start_port_scan(self.connection_data[self.selected_index])
+            self.scan_worker.start(self.connection_data[self.selected_index])
 
     def on_change_connection_item(self, index):
         if index < 0 or index >= len(self.connection_data):
@@ -142,20 +143,18 @@ class ConnectionConnectWin(QMainWindow):
         except Exception as e:
             pass
 
-        self.start_port_scan(self.connection_data[self.selected_index])            
+        self.scan_worker.start(self.connection_data[self.selected_index])       
 
-    def start_port_scan(self, connection_setting):
-        if self.scan_thread is not None and self.scan_thread.isRunning():
-            self._next_setting = connection_setting
-            self._stop_current_thread("Preparing to scan...", "Please wait for the previous scan to complete...", self._on_previous_scan_finished)
-            return 
+    def on_select_port_item(self, index):
+        if self.selected_index < 0 or self.selected_index >= len(self.connection_data):
+            return
+        
+        item = self.port_list_widget.item(index.row())
+        if item is not None:
+            self._open_port_name = item.data(Qt.UserRole)
 
-        self._run_new_scan_thread(connection_setting)
-
-    def _on_previous_scan_finished(self):
-        self._cleanup_after_thread_stop()
-        if hasattr(self, '_next_setting'):
-            self._run_new_scan_thread(self._next_setting)
+            if self.scan_worker.stop():
+                self.handle_scan_stopped()
 
     def handle_ports_found(self, port_names):
         self.port_list_widget.clear()
@@ -179,88 +178,29 @@ class ConnectionConnectWin(QMainWindow):
                     item.setFlags(item.flags() & ~Qt.ItemIsEnabled) # 비활성화
                 break            
 
-    def on_select_port_item(self, index):
-        if self.selected_index < 0 or self.selected_index >= len(self.connection_data):
+    def handle_scan_stopped(self):
+        self._execute_port_open()
+        self._is_closing = True 
+        self.close()  
+
+    def _execute_port_open(self):
+        if not hasattr(self, '_open_port_name'):
             return
         
-        item = self.port_list_widget.item(index.row())
-        if item is not None:
-            selected_port_name = item.data(Qt.UserRole)
-
-            if self.scan_thread is not None and self.scan_thread.isRunning():
-                self._open_port_name = selected_port_name
-                self._stop_current_thread("Opening...", "Please wait for the previous opening to complete...", self._on_open_thread_finished)
-                return 
-            else:
-                self._execute_port_open(selected_port_name)
-
-    def _on_open_thread_finished(self):
-        self._cleanup_after_thread_stop()
-        if hasattr(self, '_open_port_name'):
-            self._execute_port_open(self._open_port_name)
-
-    def _execute_port_open(self, port_name):
         setting = self.connection_data[self.selected_index]
-        ServicePort().open(port_name,
+        ServicePort().open(self._open_port_name,
                            setting["baudrate"],
                            setting["dataBits"],
                            setting["parity"],
                            setting["stopBits"],
                            setting["termination"])
-        self.close()            
-
+                  
     def closeEvent(self, event):
         if self._is_closing:
             event.accept()
             return
 
-        if self.scan_thread is not None and self.scan_thread.isRunning():
-            event.ignore() 
-            self._stop_current_thread("Closing", "Please wait for the previous scan to complete...", self._on_close_thread_finished)
-        else:
+        if self.scan_worker.stop():
             event.accept()
-
-    def _on_close_thread_finished(self):
-        self._cleanup_after_thread_stop()
-        self._is_closing = True 
-        self.close()
-
-    def _run_new_scan_thread(self, connection_setting):
-        self.scan_thread = PortScanThread(ServicePort().get_port_name(), connection_setting)
-        self.scan_thread.ports_found.connect(self.handle_ports_found)
-        self.scan_thread.port_checked.connect(self.handle_port_checked)
-        self.scan_thread.start()
-
-    def _stop_current_thread(self, title, message, finished_slot):
-        self.setEnabled(False)
-
-        self.wait_msg_box = QMessageBox(self)
-        self.wait_msg_box.setWindowTitle(title)
-        self.wait_msg_box.setText(message)
-        self.wait_msg_box.setStandardButtons(QMessageBox.StandardButton.NoButton)
-        self.wait_msg_box.show()
-
-        # 기존 시그널 해제 (오작동 방지)
-        try:
-            self.scan_thread.ports_found.disconnect()
-            self.scan_thread.port_checked.disconnect()
-        except Exception:
-            pass
-
-        self.scan_thread.finished.connect(finished_slot)
-        self.scan_thread.stop()
-
-    def _cleanup_after_thread_stop(self):
-        if hasattr(self, 'wait_msg_box') and self.wait_msg_box:
-            self.wait_msg_box.accept()
-            self.wait_msg_box = None
-            
-        self.setEnabled(True)
-
-        if self.scan_thread:
-            try:
-                self.scan_thread.finished.disconnect()
-            except Exception:
-                pass
-            self.scan_thread.deleteLater()
-            self.scan_thread = None
+        else:
+            event.ignore() 
