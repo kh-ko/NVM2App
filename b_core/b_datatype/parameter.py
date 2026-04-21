@@ -1,4 +1,3 @@
-
 from typing import List, Dict, Union, Type, Optional
 from PySide6.QtCore import QObject, Signal
 
@@ -8,10 +7,8 @@ from b_core.b_datatype.param_enum import DescriptionEnum
 class Parameter(QObject):
     # 값이 변경되었을 때 발생하는 시그널 (새로운 값을 문자열로 전달)
     sig_value_changed = Signal(str)
-    sig_not_support_changed = Signal(bool)
-    sig_edited_changed = Signal(bool)
-    sig_syncing_changed = Signal(bool)
-    sig_err_changed = Signal(bool)
+    sig_is_not_support_changed = Signal(bool)
+    sig_is_err_changed = Signal(bool)
 
     def __init__(self, path: str, name: str, id: str, index: int, display_type: ParamDisplayType, data_type: ParamDataType, acc: ParamAccType, is_nor_backup: bool, is_fu_backup: bool, unit: str, min_value: Union[int, float, None], max_value: Union[int, float, None], ref_list: Optional[Type[DescriptionEnum]], description: str):
         super().__init__()
@@ -32,9 +29,7 @@ class Parameter(QObject):
         
         self._value : str = ""
         self._is_not_support : bool = False
-        self._is_edited : bool = False
-        self._is_syncing : bool = False
-        self._err :  bool = False
+        self._is_err : bool = False
 
         if self.display_type == ParamDisplayType.ENUM and self.ref_list is not None:
             enum_values = [item.value for item in self.ref_list]
@@ -61,184 +56,96 @@ class Parameter(QObject):
     def is_not_support(self, new_val: bool):
         if self._is_not_support != new_val:
             self._is_not_support = new_val
-            self.sig_not_support_changed.emit(self._is_not_support)
+            self.sig_is_not_support_changed.emit(self._is_not_support)
 
     @property
-    def is_edited(self) -> bool:
-        return self._is_edited
+    def is_err(self) -> bool:
+        return self._is_err
 
-    @is_edited.setter
-    def is_edited(self, new_val: bool):
-        if self._is_edited != new_val:
-            self._is_edited = new_val
-            self.sig_edited_changed.emit(self._is_edited)
+    @is_err.setter
+    def is_err(self, new_val: bool):
+        if self._is_err != new_val:
+            self._is_err = new_val
+            self.sig_is_err_changed.emit(self._is_err)
 
-    @property
-    def is_syncing(self) -> bool:
-        return self._is_syncing
+    def set_force_value(self, new_val: str):
+        self._value = new_val
 
-    @is_syncing.setter
-    def is_syncing(self, new_val: bool):
-        if self._is_syncing != new_val:
-            self._is_syncing = new_val
-            self.sig_syncing_changed.emit(self._is_syncing)
+    def set_read_response_packet(self, resp_msg: str) -> str | None:        
+        err_msg = self.check_error(False, resp_msg)
 
-    @property
-    def err(self) -> bool:
-        return self._err
+        if err_msg is not None:
+            return err_msg
 
-    @err.setter
-    def err(self, new_val: bool):
-        if self._err != new_val:
-            self._err = new_val
-            self.sig_err_changed.emit(self._err)
-
-    def edit_value(self, new_val: str):
-        self.value = new_val
-        self.is_edited = True
-
-    def set_read_response_packet(self, resp_msg: str) -> str | None:
-        self.is_syncing = False
-        self.is_edited = False
-        
-        if resp_msg and len(resp_msg) >= 4:
-            prefix     = resp_msg[0:2]   # 인덱스 0~1 (2자리) -> "p:"
-            err_code   = resp_msg[2:4]   # 인덱스 2~3 (2자리) -> "00"
-
-            if prefix != "p:":
-                self.err = True
-                return f"{self.path}.{self.name} : wrong prefix"
-
-            if err_code == "00" and len(resp_msg) >= 16:
-                svc_code   = resp_msg[4:6]   # 인덱스 4~5 (2자리) -> "0B"
-
-                if svc_code != "0B":
-                    self.err = True
-                    return f"{self.path}.{self.name} : wrong service code"
-
-                id_code    = resp_msg[6:14]  # 인덱스 6~13 (8자리) -> "12345678"
-                index      = int(resp_msg[14:16], 16) # 인덱스 14~15 (2자리) -> "ab"
-                if self.id == id_code and self.index == index:
-                    self.is_not_support = False
-                    self.value = resp_msg[16:]   # 인덱스 16부터 끝까지 -> "xxx..." (나머지 모두)
-                    self.err = False
-                    return None
-                else:
-                    self.err = True
-                    return f"{self.path}.{self.name} : wrong parameter ID or index"
-            elif err_code == "00" and len(resp_msg) < 16:
-                self.err = True
-                return f"{self.path}.{self.name} : wrong parameter length"
-            else:
-                if   err_code == "0C": self.err = True;            return f"{self.path}.{self.name} : wrong command length"
-                elif err_code == "1C": self.err = True;            return f"{self.path}.{self.name} : value too low"
-                elif err_code == "1D": self.err = True;            return f"{self.path}.{self.name} : value too high"
-                elif err_code == "20": self.err = True;            return f"{self.path}.{self.name} : resulting zero adjust offset value out of range"
-                elif err_code == "21": self.err = True;            return f"{self.path}.{self.name} : not valid because no sensor enabled"
-                elif err_code == "50": self.err = True;            return f"{self.path}.{self.name} : wrong access mode"
-                elif err_code == "51": self.err = True;            return f"{self.path}.{self.name} : timeout"
-                elif err_code == "6D": self.err = True;            return f"{self.path}.{self.name} : EEProm not ready"
-                elif err_code == "6E": self.is_not_support = True; return f"{self.path}.{self.name} : wrong parameter ID"
-                elif err_code == "6F": self.err = True;            return f"{self.path}.{self.name} : set to default value not allowed"
-                elif err_code == "70": self.err = True;            return f"{self.path}.{self.name} : parameter not settable"
-                elif err_code == "71": self.err = True;            return f"{self.path}.{self.name} : parameter not readable"
-                elif err_code == "72": self.err = True;            return f"{self.path}.{self.name} : set to initial value not allowed"
-                elif err_code == "73": self.is_not_support = True; return f"{self.path}.{self.name} : wrong parameter index"
-                elif err_code == "74": self.err = True;            return f"{self.path}.{self.name} : initial value out of range"
-                elif err_code == "76": self.err = True;            return f"{self.path}.{self.name} : wrong value"
-                elif err_code == "77": self.err = True;            return f"{self.path}.{self.name} : wrong value, only reset possible"
-                elif err_code == "78": self.err = True;            return f"{self.path}.{self.name} : not allowed in this state"
-                elif err_code == "7A": self.err = True;            return f"{self.path}.{self.name} : wrong service"
-                elif err_code == "7B": self.is_not_support = True; return f"{self.path}.{self.name} : parameter not active"
-                elif err_code == "7C": self.err = True;            return f"{self.path}.{self.name} : parameter system error"
-                elif err_code == "7D": self.err = True;            return f"{self.path}.{self.name} : communication error"
-                elif err_code == "7E": self.is_not_support = True; return f"{self.path}.{self.name} : unknown service"
-                elif err_code == "7F": self.err = True;            return f"{self.path}.{self.name} : unexpected character"
-                elif err_code == "80": self.err = True;            return f"{self.path}.{self.name} : no access rights"
-                elif err_code == "81": self.err = True;            return f"{self.path}.{self.name} : no adequately hardware"
-                elif err_code == "82": self.err = True;            return f"{self.path}.{self.name} : wrong object state"
-                elif err_code == "84": self.err = True;            return f"{self.path}.{self.name} : no slave command"
-                elif err_code == "85": self.err = True;            return f"{self.path}.{self.name} : command to unknown slave"
-                elif err_code == "87": self.err = True;            return f"{self.path}.{self.name} : command to master only"
-                elif err_code == "88": self.err = True;            return f"{self.path}.{self.name} : only G command allowed"
-                elif err_code == "89": self.is_not_support = True; return f"{self.path}.{self.name} : not supported"
-                elif err_code == "A0": self.err = True;            return f"{self.path}.{self.name} : function is disabled"
-                elif err_code == "A1": self.err = True;            return f"{self.path}.{self.name} : already done"   
-                else:                                              return f"{self.path}.{self.name} : unknown error"
-        elif resp_msg is None:
-            self.err = True
-            return f"{self.path}.{self.name} : communication error"
-        else:
-            self.err = True
-            return f"{self.path}.{self.name} : wrong response message format"
+        if len(resp_msg) > 16:
+            self.value = resp_msg[16:]
 
     def set_write_response_packet(self, resp_msg: str) -> str | None:        
-        if resp_msg and len(resp_msg) >= 4:
-            prefix     = resp_msg[0:2]   # 인덱스 0~1 (2자리) -> "p:"
-            err_code   = resp_msg[2:4]   # 인덱스 2~3 (2자리) -> "00"
+        return self.check_error(False, resp_msg)
 
-            if prefix != "p:":
-                self.err = True
-                return f"{self.path}.{self.name} : wrong prefix"
-
-            if err_code == "00" and len(resp_msg) >= 16:
-                svc_code   = resp_msg[4:6]   # 인덱스 4~5 (2자리) -> "01"
-
-                if svc_code != "01":
-                    self.err = True
-                    return f"{self.path}.{self.name} : wrong service code"
-
-                id_code    = resp_msg[6:14]  # 인덱스 6~13 (8자리) -> "12345678"
-                index      = int(resp_msg[14:16], 16) # 인덱스 14~15 (2자리) -> "ab"
-                if self.id == id_code and self.index == index and self.acc == ParamAccType.WO:
-                    self.is_not_support = False
-                    self.err = False
-                    return None
-                else:
-                    self.err = True
-                    return f"{self.path}.{self.name} : wrong parameter ID or index"
-            elif err_code == "00" and len(resp_msg) < 16:
-                self.err = True
-                return f"{self.path}.{self.name} : wrong parameter length"
-            else:
-                if   err_code == "0C": self.err = True;            return f"{self.path}.{self.name} : wrong command length"
-                elif err_code == "1C": self.err = True;            return f"{self.path}.{self.name} : value too low"
-                elif err_code == "1D": self.err = True;            return f"{self.path}.{self.name} : value too high"
-                elif err_code == "20": self.err = True;            return f"{self.path}.{self.name} : resulting zero adjust offset value out of range"
-                elif err_code == "21": self.err = True;            return f"{self.path}.{self.name} : not valid because no sensor enabled"
-                elif err_code == "50": self.err = True;            return f"{self.path}.{self.name} : wrong access mode"
-                elif err_code == "51": self.err = True;            return f"{self.path}.{self.name} : timeout"
-                elif err_code == "6D": self.err = True;            return f"{self.path}.{self.name} : EEProm not ready"
-                elif err_code == "6E": self.is_not_support = True; return f"{self.path}.{self.name} : wrong parameter ID"
-                elif err_code == "6F": self.err = True;            return f"{self.path}.{self.name} : set to default value not allowed"
-                elif err_code == "70": self.err = True;            return f"{self.path}.{self.name} : parameter not settable"
-                elif err_code == "71": self.err = True;            return f"{self.path}.{self.name} : parameter not readable"
-                elif err_code == "72": self.err = True;            return f"{self.path}.{self.name} : set to initial value not allowed"
-                elif err_code == "73": self.is_not_support = True; return f"{self.path}.{self.name} : wrong parameter index"
-                elif err_code == "74": self.err = True;            return f"{self.path}.{self.name} : initial value out of range"
-                elif err_code == "76": self.err = True;            return f"{self.path}.{self.name} : wrong value"
-                elif err_code == "77": self.err = True;            return f"{self.path}.{self.name} : wrong value, only reset possible"
-                elif err_code == "78": self.err = True;            return f"{self.path}.{self.name} : not allowed in this state"
-                elif err_code == "7A": self.err = True;            return f"{self.path}.{self.name} : wrong service"
-                elif err_code == "7B": self.is_not_support = True; return f"{self.path}.{self.name} : parameter not active"
-                elif err_code == "7C": self.err = True;            return f"{self.path}.{self.name} : parameter system error"
-                elif err_code == "7D": self.err = True;            return f"{self.path}.{self.name} : communication error"
-                elif err_code == "7E": self.is_not_support = True; return f"{self.path}.{self.name} : unknown service"
-                elif err_code == "7F": self.err = True;            return f"{self.path}.{self.name} : unexpected character"
-                elif err_code == "80": self.err = True;            return f"{self.path}.{self.name} : no access rights"
-                elif err_code == "81": self.err = True;            return f"{self.path}.{self.name} : no adequately hardware"
-                elif err_code == "82": self.err = True;            return f"{self.path}.{self.name} : wrong object state"
-                elif err_code == "84": self.err = True;            return f"{self.path}.{self.name} : no slave command"
-                elif err_code == "85": self.err = True;            return f"{self.path}.{self.name} : command to unknown slave"
-                elif err_code == "87": self.err = True;            return f"{self.path}.{self.name} : command to master only"
-                elif err_code == "88": self.err = True;            return f"{self.path}.{self.name} : only G command allowed"
-                elif err_code == "89": self.is_not_support = True; return f"{self.path}.{self.name} : not supported"
-                elif err_code == "A0": self.err = True;            return f"{self.path}.{self.name} : function is disabled"
-                elif err_code == "A1": self.err = True;            return f"{self.path}.{self.name} : already done"   
-                else:                                              return f"{self.path}.{self.name} : unknown error"
-        elif resp_msg is None:
-            self.err = True
+    def check_error(self, is_read : bool, resp_msg: str) -> str | None: 
+        if not is_read and self.acc != ParamAccType.WO:
+            return None
+        
+        if not resp_msg:
+            self.is_err = True
             return f"{self.path}.{self.name} : communication error"
-        else:
-            self.err = True
+
+        if len(resp_msg) < 4:
+            self.is_err = True
             return f"{self.path}.{self.name} : wrong response message format"
+
+        prefix = resp_msg[0:2]
+        if prefix != "p:":
+            self.is_err = True
+            return f"{self.path}.{self.name} : wrong prefix"
+
+        err_code = resp_msg[2:4]
+
+        if err_code == "00":
+            if len(resp_msg) < 16:
+                self.is_err = True
+                return f"{self.path}.{self.name} : wrong parameter length"
+
+            svc_code = resp_msg[4:6]
+            if (svc_code != "01" and not is_read) or (svc_code != "0B" and is_read):
+                self.is_err = True
+                return f"{self.path}.{self.name} : wrong service code"
+
+            id_code = resp_msg[6:14]
+            index = int(resp_msg[14:16], 16)
+            
+            if self.id == id_code and self.index == index:
+                self.is_err = False
+                self.is_not_support = False
+                return None
+            else:
+                self.is_err = True
+                return f"{self.path}.{self.name} : wrong parameter ID or index"
+
+        error_map = {
+            "0C": "wrong command length", "1C": "value too low", "1D": "value too high",
+            "20": "resulting zero adjust offset value out of range", "21": "not valid because no sensor enabled",
+            "50": "wrong access mode", "51": "timeout", "6D": "EEProm not ready",
+            "6E": "wrong parameter ID", "6F": "set to default value not allowed",
+            "70": "parameter not settable", "71": "parameter not readable", "72": "set to initial value not allowed",
+            "73": "wrong parameter index", "74": "initial value out of range", "76": "wrong value",
+            "77": "wrong value, only reset possible", "78": "not allowed in this state", "7A": "wrong service",
+            "7B": "parameter not active", "7C": "parameter system error", "7D": "communication error",
+            "7E": "unknown service", "7F": "unexpected character", "80": "no access rights",
+            "81": "no adequately hardware", "82": "wrong object state", "84": "no slave command",
+            "85": "command to unknown slave", "87": "command to master only", "88": "only G command allowed",
+            "89": "not supported", "A0": "function is disabled", "A1": "already done"
+        }
+
+        not_support_codes = {"6E", "73", "7B", "7E", "89"}
+
+        if err_code in error_map:
+            if err_code in not_support_codes:
+                self.is_not_support = True
+            else:
+                self.is_err = True
+            return f"{self.path}.{self.name} : {error_map[err_code]}"
+        else:
+            self.is_err = True # 알 수 없는 에러일 때
+            return f"{self.path}.{self.name} : unknown error"

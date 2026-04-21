@@ -121,7 +121,7 @@ class ParamManager:
         '''
         Position Control
         '''
-        self._add_param_posi  ("Position Control.Basic.Target Position Used"                                                , ""        ,  0, ParamAccType.RO,                               False, False, "")
+        self._add_param_posi  ("Position Control.Basic.Target Position Used"                                                , "10660600",  0, ParamAccType.RO,                               False, False, "")
         self._add_param_posi  ("Position Control.Basic.Actual Position"                                                     , "11010000",  0, ParamAccType.RO,                               False, False, "")
         self._add_param_real  ("Position Control.Basic.Position Control Speed"                                              , "11030000",  0, ParamAccType.RO, 0.0  , 1.0  , ""            , False, False, "Speed valid in Control Mode = Position 1.0 equals to full speed")
         self._add_param_posi  ("Position Control.Basic.Target Position"                                                     , "11020000",  0, ParamAccType.RW,                               False, False, "")
@@ -134,6 +134,7 @@ class ParamManager:
         '''              
         Pressure Control              
         '''              
+        self._add_param_pres  ("Pressure Control.Basic.Actual Pressure"                                                     , "07010000",  0, ParamAccType.RO,                               False, False, "")
         self._add_param_enum  ("Pressure Control.Basic.Controller Selector"                                                 , "07100000",  0, ParamAccType.RW, p_enum.PresCtrlSelEnum      , True , True , None)
         self._add_param_enum  ("Pressure Control.Basic.Controller Selector Used"                                            , "07100100",  0, ParamAccType.RO, p_enum.PresCtrlSelEnum      , False, False, None)
         self._add_param_real  ("Pressure Control.Basic.Conductance[l/s]"                                                    , "07100200",  0, ParamAccType.RO, 0.0  , f_max, "l/s"         , False, False, "")
@@ -206,11 +207,29 @@ class ParamManager:
         '''
         NVM for Compounds
         '''
-        for i in range(0, 20):
-            self._add_param_hex(f"Compound Commands.NVM For Sevice.Compound Commands 1.1 [{i}]", "B10A0100", i, ParamAccType.RW, False, False, None)
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[0]" , "B10A0100",  0)#, "System.Access Mode")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[1]" , "B10A0100",  1)#, "System.Control Mode")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[2]" , "B10A0100",  2)#, "Position Control.Basic.Actual Position")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[3]" , "B10A0100",  3)#, "Position Control.Basic.Target Position Used")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[4]" , "B10A0100",  4)#, "Pressure Control.Basic.Actual Pressure")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[5]" , "B10A0100",  5)#, "Pressure Control.Basic.Target Pressure Used")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[6]" , "B10A0100",  6)#, "Position Control.Basic.Position Control Speed")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[7]" , "B10A0100",  7)#, "Pressure Control.Basic.Controller Selector Used")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[8]" , "B10A0100",  8)#, "System.Warning/Error.Warning Bitmap")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[9]" , "B10A0100",  9)#, "System.Warning/Error.Error Bitmap")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[10]", "B10A0100", 10)#, "System.Warning/Error.Error Number")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[11]", "B10A0100", 11)#, "System.Warning/Error.Error Code")
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[12]", "B10A0100", 12)
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[13]", "B10A0100", 13)
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[14]", "B10A0100", 14)
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[15]", "B10A0100", 15)
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[16]", "B10A0100", 16)
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[17]", "B10A0100", 17)
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[18]", "B10A0100", 18)
+        self._add_param_nvm_compound("Compound Commands.NVM For Sevice.Compound Commands 1.[19]", "B10A0100", 19)
 
-        for i in range(0, 20):
-            self._add_param_hex(f"Compound Commands.NVM For Sevice.Compound Commands 2.2 [{i}]", "B10A0200", i, ParamAccType.RW, False, False, None)
+        #for i in range(0, 20):
+        #    self._add_param_nvm_compound(f"Compound Commands.NVM For Sevice.Compound Commands 2.2 [{i}]", "B10A0200", i, ParamAccType.RW, False, False, None)
 
     def _add_param_enum(self, full_path: str, id: str, index: int, param_acc : ParamAccType, enum_class: type, is_nor_backup: bool, is_fu_backup: bool, description: str | None):
         path, name = full_path.rsplit(".", 1)
@@ -275,6 +294,9 @@ class ParamManager:
         path, name = full_path.rsplit(".", 1)
         self._add_param(Parameter(path, name, id, index, ParamDisplayType.REAL, ParamDataType.FLOAT, param_acc, is_nor_backup, is_fu_backup, unit, min_value, max_value, None, description))   
 
+    def _add_param_nvm_compound(self, full_path: str, id: str, index: int):
+        path, name = full_path.rsplit(".", 1)
+        self._add_param(Parameter(path, name, id, index, ParamDisplayType.HEX, ParamDataType.UINT32, ParamAccType.RW, False, False, "", int(0), int(4294967295), None, ""))
 
     def _add_param(self, param: Parameter):
         self._parameters.append(param)

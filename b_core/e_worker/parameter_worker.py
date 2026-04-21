@@ -120,7 +120,7 @@ class ParameterWorker(QObject):
         self._current_phase = "INIT"
         self._current_index = 0
         
-        self._request_next()
+        self._request_read_next()
             
     def read(self):
         pass
@@ -128,7 +128,7 @@ class ParameterWorker(QObject):
     def write(self):
         pass
 
-    def _request_next(self):        
+    def _request_read_next(self):        
         if self._current_phase == "STOP":
             return
 
@@ -179,13 +179,17 @@ class ParameterWorker(QObject):
         if self._current_param != param:
             return
 
+        if resp_msg is None: # 통신 오류 이므로 계속 재 시도 해야함
+            self._request_read_next()
+            return
+
         if self._current_phase in ["INIT", "READ"]:
             self._processed_count += 1
             if self._total_target_count > 0:
                 self.progress = int((self._processed_count / self._total_target_count) * 100)
 
         self._current_index += 1
-        self._request_next()
+        self._request_read_next()
 
     @Slot(str, object)
     def handle_write_result(self, resp_msg: str, param: Parameter):

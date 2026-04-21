@@ -4,9 +4,9 @@ from PySide6.QtCore import Qt, QTimer
 
 from b_core.a_define import app_info
 
-from b_core.b_datatype.x10_data import X10Data
+from b_core.b_datatype.compound_data import CompoundData
 from b_core.c_manager.gv_manager import GvManager
-from b_core.e_worker.x10_run_worker import X10RunWorker
+from b_core.e_worker.compounds_run_worker import CompoundsRunWorker
 from b_core.e_worker.parameter_worker import ParameterWorker
 from b_core.d_dal.service_port import ServicePort
 from c_ui.c_windows.win_manager import WinManager
@@ -38,13 +38,13 @@ class MainWin(QMainWindow):
 
         ServicePort().connect_info_changed.connect(self.handle_changed_connection_info)
 
-        self.x10_worker = X10RunWorker(self)
-        self.x10_worker.start()
+        self.compounds_worker = CompoundsRunWorker(self)
+        self.compounds_worker.start()
 
-        self.x10_timer = QTimer(self)
-        self.x10_timer.setInterval(100)  # 100ms = 0.1초
-        self.x10_timer.timeout.connect(self.handle_x10_data)
-        self.x10_timer.start()
+        self.compounds_timer = QTimer(self)
+        self.compounds_timer.setInterval(100)  # 100ms = 0.1초
+        self.compounds_timer.timeout.connect(self.handle_compounds_data)
+        self.compounds_timer.start()
 
         self.param_worker = ParameterWorker(self)   
         self.param_worker.add_init_param("System.Identification.Serial Number")    
@@ -97,14 +97,14 @@ class MainWin(QMainWindow):
     def handle_progress_changed(self, progress: int):
         self.custom_statusbar.set_progress(progress)
 
-    def handle_x10_data(self):
-        data_list = self.x10_worker.pop_all_data()
+    def handle_compounds_data(self):
+        data_list = self.compounds_worker.pop_all_data()
 
         if data_list:
             if len(data_list) > 1:
                 last_data = data_list[-1]
 
-                x10_data : X10Data = last_data
+                compound_data : CompoundData = last_data
 
                 total_time_diff = last_data.timestamp - data_list[0].timestamp
                 avg_interval = total_time_diff / (len(data_list) - 1)
