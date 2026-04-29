@@ -1,11 +1,13 @@
 import time
+from datetime import datetime
+
 from typing import List, Tuple
 from collections import deque
 from PySide6.QtCore import QCoreApplication, QObject, QThread, QMutex, QMutexLocker, Signal
 
 from b_core.d_dal.service_port import ServicePort
 from b_core.b_datatype import param_enum as p_enum
-from b_core.b_datatype.general_enum import LogType
+from b_core.b_datatype.general_enum import SvcPortErrType
 from b_core.b_datatype.compound_data import CompoundData
 from b_core.b_datatype.parameter import Parameter
 
@@ -13,8 +15,11 @@ from b_core.c_manager.log_manager import LogManager
 from b_core.c_manager.parameter_manager import ParamManager
 
 class CompoundsWorkerThread(QThread):
+    sig_log = Signal(bool, str, str, str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._loop_log_count : int = 0
         self._is_running : bool = False
         self._is_not_connected : bool = True
         self.svc_port : ServicePort = ServicePort()
@@ -46,21 +51,30 @@ class CompoundsWorkerThread(QThread):
     # 모든 통신은 성공이후 sleep없이 바로 다음 동작을수행한다. 어차피 Serial 통신이므로 self.svc_port 내부에서 적절하게 대기 하도록 된다.
     def run(self):
         self._is_running = True
+
+        response: str | None = None
+        err_type: SvcPortErrType | None = None
         
         while self._is_running:
             if self.svc_port.connect_info:
-                if self._is_not_connected:
+                if self._is_not_connected: 
                     for cmd in self.compound_write_cmds: 
                         if not self._is_running:
                             break
 
-                        response : str | None = self.svc_port.request(cmd, True, True)
-                        if response is None:
+                        response, err_type = self.svc_port.request(cmd)
+
+                        if err_type != SvcPortErrType.NONE:
+                            self.sig_log.emit(True, cmd.hex(), response, f"Write Compound Fail : {err_type}")
+                            self.msleep(100) 
+                            break
+                        
+                        if not response.startswith("p:0001"):
+                            self.sig_log.emit(True, cmd.hex(), response, "Write Compound Fail")
                             self.msleep(100) 
                             break
 
-                        if not response.startswith("p:0001"):
-                            LogManager().log(LogType.WARNING, f"Compounds Write Error: {cmd.hex()}, {response}")
+                        self.sig_log.emit(False, cmd.hex(), response, "Write Compound Success")
                     else:
                         self._is_not_connected = False
             else:
@@ -73,44 +87,49 @@ class CompoundsWorkerThread(QThread):
                 continue
 
             if not self.compound_read_bytes:
-                LogManager().log(LogType.WARNING, f"Compounds Read Error: No read bytes")
+                self.sig_log.emit(True, "TX : Not Set", "", "[Compound Read Command] is not set")
                 self.msleep(100)
                 continue
 
-            response : str | None = self.svc_port.request(self.compound_read_bytes, False, False)
+            response, err_type = self.svc_port.request(self.compound_read_bytes)
             
-            if response is not None and response.startswith("p:0029"):
+            if err_type == SvcPortErrType.NONE and response.startswith("p:0029"):
                 try:
+                    self._loop_log_count += 1
+
+                    if self._loop_log_count % 100 == 0:
+                        self.sig_log.emit(False, self.compound_read_bytes.hex(), response, "Read Compound Success")
+
                     payload = response[16:]
                     values = payload.split(';')
                     
-                    if len(values) >= 13:
+                    if len(values) >= 12:
                         current_ms = int(time.time() * 1000)
                         
                         parsed_data = CompoundData(
                             current_ms,
-                            int(values[1]),   # access_mode
-                            int(values[2]),   # control_mode
-                            float(values[3]),     # act_posi
-                            float(values[4]),     # act_pres
-                            float(values[5]),     # target_posi
-                            float(values[6]),     # target_pres
-                            float(values[7]),     # speed
-                            int(values[8]),   # pres_contoller_selector
-                            int(values[9]),   # warning_bitmap
-                            int(values[10]),   # error_bitmap
-                            int(values[11]),  # error_number
-                            int(values[12])   # error_code
+                            int(values[0]),   # access_mode
+                            int(values[1]),   # control_mode
+                            float(values[2]),     # act_posi
+                            float(values[3]),     # act_pres
+                            float(values[4]),     # target_posi
+                            float(values[5]),     # target_pres
+                            float(values[6]),     # speed
+                            int(values[7]),   # pres_contoller_selector
+                            int(values[8]),   # warning_bitmap
+                            int(values[9]),   # error_bitmap
+                            int(values[10]),  # error_number
+                            int(values[11])   # error_code
                         )
                         
                         with QMutexLocker(self.queue_mutex):
                             self.data_queue.append(parsed_data)
 
                     else:
-                        LogManager().log(LogType.ERROR, f"CompoundsWorkerThread._run() Error: Not enough values in response. Count: {len(values)}")
+                        self.sig_log.emit(True, self.compound_read_bytes.hex(), response, "Response is short")
                         
                 except Exception as e:
-                    LogManager().log(LogType.ERROR, f"CompoundsWorkerThread._run() Error: {str(e)}")
+                    self.sig_log.emit(True, self.compound_read_bytes.hex(), response, f"Error: {str(e)}")
             else:
                 self.msleep(1000)
 
@@ -138,6 +157,7 @@ class CompoundsRunWorker(QObject):
         ]
 
         self._thread = CompoundsWorkerThread(self)
+        self._thread.sig_log.connect(self.handle_log_event)
 
         self.compound_pairs : List[Tuple[Parameter, Parameter | None]] = []
 
@@ -205,6 +225,20 @@ class CompoundsRunWorker(QObject):
                     ref_param.set_force_value(str(val))
 
         return data_list
+
+    def handle_log_event(self, is_err: bool, tx: str, rx: str, msg: str):
+        now = datetime.now()
+        time_str = now.strftime("%H:%M:%S.%f")[:-3]
+        status = "ERROR" if is_err else "INFO"
+        
+        log_msg = (
+            f"[Compound Worker][{time_str}] [{status}] "
+            f"Tx: {tx} "
+            f"Rx: {rx} "
+            f"Message: {msg}"
+        )
+
+        print(log_msg)
 
     def _destroyed(self):
         app = QCoreApplication.instance()

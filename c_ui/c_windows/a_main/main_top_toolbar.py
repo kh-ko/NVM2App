@@ -27,6 +27,9 @@ class MainTopToolBar(QToolBar):
         self.conn_btn.setProperty("menuBtn", "true") # 커스텀 CSS(마우스 오버 등) 적용
         self.conn_btn.setPopupMode(QToolButton.InstantPopup) # 클릭 시 즉시 메뉴 펼침
 
+        self.action_refresh = QAction("Refresh", self)
+        self.addAction(self.action_refresh)
+
         # 2. 하위 메뉴(QMenu) 생성
         self.conn_menu = QMenu(self.conn_btn)
 
@@ -89,7 +92,7 @@ class MainTopToolBar(QToolBar):
             
             /* ---------------------------------------------------- */
             
-            QToolButton[menuBtn="true"] {{
+            QToolButton {{
                 background: transparent;
                 border: none;
                 border-radius: 4px;
@@ -97,11 +100,11 @@ class MainTopToolBar(QToolBar):
                 color: white; 
             }}
             
-            QToolButton[menuBtn="true"]:hover {{
+            QToolButton:hover {{
                 background-color: {btn_hover_color}; 
             }}
             
-            QToolButton[menuBtn="true"]::menu-indicator {{
+            QToolButton::menu-indicator {{
                 image: none; /* 드롭다운 기본 화살표 아이콘 제거 (원할 경우 생략 가능) */
             }}
             
@@ -144,6 +147,15 @@ class MainTopToolBar(QToolBar):
                 margin: 4px 0px;
             }}
         """)
+
+    def reg_local_btn_slot(self, slot):
+        self.local_btn.clicked.connect(slot)
+
+    def reg_remote_btn_slot(self, slot):
+        self.remote_btn.clicked.connect(slot)
+
+    def reg_connection_refresh_slot(self, slot):
+        self.action_refresh.triggered.connect(slot)
 
     def reg_connection_connect_slot(self, slot):
         self.action_connect.triggered.connect(slot)

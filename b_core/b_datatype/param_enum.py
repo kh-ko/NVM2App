@@ -177,9 +177,9 @@ class SysErrorBitmap(DescriptionEnum):
     OPERATION_POSITION_ERROR    = (3, "Operation Position Error")
     OPERATION_NOT_RUNNING       = (4, "Operation Not Running")
     OPERATION_ERROR_STATE       = (5, "Operation Error State")
-    OTHER_COMPONENT             = (12, "Other Component")
-    GENERAL                     = (30, "General")
-    INTERNAL                    = (31, "Internal")
+    OTHER_COMPONENT             = (12, "Other Component Error")
+    GENERAL                     = (30, "General Error")
+    INTERNAL                    = (31, "Internal Error")
 
          
 class SysErrorNumberComponent(DescriptionEnum):

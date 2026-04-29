@@ -1,5 +1,3 @@
-from typing import List, Dict, Union, Type, Optional
-
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QGraphicsOpacityEffect
 
@@ -7,7 +5,7 @@ from b_core.b_datatype.param_enum import DescriptionEnum
 from c_ui.b_components.a_custom.custom_label import CustomLabel
 from b_core.c_manager.parameter_manager import ParamManager
 
-class UserEnumLabel(QWidget):
+class UserFloatLabel(QWidget):
     def __init__(self, label_text="", param_full_path="",label_width=150, parent=None):
         """
         :param label_text: 라벨에 표시할 문구 (없거나 빈 문자열이면 라벨 생성 안 함)
@@ -66,13 +64,7 @@ class UserEnumLabel(QWidget):
 
     def handle_value_changed(self):
         if self.param:
-            self.param.ref_list : Optional[Type[DescriptionEnum]] 
-
-            if not self.param.ref_list or not self.param.str_value:
-                self.setText("Unknown Value")
-                return
-
-            self.setText(self.param.ref_list(self.param.value).description)
+            self.setText(self.param.str_value)
             
     def handle_is_err_changed(self):
         if self.param.is_err:

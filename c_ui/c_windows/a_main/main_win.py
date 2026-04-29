@@ -1,19 +1,31 @@
-
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox
+from typing import List, Tuple
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox, QFrame, QHBoxLayout
 from PySide6.QtCore import Qt, QTimer
 
 from b_core.a_define import app_info
 
+from b_core.b_datatype import param_enum as p_enum
 from b_core.b_datatype.compound_data import CompoundData
-from b_core.c_manager.gv_manager import GvManager
 from b_core.e_worker.compounds_run_worker import CompoundsRunWorker
 from b_core.e_worker.parameter_worker import ParameterWorker
 from b_core.d_dal.service_port import ServicePort
+from b_core.c_manager.parameter_manager import ParamManager
 from c_ui.c_windows.win_manager import WinManager
 from c_ui.c_windows.a_main.main_top_toolbar import MainTopToolBar
 from c_ui.c_windows.b_connection.connection_setting_win import ConnectionSettingWin
 from c_ui.c_windows.b_connection.connection_connect_win import ConnectionConnectWin
 from c_ui.b_components.b_usercontrol.user_statusbar import UserStatusBar
+from c_ui.b_components.b_usercontrol.user_enum_label import UserEnumLabel
+from c_ui.b_components.b_usercontrol.user_float_label import UserFloatLabel
+from c_ui.b_components.a_custom.custom_panel import CustomPanel
+from c_ui.b_components.a_custom.custom_icon_button import CustomIconButton
+from c_ui.b_components.a_custom.custom_icon_label_button import CustomIconLabelButton
+from c_ui.b_components.a_custom.custom_button import CustomButton
+
+from c_ui.c_windows.a_main.main_status import MainStatus
+from c_ui.c_windows.a_main.main_control import MainControl
+from c_ui.c_windows.a_main.main_position import MainPosition
+from c_ui.c_windows.a_main.main_pressure import MainPressure
 
 class MainWin(QMainWindow):
     """
@@ -26,9 +38,45 @@ class MainWin(QMainWindow):
         self.setWindowTitle(app_info.APP_DISPLAY_TITLE)
         self.resize(1024, 690)  # 초기 윈도우 크기 설정
 
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        self.top_area = QFrame()
+        self.top_area.setStyleSheet("background-color: lightgray;") # 시각적 확인을 위한 색상
+        main_layout.addWidget(self.top_area)
+
+        self.bottom_area = QWidget()
+        self.bottom_area.setFixedHeight(275)
+
+        bottom_layout = QHBoxLayout(self.bottom_area)
+        bottom_layout.setContentsMargins(0, 0, 0, 0) # 영역 간 마진 없애기
+        bottom_layout.setSpacing(0)
+
+        section = MainStatus("Status", "System.Control Mode", "Position Control.Basic.Position Control Speed", "Pressure Control.Basic.Controller Selector Used", "System.Warning/Error.Warning Bitmap", "System.Warning/Error.Error Bitmap")
+        bottom_layout.addWidget(section, 3.9)
+
+        self.ctrl_panel = MainControl("Control"); self.ctrl_panel.open_btn.clicked.connect(self.on_clicked_open_btn); self.ctrl_panel.close_btn.clicked.connect(self.on_clicked_close_btn); self.ctrl_panel.hold_btn.clicked.connect(self.on_clicked_hold_btn); self.ctrl_panel.learn_btn.clicked.connect(self.on_clicked_learn_btn)
+        bottom_layout.addWidget(self.ctrl_panel, 1)
+            
+        self.posi_panel = MainPosition("Position")
+        bottom_layout.addWidget(self.posi_panel, 2)
+
+        self.pres_panel = MainPressure("Pressure")
+        bottom_layout.addWidget(self.pres_panel, 2)
+
+        # 메인 레이아웃에 하단 영역 추가
+        main_layout.addWidget(self.bottom_area)
+
         self.main_toolbar = MainTopToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
 
+        self.main_toolbar.reg_local_btn_slot(self.on_clicked_local_btn)
+        self.main_toolbar.reg_remote_btn_slot(self.on_clicked_remote_btn)
+        self.main_toolbar.reg_connection_refresh_slot(self.on_clicked_refresh)
         self.main_toolbar.reg_connection_settings_slot(self.on_clicked_connection_setting)
         self.main_toolbar.reg_connection_connect_slot(self.on_clicked_connection_connect)
         self.main_toolbar.reg_connection_disconnect_slot(self.on_clicked_connection_disconnect)
@@ -68,14 +116,37 @@ class MainWin(QMainWindow):
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Upper Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Lower Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Voltage Per Decade")
-        self.param_worker.add_init_param("RS232 User interface.Scaling.Pressure.Pressure Unit")
-        self.param_worker.add_init_param("RS232 User interface.Scaling.Pressure.Value Pressure 0")
-        self.param_worker.add_init_param("RS232 User interface.Scaling.Pressure.Value Pressure Sensor Full Scale")
-        self.param_worker.add_init_param("RS232 User interface.Scaling.Position.Position Unit")
-        self.param_worker.add_init_param("RS232 User interface.Scaling.Position.Value Open Position")
-        self.param_worker.add_init_param("RS232 User interface.Scaling.Position.Value Closest Position")
+        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Pressure Unit")
+        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure 0")
+        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure Sensor Full Scale")
+        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Position Unit")
+        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Value Open Position")
+        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Value Closest Position")
+
+        self.acc_mode_param = self.param_worker.add_write_param("System.Access Mode")    
+
+        if self.acc_mode_param:
+            self.acc_mode_param.sig_value_changed.connect(self.handle_access_mode_changed)
+            self.handle_access_mode_changed()
+
+        self.ctrl_mode_param = self.param_worker.add_write_param("System.Control Mode")    
+
+        if self.ctrl_mode_param:
+            self.ctrl_mode_param.sig_value_changed.connect(self.handle_ctrl_mode_changed)
+            self.handle_ctrl_mode_changed()
 
         self.param_worker.sig_progress_changed.connect(self.handle_progress_changed)
+
+    def on_clicked_local_btn(self):
+        self.acc_mode_param.write_str_value = f"{p_enum.AccModeEnum.LOCAL.value}"
+        self.param_worker.write()
+
+    def on_clicked_remote_btn(self):
+        self.acc_mode_param.write_str_value = f"{p_enum.AccModeEnum.REMOTE.value}"
+        self.param_worker.write()
+
+    def on_clicked_refresh(self):
+        self.param_worker.refresh()
 
     def on_clicked_connection_setting(self):
         WinManager().show_window(win_class=ConnectionSettingWin, parent=self, is_modal=True)
@@ -87,6 +158,24 @@ class MainWin(QMainWindow):
         reply = QMessageBox.question(self, "Confirm Disconnect", "Are you sure you want to disconnect?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             ServicePort().close()
+
+    def on_clicked_warn_err_button(self):
+        pass
+
+    def on_clicked_open_btn(self):
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.OPEN.value}"
+        self.param_worker.write()
+
+    def on_clicked_close_btn(self):
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.CLOSE.value}"
+        self.param_worker.write()
+
+    def on_clicked_hold_btn(self):
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.HOLD.value}"
+        self.param_worker.write()
+
+    def on_clicked_learn_btn(self):
+        pass
 
     def handle_changed_connection_info(self, info: str):
         if info:
@@ -114,4 +203,28 @@ class MainWin(QMainWindow):
         else:
             self.custom_statusbar.set_scan_rate(-1)
 
-    
+    def handle_access_mode_changed(self):
+        if not self.acc_mode_param.str_value:
+            self.main_toolbar.local_btn.set_accent(False)
+            self.main_toolbar.remote_btn.set_accent(False)
+            return
+
+        int_value = self.acc_mode_param.value
+
+        if int_value == p_enum.AccModeEnum.LOCAL.value:
+            self.main_toolbar.local_btn.set_accent(True)
+            self.main_toolbar.remote_btn.set_accent(False)
+        elif int_value == p_enum.AccModeEnum.REMOTE.value:
+            self.main_toolbar.local_btn.set_accent(False)
+            self.main_toolbar.remote_btn.set_accent(True)
+        else:
+            self.main_toolbar.local_btn.set_accent(False)
+            self.main_toolbar.remote_btn.set_accent(False)
+
+
+    def handle_ctrl_mode_changed(self):
+        if not self.ctrl_mode_param.str_value:
+            self.ctrl_panel.set_ctrl_mode_value(p_enum.ControlModeEnum.INIT.value)
+            return
+
+        self.ctrl_panel.set_ctrl_mode_value(self.ctrl_mode_param.value)

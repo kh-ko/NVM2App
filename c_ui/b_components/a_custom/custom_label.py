@@ -4,15 +4,19 @@ from PySide6.QtWidgets import QLabel, QGraphicsOpacityEffect
 class CustomLabel(QLabel):
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
-        self.__color_design()
+        self.__color_design("transparent")
 
-    def __color_design(self):
-        # 전달해주신 스타일시트를 그대로 적용합니다.
-        self.setStyleSheet("""
-            QLabel {
+    def __color_design(self, bg_color: str):
+        # f-string을 사용하여 텍스트 색상은 유지하고 배경색만 변수로 받습니다.
+        self.setStyleSheet(f"""
+            QLabel {{
                 color: black;
-            }
+                background-color: {bg_color};
+            }}
         """)
+
+    def set_bg_color(self, color_code: str):
+        self.__color_design(color_code)
 
     def changeEvent(self, event: QEvent):
         """위젯의 상태 변화(Enabled 등)를 감시하고 처리합니다."""

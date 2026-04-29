@@ -44,10 +44,10 @@ class UserStatusBar(QStatusBar):
         self.addPermanentWidget(self.progress_bar)
 
         ServicePort().connect_info_changed.connect(self.set_connection_info)
-        sn_param = ParamManager().get_by_full_path("System.Identification.Serial Number")
+        self.sn_param = ParamManager().get_by_full_path("System.Identification.Serial Number")
 
-        if sn_param is not None:
-            sn_param.sig_value_changed.connect(self.set_serial_number)
+        if self.sn_param is not None:
+            self.sn_param.sig_value_changed.connect(self.handle_sn_changed)
 
         self.__design()
 
@@ -87,8 +87,8 @@ class UserStatusBar(QStatusBar):
         else:
             self.lbl_connection_info.setText(f"{message}")
 
-    def set_serial_number(self, value: str):
-        self.lbl_serial_number.setText(f"S/N: {value}")
+    def handle_sn_changed(self):
+        self.lbl_serial_number.setText(f"S/N: {self.sn_param.str_value}")
 
     def set_scan_rate(self, ms: int):
         if ms < 0:

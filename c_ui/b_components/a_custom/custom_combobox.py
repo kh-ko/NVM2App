@@ -155,7 +155,6 @@ class CustomComboBox(QWidget):
         """사용자가 콤보박스 값을 변경하면 원본과 비교하여 Dirty 표시를 켭니다."""
         # 아이템이 하나도 없을 때(-1)는 무시하도록 처리 가능
         is_dirty = (index != self._original_index)
-        print(f"is_dirty: {is_dirty}")
         self.dirty_label.setVisible(is_dirty)        
 
     def changeEvent(self, event: QEvent):
