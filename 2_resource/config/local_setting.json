@@ -1,0 +1,16 @@
+{
+    "pres_unit": 4,
+    "decimal_places": 2,
+    "posi_setpoint01": 1.0,
+    "posi_setpoint02": 0.9,
+    "posi_setpoint03": 0.8,
+    "posi_setpoint04": 0.7,
+    "posi_setpoint05": 0.6,
+    "posi_setpoint06": 0.5,
+    "pres_setpoint01": 1.0,
+    "pres_setpoint02": 0.9,
+    "pres_setpoint03": 0.8,
+    "pres_setpoint04": 0.7,
+    "pres_setpoint05": 0.6,
+    "pres_setpoint06": 0.5
+}

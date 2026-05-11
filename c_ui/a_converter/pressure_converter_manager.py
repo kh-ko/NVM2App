@@ -1,6 +1,8 @@
 import threading
 import math
 
+from decimal import Decimal
+
 from PySide6.QtCore import Signal, QObject
 
 from b_core.b_datatype import param_enum as p_enum
@@ -149,6 +151,14 @@ class PresConverterManager(QObject):
         real_pres_in_sens_unit = (ori_value * self.slope) + self.intercept
         return (real_pres_in_sens_unit * self.unit_gain) + self.unit_offset
 
+    def convert_display_to_pres_value_str(self, value: float) -> str:
+        if self.slope == 0:
+            return ""
+            
+        real_pres_in_sens_unit = (value - self.unit_offset) / self.unit_gain
+        result_value = (real_pres_in_sens_unit - self.intercept) / self.slope
+        return format(Decimal(str(result_value)), 'f')
+
     def _convert_pressure(self, value: float, from_unit_idx: int, to_unit_idx: int) -> float:
         gain, offset = self._get_unit_conversion(from_unit_idx, to_unit_idx)
         return (value * gain) + offset
@@ -184,3 +194,11 @@ class PresConverterManager(QObject):
             return p_enum.SensUnitEnum.PSIA.value
         else:
             return p_enum.SensUnitEnum.PA.value
+
+    def get_display_max_pres_value(self) -> float:
+        if self.iface_max_param.value:
+            return self.convert_pres_to_display_value(self.iface_max_param.value)
+        else:
+            return 1.0
+            
+        

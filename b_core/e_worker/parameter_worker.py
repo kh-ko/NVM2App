@@ -2,15 +2,13 @@ from datetime import datetime
 
 from b_core.c_manager.parameter_manager import ParamManager
 from typing import Optional
-from PySide6.QtWidgets import QMessageBox, QApplication
+from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import QThread, Signal, QObject, QCoreApplication, Slot, Qt
 
 from b_core.b_datatype import param_enum as p_enum
 from b_core.b_datatype.parameter import Parameter
 from b_core.b_datatype.general_enum import SvcPortErrType, ParamParseErrType
 from b_core.d_dal.service_port import ServicePort
-
-from c_ui.b_components.b_usercontrol.user_error_report_dialog import UserErrorReportDialog
 
 class ParameterThread(QObject):
     sig_read_result = Signal(str, str, object, SvcPortErrType)
@@ -130,8 +128,13 @@ class ParameterWorker(QObject):
         if param is not None:
             self.monitor_param_list.append(param)
 
-    def refresh(self):       
-        is_connected: bool = ServicePort().connect_info is not None
+    def refresh(self):  
+        if ServicePort().connect_info:
+            is_connected = True
+        else:
+            is_connected = False
+
+        self._close_active_msg_box()
 
         self._current_param = None
         self._current_phase = "STOP" 
@@ -141,7 +144,7 @@ class ParameterWorker(QObject):
         self.progress = 0
 
         if not is_connected:
-            QMessageBox.warning(self.parent(), "Connection Error", "Communication is not connected. Please check the connection status.", QMessageBox.Ok)
+            self._show_warning_msgbox("Connection Error", "Communication is not connected. Please check the connection status.")
             return
 
         self._total_target_count = len(self.init_param_list) + len(self.read_param_list)
@@ -160,16 +163,20 @@ class ParameterWorker(QObject):
         pass
 
     def write(self):
+        if ServicePort().connect_info:
+            is_connected = True
+        else:
+            is_connected = False
+
         if self.is_working:
-            QMessageBox.warning(self.parent(), "Warning", f"The '{self._current_phase}' phase is currently in progress. Please try again in a moment.", QMessageBox.Ok)
+            self._show_warning_msgbox("Warning", f"The '{self._current_phase}' phase is currently in progress. Please try again in a moment.")
             return
 
         is_only_local_acc: bool = False
-        is_connected: bool = ServicePort().connect_info is not None
         current_acc_mode: int = int(self._acc_mode_param.value) if str(self._acc_mode_param.value).isdigit() else -1 
 
         if not is_connected:
-            QMessageBox.warning(self.parent(), "Connection Error", "Communication is not connected. Please check the connection status.", QMessageBox.Ok)
+            self._show_warning_msgbox("Connection Error", "Communication is not connected. Please check the connection status.")
             return
         
         self.write_param_proc_list.clear()
@@ -184,13 +191,13 @@ class ParameterWorker(QObject):
                 self.write_param_proc_list.append((param, packet))
         
         if is_only_local_acc and current_acc_mode == p_enum.AccModeEnum.REMOTE_LOCKED.value:
-            QMessageBox.warning(self.parent(), "Access Denied", "Cannot modify local-only parameters while in Remote Lock mode.", QMessageBox.Ok)
+            self._show_warning_msgbox("Access Denied", "Cannot modify local-only parameters while in Remote Lock mode.")
             return
 
         if is_only_local_acc and current_acc_mode == p_enum.AccModeEnum.REMOTE.value:
-            reply = QMessageBox.question(self.parent(), "Access Mode Change", "You are attempting to change a local-only parameter while in Remote mode.\nWould you like to switch to Local mode and continue?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+            reply = self._show_question_msgbox("Access Mode Change", "You are attempting to change a local-only parameter while in Remote mode.\nWould you like to switch to Local mode and continue?")
             
-            if reply == QMessageBox.No:
+            if reply != QMessageBox.StandardButton.Yes:
                 return
             else:
                 packet = f"p:01{self._acc_mode_param.id}{self._acc_mode_param.index:02X}{p_enum.AccModeEnum.LOCAL.value}"
@@ -345,6 +352,23 @@ class ParameterWorker(QObject):
 
         print(log_msg)
         
+    def _show_warning_msgbox(self, title: str, message: str):
+        self._close_active_msg_box()
+        self._active_msg_box = QMessageBox(QMessageBox.Icon.Warning, title, message, QMessageBox.StandardButton.Ok, self.parent())
+        self._active_msg_box.exec()
+        self._active_msg_box = None
+
+    def _show_question_msgbox(self, title: str, message: str) -> QMessageBox.StandardButton:
+        self._close_active_msg_box()
+        self._active_msg_box = QMessageBox(QMessageBox.Icon.Question, title, message, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, self.parent())
+        reply = self._active_msg_box.exec()
+        self._active_msg_box = None
+        return reply
+
+    def _close_active_msg_box(self):
+        if self._active_msg_box is not None:
+            self._active_msg_box.reject()
+            self._active_msg_box = None
 
     def _destroyed(self):
         app = QCoreApplication.instance()

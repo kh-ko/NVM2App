@@ -18,6 +18,9 @@ class CustomLabel(QLabel):
     def set_bg_color(self, color_code: str):
         self.__color_design(color_code)
 
+    def setText(self, text: str):
+        super().setText(text)
+
     def changeEvent(self, event: QEvent):
         """위젯의 상태 변화(Enabled 등)를 감시하고 처리합니다."""
         super().changeEvent(event) # 기본 이벤트 처리 유지

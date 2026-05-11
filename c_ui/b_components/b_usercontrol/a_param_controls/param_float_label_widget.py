@@ -1,5 +1,3 @@
-from typing import List, Dict, Union, Type, Optional
-
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QGraphicsOpacityEffect
 
@@ -7,8 +5,8 @@ from b_core.b_datatype.param_enum import DescriptionEnum
 from c_ui.b_components.a_custom.custom_label import CustomLabel
 from b_core.c_manager.parameter_manager import ParamManager
 
-class UserEnumLabel(QWidget):
-    def __init__(self, label_text="", param_full_path="",label_width=150, parent=None):
+class ParamFloatLabelWidget(QWidget):
+    def __init__(self, param_full_path="",label_width=150, parent=None):
         """
         :param label_text: 라벨에 표시할 문구 (없거나 빈 문자열이면 라벨 생성 안 함)
         :param label_width: 라벨의 고정 폭
@@ -22,13 +20,9 @@ class UserEnumLabel(QWidget):
         self.layout.setSpacing(5)
         
         # 2. 라벨 처리 로직
-        # label_text가 존재하고 빈 문자열이 아닐 경우에만 QLabel 추가
-        if label_text:
-            self.label = CustomLabel(label_text)
-            self.label.setFixedWidth(label_width) # 입력받은 너비로 폭 고정
-            self.layout.addWidget(self.label)
-        else:
-            self.label = None
+        self.label = CustomLabel("")
+        self.label.setFixedWidth(label_width) # 입력받은 너비로 폭 고정
+        self.layout.addWidget(self.label)
 
         # 3. 라인 에디트 생성 및 추가
         self.label_value = CustomLabel("-")
@@ -44,7 +38,9 @@ class UserEnumLabel(QWidget):
                 #self.param.sig_dirty_changed.connect(self.handle_dirty_changed)
                 self.handle_value_changed()
                 self.handle_is_err_changed()
-                self.handle_is_not_support_changed()        
+                self.handle_is_not_support_changed()     
+
+                self.label.setText(self.param.name)   
 
     # 주요 메서드 래핑
     def text(self) -> str:
@@ -66,13 +62,7 @@ class UserEnumLabel(QWidget):
 
     def handle_value_changed(self):
         if self.param:
-            self.param.ref_list : Optional[Type[DescriptionEnum]] 
-
-            if not self.param.ref_list or not self.param.str_value:
-                self.setText("Unknown Value")
-                return
-
-            self.setText(self.param.ref_list(self.param.value).description)
+            self.setText(self.param.str_value)
             
     def handle_is_err_changed(self):
         if self.param.is_err:

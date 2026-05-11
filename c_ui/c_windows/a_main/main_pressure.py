@@ -1,14 +1,22 @@
-
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QDoubleSpinBox, QSizePolicy, QFrame, QVBoxLayout, QWidget, QHBoxLayout, QComboBox
+
+from b_core.b_datatype.param_enum import SensUnitEnum
+from b_core.c_manager.local_setting_manager import LocalSettingManager
+
+from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 
 from c_ui.b_components.a_custom.custom_label import CustomLabel
 from c_ui.b_components.a_custom.custom_button import CustomButton
 from c_ui.b_components.a_custom.custom_title import CustomTitle
-from c_ui.b_components.b_usercontrol.user_pres_label_in_main import UserPresLabelInMain
+from c_ui.b_components.b_usercontrol.b_main_win_controls.pres_label_in_main import PresLabelInMain
+from c_ui.b_components.b_usercontrol.b_main_win_controls.pres_input_in_main import PresInputInMain
 
 class MainPressure(QWidget):
-    def __init__(self, title="", parent=None): # title의 기본값을 빈 문자열로 설정
+
+    sig_btn_clicked = Signal(str)
+    
+    def __init__(self, parent=None): # title의 기본값을 빈 문자열로 설정
         super().__init__(parent)
         self.setObjectName("MainPressure")
 
@@ -25,7 +33,7 @@ class MainPressure(QWidget):
         self.main_layout.setContentsMargins(10, 10, 10, 10) # 카드 내부 여백
         self.main_layout.setSpacing(5) # 내부 위젯들 간의 기본 간격
 
-        lbl_title = CustomTitle(title)
+        lbl_title = CustomTitle("Pressure")
         # 패널의 기본 스타일이 상속되어 테두리가 생길 수 있으므로 border: none 추가
         self.main_layout.addWidget(lbl_title)
 
@@ -48,29 +56,44 @@ class MainPressure(QWidget):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(5)
         
-        self.spin_value = QDoubleSpinBox()
-        self.spin_value.setDecimals(3)
-        self.spin_value.setRange(-9999.999, 9999.999)
-        self.spin_value.setAlignment(Qt.AlignRight)
-        self.spin_value.setMinimumWidth(1) 
-        self.spin_value.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
-
-        self.spin_value.setStyleSheet("""
-            QDoubleSpinBox {
-                border: 1px solid #dcdcdc;
-                border-radius: 4px;
-                padding: 4px;
-                background-color: white; /* 배경색을 흰색으로 지정 */
-            }
-        """)
+        self.pres_input = PresInputInMain("Target", param_full_path="Pressure Control.Basic.Target Pressure")
+        self.pres_input.setDecimals(3)
+        self.pres_input.setRange(-9999999999.0, 9999999999.0)
+        self.pres_input.setAlignment(Qt.AlignRight)
+        self.pres_input.setMinimumWidth(1) 
+        self.pres_input.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)       
         
-        right_layout.addWidget(self.spin_value)
+        right_layout.addWidget(self.pres_input)
 
-        # 버튼들 추가
-        for _ in range(6):
-            btn = CustomButton("100%")
-            btn.setMinimumWidth(1) # 버튼 폭 제한 해제
-            right_layout.addWidget(btn)
+        self.btn_01 = CustomButton("100")
+        self.btn_01.setMinimumWidth(1)
+        self.btn_01.clicked.connect(self.on_btn_01_clicked)
+        right_layout.addWidget(self.btn_01)
+
+        self.btn_02 = CustomButton("100")
+        self.btn_02.setMinimumWidth(1)
+        self.btn_02.clicked.connect(self.on_btn_02_clicked)
+        right_layout.addWidget(self.btn_02)
+
+        self.btn_03 = CustomButton("100")
+        self.btn_03.setMinimumWidth(1)
+        self.btn_03.clicked.connect(self.on_btn_03_clicked)
+        right_layout.addWidget(self.btn_03)
+
+        self.btn_04 = CustomButton("100")
+        self.btn_04.setMinimumWidth(1)
+        self.btn_04.clicked.connect(self.on_btn_04_clicked)
+        right_layout.addWidget(self.btn_04)
+
+        self.btn_05 = CustomButton("100")
+        self.btn_05.setMinimumWidth(1)
+        self.btn_05.clicked.connect(self.on_btn_05_clicked)
+        right_layout.addWidget(self.btn_05)
+
+        self.btn_06 = CustomButton("100")
+        self.btn_06.setMinimumWidth(1)
+        self.btn_06.clicked.connect(self.on_btn_06_clicked)
+        right_layout.addWidget(self.btn_06)
             
         right_layout.addStretch()
         
@@ -82,13 +105,13 @@ class MainPressure(QWidget):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(10)
         
-        self.status_actual = UserPresLabelInMain("Actual", "Pressure Control.Basic.Actual Pressure")
-        self.status_target = UserPresLabelInMain("Target", "Pressure Control.Basic.Target Pressure Used")
-        #self.lbl_max = create_status_display("Max")
+        self.status_actual = PresLabelInMain("Actual"     , "Pressure Control.Basic.Actual Pressure")
+        self.status_target = PresLabelInMain("Target Used", "Pressure Control.Basic.Target Pressure Used")
+        self.lbl_max       = PresLabelInMain("Max"        , "RS232/RS485 User interface.Scaling.Pressure.Value Pressure Sensor Full Scale")
         
         left_layout.addWidget(self.status_actual)
         left_layout.addWidget(self.status_target)
-        #left_layout.addWidget(self.status_max)
+        left_layout.addWidget(self.lbl_max)
 
         unit_layout = QVBoxLayout()
         unit_layout.setSpacing(0)
@@ -96,16 +119,32 @@ class MainPressure(QWidget):
         lbl_unit = CustomLabel("Unit")
 
         self.combo_unit = QComboBox()
-        self.combo_unit.addItems([
-            "Pa", 
-            "kPa", 
-            "bar", 
-            "mbar", 
-            "Torr", 
-            "mTorr", 
-            "psia",
-            "psig"
-        ])
+
+        for unit in SensUnitEnum:
+            self.combo_unit.addItem(unit.description, unit)
+
+        self.combo_unit.currentIndexChanged.connect(self.on_pres_unit_changed)
+
+        self.converter = PresConverterManager()   
+
+        LocalSettingManager().sig_pres_unit_changed.connect(self.handle_pres_unit_changed)
+        LocalSettingManager().sig_decimal_places_changed.connect(self.handle_decimal_places_changed)
+        LocalSettingManager().sig_pres_setpoint01_changed.connect(self.handle_pres_setpoint01_changed)
+        LocalSettingManager().sig_pres_setpoint02_changed.connect(self.handle_pres_setpoint02_changed)
+        LocalSettingManager().sig_pres_setpoint03_changed.connect(self.handle_pres_setpoint03_changed)
+        LocalSettingManager().sig_pres_setpoint04_changed.connect(self.handle_pres_setpoint04_changed)
+        LocalSettingManager().sig_pres_setpoint05_changed.connect(self.handle_pres_setpoint05_changed)
+        LocalSettingManager().sig_pres_setpoint06_changed.connect(self.handle_pres_setpoint06_changed)
+        self.handle_pres_unit_changed()
+        self.handle_decimal_places_changed()
+        self.handle_pres_setpoint01_changed()
+        self.handle_pres_setpoint02_changed()
+        self.handle_pres_setpoint03_changed()
+        self.handle_pres_setpoint04_changed()
+        self.handle_pres_setpoint05_changed()
+        self.handle_pres_setpoint06_changed()
+ 
+        self.converter.sig_pres_range_changed.connect(self.handle_pres_range_changed)        
         
         # 기존 스핀박스/라벨과 디자인 톤을 맞추기 위한 스타일 적용
         self.combo_unit.setStyleSheet("""
@@ -150,8 +189,129 @@ class MainPressure(QWidget):
 
         left_layout.addStretch()
         
-        content_layout.addWidget(left_container, 1)  
-        content_layout.addWidget(right_container, 1) 
+        content_layout.addWidget(left_container, 8)  
+        content_layout.addWidget(right_container, 10) 
         self.main_layout.addLayout(content_layout)
         self.main_layout.addStretch()
+
+    def handle_pres_unit_changed(self):
+        current_unit_val = LocalSettingManager().pres_unit
+        
+        self.combo_unit.blockSignals(True)
+        for i in range(self.combo_unit.count()):
+            unit_enum = self.combo_unit.itemData(i)
+            if unit_enum and unit_enum.value == current_unit_val:
+                self.combo_unit.setCurrentIndex(i)
+                break
+        self.combo_unit.blockSignals(False)
+
+        self.handle_pres_range_changed()
+
+    def handle_decimal_places_changed(self):
+        current_decimal_places = LocalSettingManager().decimal_places
+        self.pres_input.setDecimals(current_decimal_places)
+        self.status_actual.set_decimals(current_decimal_places)
+        self.status_target.set_decimals(current_decimal_places)
+        self.lbl_max.set_decimals(current_decimal_places)
+
+        self.handle_pres_range_changed()
+    
+    def handle_pres_setpoint01_changed(self):
+        current_decimal_places = LocalSettingManager().decimal_places
+        setpoint_ratio = LocalSettingManager().pres_setpoint01
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        self.btn_01.setText(f"{display_value:.{current_decimal_places}f}")
+        
+    def handle_pres_setpoint02_changed(self):
+        current_decimal_places = LocalSettingManager().decimal_places
+        setpoint_ratio = LocalSettingManager().pres_setpoint02
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        self.btn_02.setText(f"{display_value:.{current_decimal_places}f}")
+        
+    def handle_pres_setpoint03_changed(self):
+        current_decimal_places = LocalSettingManager().decimal_places
+        setpoint_ratio = LocalSettingManager().pres_setpoint03
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        self.btn_03.setText(f"{display_value:.{current_decimal_places}f}")
+        
+    def handle_pres_setpoint04_changed(self):
+        current_decimal_places = LocalSettingManager().decimal_places
+        setpoint_ratio = LocalSettingManager().pres_setpoint04
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        self.btn_04.setText(f"{display_value:.{current_decimal_places}f}")
+        
+    def handle_pres_setpoint05_changed(self):
+        current_decimal_places = LocalSettingManager().decimal_places
+        setpoint_ratio = LocalSettingManager().pres_setpoint05
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        self.btn_05.setText(f"{display_value:.{current_decimal_places}f}")
+        
+    def handle_pres_setpoint06_changed(self):
+        current_decimal_places = LocalSettingManager().decimal_places
+        setpoint_ratio = LocalSettingManager().pres_setpoint06
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        self.btn_06.setText(f"{display_value:.{current_decimal_places}f}")  
+        
+    def handle_pres_range_changed(self):
+        self.handle_pres_setpoint01_changed()
+        self.handle_pres_setpoint02_changed()
+        self.handle_pres_setpoint03_changed()
+        self.handle_pres_setpoint04_changed()
+        self.handle_pres_setpoint05_changed()
+        self.handle_pres_setpoint06_changed()  
+
+    def on_pres_unit_changed(self, index):
+        selected_unit = self.combo_unit.itemData(index)
+        if selected_unit:
+            LocalSettingManager().pres_unit = selected_unit.value
+
+    def on_btn_01_clicked(self):
+        setpoint_ratio = LocalSettingManager().pres_setpoint01
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        self.sig_btn_clicked.emit(pres_value)
+        
+    def on_btn_02_clicked(self):
+        setpoint_ratio = LocalSettingManager().pres_setpoint02
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        self.sig_btn_clicked.emit(pres_value)
+        
+    def on_btn_03_clicked(self):
+        setpoint_ratio = LocalSettingManager().pres_setpoint03
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        self.sig_btn_clicked.emit(pres_value)
+        
+    def on_btn_04_clicked(self):
+        setpoint_ratio = LocalSettingManager().pres_setpoint04
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        self.sig_btn_clicked.emit(pres_value)
+        
+    def on_btn_05_clicked(self):
+        setpoint_ratio = LocalSettingManager().pres_setpoint05
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        self.sig_btn_clicked.emit(pres_value)
+        
+    def on_btn_06_clicked(self):
+        setpoint_ratio = LocalSettingManager().pres_setpoint06
+        max_pres_value = self.converter.get_display_max_pres_value()
+        display_value = max_pres_value * setpoint_ratio
+        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        self.sig_btn_clicked.emit(pres_value) 
+
+
 

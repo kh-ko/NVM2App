@@ -31,3 +31,4 @@ RSRC_BASE = os.path.join(EXE_BASE, "2_resource")
 
 RSRC_CONFIG_PATH = os.path.join(RSRC_BASE, "config")
 RSRC_CONNECTIONS_JSON_FILE = os.path.join(RSRC_CONFIG_PATH, "connections.json")
+RSRC_LOCAL_SETTING_JSON_FILE = os.path.join(RSRC_CONFIG_PATH, "local_setting.json")

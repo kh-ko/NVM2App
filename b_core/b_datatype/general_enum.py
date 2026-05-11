@@ -49,7 +49,7 @@ class SvcPortErrType(Enum):
 
 class ParamParseErrType(Enum):
     NONE                = auto()
-    COMMUNICATION_ERROR = auto()
+    COMMUNICATION_ERR   = auto()
     WRONG_FORMAT        = auto()
     WRONG_PREFIX        = auto()
     WRONG_PARAM_LENGTH  = auto()

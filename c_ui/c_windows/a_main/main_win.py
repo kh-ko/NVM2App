@@ -15,8 +15,6 @@ from c_ui.c_windows.a_main.main_top_toolbar import MainTopToolBar
 from c_ui.c_windows.b_connection.connection_setting_win import ConnectionSettingWin
 from c_ui.c_windows.b_connection.connection_connect_win import ConnectionConnectWin
 from c_ui.b_components.b_usercontrol.user_statusbar import UserStatusBar
-from c_ui.b_components.b_usercontrol.user_enum_label import UserEnumLabel
-from c_ui.b_components.b_usercontrol.user_float_label import UserFloatLabel
 from c_ui.b_components.a_custom.custom_panel import CustomPanel
 from c_ui.b_components.a_custom.custom_icon_button import CustomIconButton
 from c_ui.b_components.a_custom.custom_icon_label_button import CustomIconLabelButton
@@ -50,23 +48,27 @@ class MainWin(QMainWindow):
         main_layout.addWidget(self.top_area)
 
         self.bottom_area = QWidget()
-        self.bottom_area.setFixedHeight(275)
+        self.bottom_area.setFixedHeight(290)
 
         bottom_layout = QHBoxLayout(self.bottom_area)
         bottom_layout.setContentsMargins(0, 0, 0, 0) # 영역 간 마진 없애기
         bottom_layout.setSpacing(0)
 
-        section = MainStatus("Status", "System.Control Mode", "Position Control.Basic.Position Control Speed", "Pressure Control.Basic.Controller Selector Used", "System.Warning/Error.Warning Bitmap", "System.Warning/Error.Error Bitmap")
-        bottom_layout.addWidget(section, 3.9)
+        section = MainStatus("System.Control Mode", "Position Control.Basic.Position Control Speed", "Pressure Control.Basic.Controller Selector Used", "System.Warning/Error.Warning Bitmap", "System.Warning/Error.Error Bitmap")
+        bottom_layout.addWidget(section, 26)
 
-        self.ctrl_panel = MainControl("Control"); self.ctrl_panel.open_btn.clicked.connect(self.on_clicked_open_btn); self.ctrl_panel.close_btn.clicked.connect(self.on_clicked_close_btn); self.ctrl_panel.hold_btn.clicked.connect(self.on_clicked_hold_btn); self.ctrl_panel.learn_btn.clicked.connect(self.on_clicked_learn_btn)
-        bottom_layout.addWidget(self.ctrl_panel, 1)
+        self.ctrl_panel = MainControl(); self.ctrl_panel.open_btn.clicked.connect(self.on_clicked_open_btn, Qt.QueuedConnection); self.ctrl_panel.close_btn.clicked.connect(self.on_clicked_close_btn, Qt.QueuedConnection); self.ctrl_panel.hold_btn.clicked.connect(self.on_clicked_hold_btn, Qt.QueuedConnection); self.ctrl_panel.learn_btn.clicked.connect(self.on_clicked_learn_btn, Qt.QueuedConnection)
+        bottom_layout.addWidget(self.ctrl_panel, 10)
             
-        self.posi_panel = MainPosition("Position")
-        bottom_layout.addWidget(self.posi_panel, 2)
+        self.posi_panel = MainPosition()
+        bottom_layout.addWidget(self.posi_panel, 20)
+        self.posi_panel.posi_input.editingFinished.connect(self.on_posi_input_finished, Qt.QueuedConnection)
+        self.posi_panel.sig_btn_clicked.connect(self.on_clicked_posi_btn, Qt.QueuedConnection)
 
-        self.pres_panel = MainPressure("Pressure")
-        bottom_layout.addWidget(self.pres_panel, 2)
+        self.pres_panel = MainPressure()
+        bottom_layout.addWidget(self.pres_panel, 20)
+        self.pres_panel.pres_input.editingFinished.connect(self.on_pres_input_finished, Qt.QueuedConnection)
+        self.pres_panel.sig_btn_clicked.connect(self.on_clicked_pres_btn, Qt.QueuedConnection)
 
         # 메인 레이아웃에 하단 영역 추가
         main_layout.addWidget(self.bottom_area)
@@ -137,6 +139,9 @@ class MainWin(QMainWindow):
 
         self.param_worker.sig_progress_changed.connect(self.handle_progress_changed)
 
+        self.posi_target_param = self.param_worker.add_write_param("Position Control.Basic.Target Position")    
+        self.pres_target_param = self.param_worker.add_write_param("Pressure Control.Basic.Target Pressure")
+
     def on_clicked_local_btn(self):
         self.acc_mode_param.write_str_value = f"{p_enum.AccModeEnum.LOCAL.value}"
         self.param_worker.write()
@@ -176,6 +181,32 @@ class MainWin(QMainWindow):
 
     def on_clicked_learn_btn(self):
         pass
+
+    def on_posi_input_finished(self):
+        write_value_str = self.posi_panel.posi_input.getParamWriteValue()
+        print(f"posi_value : {write_value_str}")
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.POSITION.value}"
+        self.posi_target_param.write_str_value = write_value_str
+        self.param_worker.write()
+        
+    def on_clicked_posi_btn(self, write_str_value=""):
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.POSITION.value}"
+        self.posi_target_param.write_str_value = write_str_value
+        print(f"click posi_value : {write_str_value}")
+        self.param_worker.write()
+        
+    def on_pres_input_finished(self):
+        write_value_str = self.pres_panel.pres_input.getParamWriteValue()
+        print(f"input pres_value : {write_value_str}")
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.PRESSURE.value}"
+        self.pres_target_param.write_str_value = write_value_str
+        self.param_worker.write()
+
+    def on_clicked_pres_btn(self, write_str_value=""):
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.PRESSURE.value}"
+        print(f"click pres_value : {write_str_value}")
+        self.pres_target_param.write_str_value = write_str_value
+        self.param_worker.write()
 
     def handle_changed_connection_info(self, info: str):
         if info:

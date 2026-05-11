@@ -39,6 +39,9 @@ class ServicePort(QObject):
             return self._connect_info
 
     def _set_connect_info(self, info: str):
+        if self._connect_info == info:
+            return
+
         self._connect_info = info
         self.connect_info_changed.emit(info)
 

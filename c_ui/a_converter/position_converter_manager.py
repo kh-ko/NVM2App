@@ -1,6 +1,7 @@
 import threading
 import math
 
+from decimal import Decimal
 from PySide6.QtCore import Signal, QObject
 
 from b_core.b_datatype import param_enum as p_enum
@@ -78,33 +79,6 @@ class PosiConverterManager(QObject):
 
         self.sig_posi_range_changed.emit()
 
-    def convert_posi_to_display_str_value(self, ori_value: float) -> str:
-            
-        if self.posi_unit == -1:
-            return "Unknown Range"
-
-        range_value = self.posi_max - self.posi_min
-
-        if range_value == 0:
-            return "0"
-        else:
-            converted_value = (ori_value - self.posi_min) / range_value * 100
-
-            if converted_value == 0:
-                return "0"
-
-            magnitude = math.floor(math.log10(abs(converted_value)))
-            round_digits = 6 - 1 - magnitude
-            rounded_value = round(converted_value, round_digits)
-
-            if round_digits > 0:
-                formatted_value = f"{rounded_value:.{round_digits}f}"
-                if '.' in formatted_value:
-                    formatted_value = formatted_value.rstrip('0').rstrip('.')
-                return formatted_value
-            else:
-                return f"{rounded_value:.0f}"
-
     def convert_posi_to_display_value(self, ori_value: float) -> float:
             
         if self.posi_unit == -1:
@@ -118,4 +92,29 @@ class PosiConverterManager(QObject):
             converted_value = (ori_value - self.posi_min) / range_value * 100
 
             return converted_value
+
+    def convert_display_to_posi_value(self, display_value: float) -> float:
+        if self.posi_unit == -1:
+            return -999.999
+
+        range_value = self.posi_max - self.posi_min
+
+        if range_value == 0:
+            return self.posi_min
+        else:
+            ori_value = (display_value / 100.0) * range_value + self.posi_min
+            return ori_value
+
+    def convert_display_to_posi_value_str(self, display_value: float) -> str:
+        if self.posi_unit == -1:
+            return ""
+
+        result_value = 0
+
+        range_value = self.posi_max - self.posi_min
+
+        if range_value != 0:
+            result_value = (display_value / 100.0) * range_value + self.posi_min
+        
+        return format(Decimal(str(result_value)), 'f')
         

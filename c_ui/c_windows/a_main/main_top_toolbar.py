@@ -149,19 +149,19 @@ class MainTopToolBar(QToolBar):
         """)
 
     def reg_local_btn_slot(self, slot):
-        self.local_btn.clicked.connect(slot)
+        self.local_btn.clicked.connect(slot, Qt.QueuedConnection)
 
     def reg_remote_btn_slot(self, slot):
-        self.remote_btn.clicked.connect(slot)
+        self.remote_btn.clicked.connect(slot, Qt.QueuedConnection)
 
     def reg_connection_refresh_slot(self, slot):
-        self.action_refresh.triggered.connect(slot)
+        self.action_refresh.triggered.connect(slot, Qt.QueuedConnection)
 
     def reg_connection_connect_slot(self, slot):
-        self.action_connect.triggered.connect(slot)
+        self.action_connect.triggered.connect(slot, Qt.QueuedConnection)
     
     def reg_connection_disconnect_slot(self, slot):
-        self.action_disconnect.triggered.connect(slot)
+        self.action_disconnect.triggered.connect(slot, Qt.QueuedConnection)
     
     def reg_connection_settings_slot(self, slot):
-        self.action_settings.triggered.connect(slot)
+        self.action_settings.triggered.connect(slot, Qt.QueuedConnection)

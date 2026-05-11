@@ -1,14 +1,21 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QDoubleSpinBox, QSizePolicy, QFrame, QVBoxLayout, QWidget, QHBoxLayout, QComboBox
+
+from b_core.c_manager.local_setting_manager import LocalSettingManager
+
+from c_ui.a_converter.position_converter_manager import PosiConverterManager
 
 from c_ui.b_components.a_custom.custom_label import CustomLabel
 from c_ui.b_components.a_custom.custom_button import CustomButton
 from c_ui.b_components.a_custom.custom_title import CustomTitle
 
-from c_ui.b_components.b_usercontrol.user_posi_label_in_main import UserPosiLabelInMain
+from c_ui.b_components.b_usercontrol.b_main_win_controls.posi_label_in_main import PosiLabelInMain
+from c_ui.b_components.b_usercontrol.b_main_win_controls.posi_input_in_main import PosiInputInMain
 
 class MainPosition(QWidget):
-    def __init__(self, title="", parent=None): # title의 기본값을 빈 문자열로 설정
+    sig_btn_clicked = Signal(str)
+    
+    def __init__(self, parent=None): # title의 기본값을 빈 문자열로 설정
         super().__init__(parent)
         self.setObjectName("MainPosition")
 
@@ -25,7 +32,7 @@ class MainPosition(QWidget):
         self.main_layout.setContentsMargins(10, 10, 10, 10) # 카드 내부 여백
         self.main_layout.setSpacing(5) # 내부 위젯들 간의 기본 간격
 
-        lbl_title = CustomTitle(title)
+        lbl_title = CustomTitle("Position")
         # 패널의 기본 스타일이 상속되어 테두리가 생길 수 있으므로 border: none 추가
         self.main_layout.addWidget(lbl_title)
 
@@ -48,29 +55,44 @@ class MainPosition(QWidget):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(5)
         
-        self.spin_value = QDoubleSpinBox()
-        self.spin_value.setDecimals(3)
-        self.spin_value.setRange(-9999.999, 9999.999)
-        self.spin_value.setAlignment(Qt.AlignRight)
-        self.spin_value.setMinimumWidth(1) 
-        self.spin_value.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
-
-        self.spin_value.setStyleSheet("""
-            QDoubleSpinBox {
-                border: 1px solid #dcdcdc;
-                border-radius: 4px;
-                padding: 4px;
-                background-color: white; /* 배경색을 흰색으로 지정 */
-            }
-        """)
+        self.posi_input = PosiInputInMain("Target", param_full_path="Position Control.Basic.Target Position")
+        self.posi_input.setDecimals(2)
+        self.posi_input.setRange(-100.0, 100.0)
+        self.posi_input.setAlignment(Qt.AlignRight)
+        self.posi_input.setMinimumWidth(1) 
+        self.posi_input.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)        
         
-        right_layout.addWidget(self.spin_value)
+        right_layout.addWidget(self.posi_input)
 
-        # 버튼들 추가
-        for _ in range(6):
-            btn = CustomButton("100%")
-            btn.setMinimumWidth(1) # 버튼 폭 제한 해제
-            right_layout.addWidget(btn)
+        self.btn_01 = CustomButton("100")
+        self.btn_01.setMinimumWidth(1)
+        self.btn_01.clicked.connect(self.on_btn_01_clicked)
+        right_layout.addWidget(self.btn_01)
+
+        self.btn_02 = CustomButton("100")
+        self.btn_02.setMinimumWidth(1)
+        self.btn_02.clicked.connect(self.on_btn_02_clicked)
+        right_layout.addWidget(self.btn_02)
+
+        self.btn_03 = CustomButton("100")
+        self.btn_03.setMinimumWidth(1)
+        self.btn_03.clicked.connect(self.on_btn_03_clicked)
+        right_layout.addWidget(self.btn_03)
+
+        self.btn_04 = CustomButton("100")
+        self.btn_04.setMinimumWidth(1)
+        self.btn_04.clicked.connect(self.on_btn_04_clicked)
+        right_layout.addWidget(self.btn_04)
+
+        self.btn_05 = CustomButton("100")
+        self.btn_05.setMinimumWidth(1)
+        self.btn_05.clicked.connect(self.on_btn_05_clicked)
+        right_layout.addWidget(self.btn_05)
+
+        self.btn_06 = CustomButton("100")
+        self.btn_06.setMinimumWidth(1)
+        self.btn_06.clicked.connect(self.on_btn_06_clicked)
+        right_layout.addWidget(self.btn_06)
             
         right_layout.addStretch()
         
@@ -82,8 +104,8 @@ class MainPosition(QWidget):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(10)
         
-        self.status_actual = UserPosiLabelInMain("Actual", "Position Control.Basic.Actual Position")
-        self.status_target = UserPosiLabelInMain("Target", "Position Control.Basic.Target Position Used")
+        self.status_actual = PosiLabelInMain("Actual", "Position Control.Basic.Actual Position")
+        self.status_target = PosiLabelInMain("Target Used", "Position Control.Basic.Target Position Used")
         #self.status_max = UserPosiLabelInMain("Max", "Position Control.Basic.Position Max")
         
         left_layout.addWidget(self.status_actual)
@@ -98,8 +120,26 @@ class MainPosition(QWidget):
         self.combo_unit = QComboBox()
         self.combo_unit.setEnabled(False)
         self.combo_unit.addItems([
-            "Percent (%)"
+            "Percent(%)"
         ])
+
+        self.converter = PosiConverterManager()   
+        
+        LocalSettingManager().sig_posi_setpoint01_changed.connect(self.handle_posi_setpoint01_changed)
+        LocalSettingManager().sig_posi_setpoint02_changed.connect(self.handle_posi_setpoint02_changed)
+        LocalSettingManager().sig_posi_setpoint03_changed.connect(self.handle_posi_setpoint03_changed)
+        LocalSettingManager().sig_posi_setpoint04_changed.connect(self.handle_posi_setpoint04_changed)
+        LocalSettingManager().sig_posi_setpoint05_changed.connect(self.handle_posi_setpoint05_changed)
+        LocalSettingManager().sig_posi_setpoint06_changed.connect(self.handle_posi_setpoint06_changed)
+
+        self.handle_posi_setpoint01_changed()
+        self.handle_posi_setpoint02_changed()
+        self.handle_posi_setpoint03_changed()
+        self.handle_posi_setpoint04_changed()
+        self.handle_posi_setpoint05_changed()
+        self.handle_posi_setpoint06_changed()
+
+        self.converter.sig_posi_range_changed.connect(self.handle_posi_range_changed)   
         
         # 기존 스핀박스/라벨과 디자인 톤을 맞추기 위한 스타일 적용
         self.combo_unit.setStyleSheet("""
@@ -143,7 +183,7 @@ class MainPosition(QWidget):
                 selection-color: #1976d2;            /* 선택 항목 글자색 */
             }
         """)
-        
+
         unit_layout.addWidget(lbl_unit)
         unit_layout.addWidget(self.combo_unit)
         
@@ -151,8 +191,83 @@ class MainPosition(QWidget):
 
         left_layout.addStretch()
         
-        content_layout.addWidget(left_container, 1)  
-        content_layout.addWidget(right_container, 1) 
+        content_layout.addWidget(left_container, 8)  
+        content_layout.addWidget(right_container, 10) 
         self.main_layout.addLayout(content_layout)
         self.main_layout.addStretch()
+
+    def handle_posi_setpoint01_changed(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint01
+        display_value = setpoint_ratio * 100
+        self.btn_01.setText(f"{display_value:.2f}")   
+
+    def handle_posi_setpoint02_changed(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint02
+        display_value = setpoint_ratio * 100
+        self.btn_02.setText(f"{display_value:.2f}")  
+
+    def handle_posi_setpoint03_changed(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint03
+        display_value = setpoint_ratio * 100
+        self.btn_03.setText(f"{display_value:.2f}")
+
+    def handle_posi_setpoint04_changed(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint04
+        display_value = setpoint_ratio * 100
+        self.btn_04.setText(f"{display_value:.2f}")
+
+    def handle_posi_setpoint05_changed(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint05
+        display_value = setpoint_ratio * 100
+        self.btn_05.setText(f"{display_value:.2f}")
+
+    def handle_posi_setpoint06_changed(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint06
+        display_value = setpoint_ratio * 100
+        self.btn_06.setText(f"{display_value:.2f}") 
+
+    def handle_posi_range_changed(self):
+        self.handle_posi_setpoint01_changed()
+        self.handle_posi_setpoint02_changed()
+        self.handle_posi_setpoint03_changed()
+        self.handle_posi_setpoint04_changed()
+        self.handle_posi_setpoint05_changed()
+        self.handle_posi_setpoint06_changed()  
+
+    def on_btn_01_clicked(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint01
+        display_value = 100 * setpoint_ratio
+        posi_value = self.converter.convert_display_to_posi_value_str(display_value)
+        self.sig_btn_clicked.emit(posi_value)       
+
+    def on_btn_02_clicked(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint02
+        display_value = 100 * setpoint_ratio
+        posi_value = self.converter.convert_display_to_posi_value_str(display_value)
+        self.sig_btn_clicked.emit(posi_value) 
+
+    def on_btn_03_clicked(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint03
+        display_value = 100 * setpoint_ratio
+        posi_value = self.converter.convert_display_to_posi_value_str(display_value)
+        self.sig_btn_clicked.emit(posi_value) 
+
+    def on_btn_04_clicked(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint04
+        display_value = 100 * setpoint_ratio
+        posi_value = self.converter.convert_display_to_posi_value_str(display_value)
+        self.sig_btn_clicked.emit(posi_value) 
+
+    def on_btn_05_clicked(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint05
+        display_value = 100 * setpoint_ratio
+        posi_value = self.converter.convert_display_to_posi_value_str(display_value)
+        self.sig_btn_clicked.emit(posi_value) 
+
+    def on_btn_06_clicked(self):
+        setpoint_ratio = LocalSettingManager().posi_setpoint06
+        display_value = 100 * setpoint_ratio
+        posi_value = self.converter.convert_display_to_posi_value_str(display_value)
+        self.sig_btn_clicked.emit(posi_value) 
+        
 
