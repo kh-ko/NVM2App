@@ -1,3 +1,4 @@
+from c_ui.b_components.a_custom.custom_icon_label_button import CustomIconLabelButton
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QDoubleSpinBox, QSizePolicy, QFrame, QVBoxLayout, QWidget, QHBoxLayout, QComboBox
 
@@ -32,9 +33,21 @@ class MainPosition(QWidget):
         self.main_layout.setContentsMargins(10, 10, 10, 10) # 카드 내부 여백
         self.main_layout.setSpacing(5) # 내부 위젯들 간의 기본 간격
 
+        self.title_layout = QHBoxLayout()
+        self.title_layout.setContentsMargins(0, 0, 0, 0)
+        
         lbl_title = CustomTitle("Position")
         # 패널의 기본 스타일이 상속되어 테두리가 생길 수 있으므로 border: none 추가
-        self.main_layout.addWidget(lbl_title)
+        self.title_layout.addWidget(lbl_title)
+
+        self.title_layout.addStretch()
+
+        self.btn_edit = CustomIconLabelButton("Edit", "\ue8b8")
+        self.btn_edit.setMinimumWidth(50)
+        self.btn_edit.setMaximumHeight(18)
+        self.title_layout.addWidget(self.btn_edit)
+
+        self.main_layout.addLayout(self.title_layout)
 
         line = QFrame()
         line.setFixedHeight(1) # 선의 두께를 명시적으로 1px로 지정

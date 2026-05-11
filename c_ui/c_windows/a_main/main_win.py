@@ -64,11 +64,13 @@ class MainWin(QMainWindow):
         bottom_layout.addWidget(self.posi_panel, 20)
         self.posi_panel.posi_input.editingFinished.connect(self.on_posi_input_finished, Qt.QueuedConnection)
         self.posi_panel.sig_btn_clicked.connect(self.on_clicked_posi_btn, Qt.QueuedConnection)
+        self.posi_panel.btn_edit.clicked.connect(self.on_clicked_posi_edit_btn, Qt.QueuedConnection)
 
         self.pres_panel = MainPressure()
         bottom_layout.addWidget(self.pres_panel, 20)
         self.pres_panel.pres_input.editingFinished.connect(self.on_pres_input_finished, Qt.QueuedConnection)
         self.pres_panel.sig_btn_clicked.connect(self.on_clicked_pres_btn, Qt.QueuedConnection)
+        self.pres_panel.btn_edit.clicked.connect(self.on_clicked_pres_edit_btn, Qt.QueuedConnection)
 
         # 메인 레이아웃에 하단 영역 추가
         main_layout.addWidget(self.bottom_area)
@@ -194,6 +196,9 @@ class MainWin(QMainWindow):
         self.posi_target_param.write_str_value = write_str_value
         print(f"click posi_value : {write_str_value}")
         self.param_worker.write()
+
+    def on_clicked_posi_edit_btn(self):
+        pass
         
     def on_pres_input_finished(self):
         write_value_str = self.pres_panel.pres_input.getParamWriteValue()
@@ -207,6 +212,9 @@ class MainWin(QMainWindow):
         print(f"click pres_value : {write_str_value}")
         self.pres_target_param.write_str_value = write_str_value
         self.param_worker.write()
+
+    def on_clicked_pres_edit_btn(self):
+        pass
 
     def handle_changed_connection_info(self, info: str):
         if info:
