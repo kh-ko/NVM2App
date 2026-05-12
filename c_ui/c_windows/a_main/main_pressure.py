@@ -231,44 +231,32 @@ class MainPressure(QWidget):
     
     def handle_pres_setpoint01_changed(self):
         current_decimal_places = LocalSettingManager().decimal_places
-        setpoint_ratio = LocalSettingManager().pres_setpoint01
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint01)
         self.btn_01.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint02_changed(self):
         current_decimal_places = LocalSettingManager().decimal_places
-        setpoint_ratio = LocalSettingManager().pres_setpoint02
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint02)
         self.btn_02.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint03_changed(self):
         current_decimal_places = LocalSettingManager().decimal_places
-        setpoint_ratio = LocalSettingManager().pres_setpoint03
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint03)
         self.btn_03.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint04_changed(self):
         current_decimal_places = LocalSettingManager().decimal_places
-        setpoint_ratio = LocalSettingManager().pres_setpoint04
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint04)
         self.btn_04.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint05_changed(self):
         current_decimal_places = LocalSettingManager().decimal_places
-        setpoint_ratio = LocalSettingManager().pres_setpoint05
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint05)
         self.btn_05.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint06_changed(self):
         current_decimal_places = LocalSettingManager().decimal_places
-        setpoint_ratio = LocalSettingManager().pres_setpoint06
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint06)
         self.btn_06.setText(f"{display_value:.{current_decimal_places}f}")  
         
     def handle_pres_range_changed(self):
@@ -285,45 +273,33 @@ class MainPressure(QWidget):
             LocalSettingManager().pres_unit = selected_unit.value
 
     def on_btn_01_clicked(self):
-        setpoint_ratio = LocalSettingManager().pres_setpoint01
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
-        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint01)
+        pres_value = self.converter.convert_dp_pres_to_iface_pres_str(display_value)
         self.sig_btn_clicked.emit(pres_value)
         
     def on_btn_02_clicked(self):
-        setpoint_ratio = LocalSettingManager().pres_setpoint02
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
-        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint02)
+        pres_value = self.converter.convert_dp_pres_to_iface_pres_str(display_value)
         self.sig_btn_clicked.emit(pres_value)
         
     def on_btn_03_clicked(self):
-        setpoint_ratio = LocalSettingManager().pres_setpoint03
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
-        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint03)
+        pres_value = self.converter.convert_dp_pres_to_iface_pres_str(display_value)
         self.sig_btn_clicked.emit(pres_value)
         
     def on_btn_04_clicked(self):
-        setpoint_ratio = LocalSettingManager().pres_setpoint04
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
-        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint04)
+        pres_value = self.converter.convert_dp_pres_to_iface_pres_str(display_value)
         self.sig_btn_clicked.emit(pres_value)
         
     def on_btn_05_clicked(self):
-        setpoint_ratio = LocalSettingManager().pres_setpoint05
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
-        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint05)
+        pres_value = self.converter.convert_dp_pres_to_iface_pres_str(display_value)
         self.sig_btn_clicked.emit(pres_value)
         
     def on_btn_06_clicked(self):
-        setpoint_ratio = LocalSettingManager().pres_setpoint06
-        max_pres_value = self.converter.get_display_max_pres_value()
-        display_value = max_pres_value * setpoint_ratio
-        pres_value = self.converter.convert_display_to_pres_value_str(display_value)
+        display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint06)
+        pres_value = self.converter.convert_dp_pres_to_iface_pres_str(display_value)
         self.sig_btn_clicked.emit(pres_value) 
 
 

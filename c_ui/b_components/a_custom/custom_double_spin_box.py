@@ -38,11 +38,20 @@ class CustomDoubleSpinBox(QWidget):
 
         # 3. 라인 에디트 생성 및 추가
         self.line_edit = QDoubleSpinBox()
-        self.line_edit.setStyleSheet("background-color: white; color: black;")
+        self.line_edit.setStyleSheet("""
+                QDoubleSpinBox {
+                    border: 1px solid #dcdcdc;
+                    border-radius: 4px;
+                    padding-right: 5px;
+                    background-color: white;
+                }
+                QDoubleSpinBox:focus {
+                    border: 1px solid #2196F3;
+                }
+            """)
+        self.line_edit.setMinimumWidth(60)
         self.line_edit.setRange(-3.4028235e38, 3.4028235e38)
-        #validator = QDoubleValidator(self)
-        #validator.setNotation(QDoubleValidator.StandardNotation) # 과학적 표기법(e) 방지 (선택사항)
-        #self.line_edit.setValidator(validator)
+        self.line_edit.setAlignment(Qt.AlignRight)
         self.layout.addWidget(self.line_edit, 1)
 
         self.line_edit.valueChanged.connect(self._on_text_edited)

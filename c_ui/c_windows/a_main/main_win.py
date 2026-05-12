@@ -24,6 +24,8 @@ from c_ui.c_windows.a_main.main_status import MainStatus
 from c_ui.c_windows.a_main.main_control import MainControl
 from c_ui.c_windows.a_main.main_position import MainPosition
 from c_ui.c_windows.a_main.main_pressure import MainPressure
+from c_ui.c_windows.a_main.main_posi_edit_win import MainPosiEditWin
+from c_ui.c_windows.a_main.main_pres_edit_win import MainPresEditWin
 
 class MainWin(QMainWindow):
     """
@@ -198,7 +200,7 @@ class MainWin(QMainWindow):
         self.param_worker.write()
 
     def on_clicked_posi_edit_btn(self):
-        pass
+        WinManager().show_window(win_class=MainPosiEditWin, parent=self, is_modal=True)
         
     def on_pres_input_finished(self):
         write_value_str = self.pres_panel.pres_input.getParamWriteValue()
@@ -214,7 +216,7 @@ class MainWin(QMainWindow):
         self.param_worker.write()
 
     def on_clicked_pres_edit_btn(self):
-        pass
+        WinManager().show_window(win_class=MainPresEditWin, parent=self, is_modal=True)
 
     def handle_changed_connection_info(self, info: str):
         if info:

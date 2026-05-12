@@ -9,6 +9,12 @@ from b_core.b_datatype import param_enum as p_enum
 from b_core.c_manager.parameter_manager import ParamManager
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 
+
+# 압력을 나타내는 단위는 3가지 이다.
+# 1. 통신에서 사용하는 압력 단위
+# 2. GUI 표시할 압력 단위
+# 3. Full Scale값으로 압력 표시 단위( 0.0 ~ 1.0 : 1.0일때 압력센서의 Max값이 된다.)
+
 class PresConverterManager(QObject):
     _instance = None
     _creation_lock = threading.Lock()
@@ -144,20 +150,32 @@ class PresConverterManager(QObject):
         # UI 갱신 등을 위한 시그널 발생
         self.sig_pres_range_changed.emit()
 
-    #def convert_pres_to_display_str_value(self, ori_value: float) -> str:
-    #    return ""
+    def get_dp_max_pres(self) -> float:
+        if self.iface_max_param.value:
+            return self.convert_iface_pres_to_dp_pres(self.iface_max_param.value)
+        else:
+            return 1.0
 
-    def convert_pres_to_display_value(self, ori_value: float) -> float:
+    def convert_iface_pres_to_dp_pres(self, ori_value: float) -> float:
         real_pres_in_sens_unit = (ori_value * self.slope) + self.intercept
         return (real_pres_in_sens_unit * self.unit_gain) + self.unit_offset
 
-    def convert_display_to_pres_value_str(self, value: float) -> str:
+    def convert_dp_pres_to_iface_pres_str(self, value: float) -> str:
         if self.slope == 0:
             return ""
             
         real_pres_in_sens_unit = (value - self.unit_offset) / self.unit_gain
         result_value = (real_pres_in_sens_unit - self.intercept) / self.slope
         return format(Decimal(str(result_value)), 'f')
+
+    def convert_sfs_to_dp_pres(self, value: float) -> float:
+        pres_max = self.get_dp_max_pres()
+        return pres_max * value
+
+    def convert_dp_pres_to_sfs(self, value: float) -> float:
+        pres_max = self.get_dp_max_pres()
+        if pres_max == 0: return 0.0
+        return value / pres_max        
 
     def _convert_pressure(self, value: float, from_unit_idx: int, to_unit_idx: int) -> float:
         gain, offset = self._get_unit_conversion(from_unit_idx, to_unit_idx)
@@ -194,11 +212,5 @@ class PresConverterManager(QObject):
             return p_enum.SensUnitEnum.PSIA.value
         else:
             return p_enum.SensUnitEnum.PA.value
-
-    def get_display_max_pres_value(self) -> float:
-        if self.iface_max_param.value:
-            return self.convert_pres_to_display_value(self.iface_max_param.value)
-        else:
-            return 1.0
             
         

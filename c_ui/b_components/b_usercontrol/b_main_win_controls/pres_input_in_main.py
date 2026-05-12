@@ -179,7 +179,7 @@ class PresInputInMain(QGroupBox):
             if not self.param.is_not_support:
                 value = self.param.value
                 if value:
-                    display_value = self.converter.convert_pres_to_display_value(value)
+                    display_value = self.converter.convert_iface_pres_to_dp_pres(value)
                     self.setValue(display_value)
                 else:
                     self.setValue(0.0)
@@ -191,5 +191,5 @@ class PresInputInMain(QGroupBox):
         pass
 
     def getParamWriteValue(self) -> str:
-        param_value_str = self.converter.convert_display_to_pres_value_str(self.value())
+        param_value_str = self.converter.convert_dp_pres_to_iface_pres_str(self.value())
         return param_value_str

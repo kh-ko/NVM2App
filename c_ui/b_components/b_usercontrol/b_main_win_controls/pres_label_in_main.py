@@ -54,14 +54,14 @@ class PresLabelInMain(QWidget):
         if not self.value_param.str_value:
             return
 
-        display_value = self.converter.convert_pres_to_display_value(self.value_param.value)
+        display_value = self.converter.convert_iface_pres_to_dp_pres(self.value_param.value)
         self.lbl_value.setText(f"{display_value:.{self._decimal_places}f}")
 
     def handle_value_changed(self):
         if not self.value_param.str_value:
             return
 
-        display_value = self.converter.convert_pres_to_display_value(self.value_param.value)
+        display_value = self.converter.convert_iface_pres_to_dp_pres(self.value_param.value)
         self.lbl_value.setText(f"{display_value:.{self._decimal_places}f}")
         
     def handle_is_not_support_changed(self, is_not_support : bool):
