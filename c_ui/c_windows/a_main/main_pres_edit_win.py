@@ -7,11 +7,12 @@ from b_core.c_manager.local_setting_manager import LocalSettingManager
 
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 
-from c_ui.b_components.a_custom.custom_combobox import CustomComboBox
-from c_ui.b_components.a_custom.custom_double_spin_box import CustomDoubleSpinBox
-from c_ui.b_components.a_custom.custom_label import CustomLabel
-from c_ui.b_components.a_custom.custom_panel import CustomPanel
-from c_ui.b_components.a_custom.custom_toolbar import CustomToolBar
+from c_ui.b_components.a_custom_base.custom_combobox import CustomComboBox
+from c_ui.b_components.a_custom_base.custom_label import CustomLabel
+from c_ui.b_components.b_custom_layout.custom_panel import CustomPanel
+from c_ui.b_components.a_custom_base.custom_toolbar import CustomToolBar
+from c_ui.b_components.c_custom_composit.combo_input_widget import ComboInputWidget
+from c_ui.b_components.c_custom_composit.double_spin_input_widget import DoubleSpinInputWidget
 
 class MainPresEditWin(QMainWindow):
     def __init__(self, parent=None):
@@ -21,7 +22,7 @@ class MainPresEditWin(QMainWindow):
         self.resize(350, 450)
 
         self.converter = PresConverterManager()   
-        self.decimal_places = LocalSettingManager().decimal_places
+        self.decimal_places = LocalSettingManager().pres_decimal_places
 
         self.init_ui()
 
@@ -48,7 +49,7 @@ class MainPresEditWin(QMainWindow):
         ]
 
         for i, val in enumerate(current_values, start=1):
-            row_widget = CustomDoubleSpinBox(f"Setpoint {i:02d}")
+            row_widget = DoubleSpinInputWidget(f"Setpoint {i:02d}")
             pres_value = self.converter.convert_sfs_to_dp_pres(val)
             row_widget.setValue(pres_value)
             row_widget.setDecimals(self.decimal_places)
@@ -57,7 +58,7 @@ class MainPresEditWin(QMainWindow):
             self.detail_panel.add_widget(row_widget)
             self.spinboxes.append(row_widget)
 
-        self.deciaml_places_combo = CustomComboBox("Decimal Places")
+        self.deciaml_places_combo = ComboInputWidget("Decimal Places")
         self.deciaml_places_combo.addItem("0", 0)
         self.deciaml_places_combo.addItem("1", 1)
         self.deciaml_places_combo.addItem("2", 2)
@@ -86,7 +87,7 @@ class MainPresEditWin(QMainWindow):
         manager.pres_setpoint04 = self.converter.convert_dp_pres_to_sfs(self.spinboxes[3].value())
         manager.pres_setpoint05 = self.converter.convert_dp_pres_to_sfs(self.spinboxes[4].value())
         manager.pres_setpoint06 = self.converter.convert_dp_pres_to_sfs(self.spinboxes[5].value())
-        manager.decimal_places = self.deciaml_places_combo.currentData()
+        manager.pres_decimal_places = self.deciaml_places_combo.currentData()
 
         for spinbox in self.spinboxes:
             spinbox.commit()  

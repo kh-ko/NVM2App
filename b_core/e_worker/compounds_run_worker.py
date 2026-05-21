@@ -65,16 +65,16 @@ class CompoundsWorkerThread(QThread):
                         response, err_type = self.svc_port.request(cmd)
 
                         if err_type != SvcPortErrType.NONE:
-                            self.sig_log.emit(True, cmd.hex(), response, f"Write Compound Fail : {err_type}")
+                            self.sig_log.emit(True, cmd.decode('utf-8'), response, f"Write Compound Fail : {err_type}")
                             self.msleep(100) 
                             break
                         
                         if not response.startswith("p:0001"):
-                            self.sig_log.emit(True, cmd.hex(), response, "Write Compound Fail")
+                            self.sig_log.emit(True, cmd.decode('utf-8'), response, "Write Compound Fail")
                             self.msleep(100) 
                             break
 
-                        self.sig_log.emit(False, cmd.hex(), response, "Write Compound Success")
+                        self.sig_log.emit(False, cmd.decode('utf-8'), response, "Write Compound Success")
                     else:
                         self._is_not_connected = False
             else:
@@ -98,7 +98,7 @@ class CompoundsWorkerThread(QThread):
                     self._loop_log_count += 1
 
                     if self._loop_log_count % 100 == 0:
-                        self.sig_log.emit(False, self.compound_read_bytes.hex(), response, "Read Compound Success")
+                        self.sig_log.emit(False, self.compound_read_bytes.decode('utf-8'), response, "Read Compound Success")
 
                     payload = response[16:]
                     values = payload.split(';')
@@ -111,8 +111,8 @@ class CompoundsWorkerThread(QThread):
                             int(values[0]),   # access_mode
                             int(values[1]),   # control_mode
                             float(values[2]),     # act_posi
-                            float(values[3]),     # act_pres
-                            float(values[4]),     # target_posi
+                            float(values[3]),     # target_posi
+                            float(values[4]),     # act_pres
                             float(values[5]),     # target_pres
                             float(values[6]),     # speed
                             int(values[7]),   # pres_contoller_selector
@@ -126,10 +126,10 @@ class CompoundsWorkerThread(QThread):
                             self.data_queue.append(parsed_data)
 
                     else:
-                        self.sig_log.emit(True, self.compound_read_bytes.hex(), response, "Response is short")
+                        self.sig_log.emit(True, self.compound_read_bytes.decode('utf-8'), response, "Response is short")
                         
                 except Exception as e:
-                    self.sig_log.emit(True, self.compound_read_bytes.hex(), response, f"Error: {str(e)}")
+                    self.sig_log.emit(True, self.compound_read_bytes.decode('utf-8'), response, f"Error: {str(e)}")
             else:
                 self.msleep(1000)
 
@@ -205,8 +205,8 @@ class CompoundsRunWorker(QObject):
                 last_data.access_mode,               # 0
                 last_data.control_mode,              # 1
                 last_data.act_posi,                  # 2
-                last_data.act_pres,                  # 3
-                last_data.target_posi,               # 4
+                last_data.target_posi,               # 3
+                last_data.act_pres,                  # 4
                 last_data.target_pres,               # 5
                 last_data.speed,                     # 6
                 last_data.pres_contoller_selector,   # 7

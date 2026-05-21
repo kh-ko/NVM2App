@@ -63,6 +63,8 @@ class ParameterWorker(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self._is_cleaned = False
+
         self._acc_mode_param: Parameter = ParamManager().get_by_full_path("System.Access Mode")
 
         self._thread = QThread()
@@ -99,9 +101,9 @@ class ParameterWorker(QObject):
 
         app = QCoreApplication.instance()
         if app is not None:
-            app.aboutToQuit.connect(self._destroyed)
+            app.aboutToQuit.connect(self.cleanup)
 
-        self.destroyed.connect(self._destroyed)
+        self.destroyed.connect(self.cleanup)
 
         self._thread.start()
 
@@ -117,11 +119,19 @@ class ParameterWorker(QObject):
             self.read_param_list.append(param)
         return param
 
+    def add_read_param_ptr(self, param: Parameter):
+        if param is not None:
+            self.read_param_list.append(param)
+
     def add_write_param(self, param_full_path: str)->Parameter:
         param = ParamManager().get_by_full_path(param_full_path)
         if param is not None:
             self.write_param_list.append(param)
         return param
+
+    def add_write_param_ptr(self, param: Parameter):
+        if param is not None:
+            self.write_param_list.append(param)
 
     def add_monitor_param(self, param_full_path: str):
         param = ParamManager().get_by_full_path(param_full_path)
@@ -224,8 +234,17 @@ class ParameterWorker(QObject):
                 self._send_read_request(param)
                 return
             else:
-                self._current_phase = "READ"
+                self._current_phase = "READ_WRITE_PARAM"
                 self._current_index = 0
+
+        if self._current_phase == "READ_WRITE_PARAM":
+            if self._current_index < len(self.write_param_list):
+                param = self.write_param_list[self._current_index]
+                self._send_read_request(param)
+                return
+            else:                
+                self._current_phase = "READ"
+                self._current_index = 0     
 
         if self._current_phase == "WRITE_AFTER_READ":
             if self._current_index < len(self.write_param_proc_list):
@@ -246,7 +265,7 @@ class ParameterWorker(QObject):
                 self.progress = 0
                 
                 self._current_phase = "MONITOR"
-                self._current_index = 0
+                self._current_index = 0           
 
         if self._current_phase == "MONITOR":
             if not self.monitor_param_list:
@@ -301,7 +320,7 @@ class ParameterWorker(QObject):
                 self._request_read_next()
                 return
 
-        if self._current_phase in ["INIT", "WRITE_AFTER_READ", "READ"]:
+        if self._current_phase in ["INIT", "READ_WRITE_PARAM", "WRITE_AFTER_READ", "READ"]:
             self._processed_count += 1
             if self._total_target_count > 0:
                 self.progress = int((self._processed_count / self._total_target_count) * 100)
@@ -370,21 +389,48 @@ class ParameterWorker(QObject):
             self._active_msg_box.reject()
             self._active_msg_box = None
 
-    def _destroyed(self):
+    #def _destroyed(self):
+    #    app = QCoreApplication.instance()
+    #    if app is not None:
+    #        try:
+    #            app.aboutToQuit.disconnect(self._destroyed)
+    #        except (TypeError, RuntimeError):
+    #            pass
+    #    if self._thread is not None and self._thread.isRunning():
+    #        
+    #        if self._param_thread:
+    #            self._param_thread.blockSignals(True)
+    #        
+    #        self._thread.quit()  
+    #        self._thread.wait()  
+    #        
+    #        self._thread = None       
+    #        self._param_thread = None    
+
+    def cleanup(self):
+        # 이미 자원 해제가 진행되었거나 완료되었다면 무시 (충돌 방지 핵심)
+        if self._is_cleaned:
+            return
+        self._is_cleaned = True
+
+        # 1. aboutToQuit 시그널 연결 해제
         app = QCoreApplication.instance()
         if app is not None:
             try:
-                app.aboutToQuit.disconnect(self._destroyed)
+                app.aboutToQuit.disconnect(self.cleanup)
             except (TypeError, RuntimeError):
                 pass
+
+        # 2. 스레드 안전 종료
         if self._thread is not None and self._thread.isRunning():
-            
             if self._param_thread:
                 self._param_thread.blockSignals(True)
+                # (옵션) ParameterThread 내부에 루프가 있다면 멈추는 플래그나 메서드를 여기서 호출
+                # self._param_thread.stop() 
             
-            self._thread.quit()  
-            self._thread.wait()  
+            self._thread.quit()  # 스레드의 이벤트 루프 종료 요청
+            self._thread.wait()  # 스레드가 완전히 종료될 때까지 대기
             
             self._thread = None       
-            self._param_thread = None    
+            self._param_thread = None            
     

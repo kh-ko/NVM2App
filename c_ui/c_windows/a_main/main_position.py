@@ -1,4 +1,3 @@
-from c_ui.b_components.a_custom.custom_icon_label_button import CustomIconLabelButton
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QDoubleSpinBox, QSizePolicy, QFrame, QVBoxLayout, QWidget, QHBoxLayout, QComboBox
 
@@ -6,12 +5,14 @@ from b_core.c_manager.local_setting_manager import LocalSettingManager
 
 from c_ui.a_converter.position_converter_manager import PosiConverterManager
 
-from c_ui.b_components.a_custom.custom_label import CustomLabel
-from c_ui.b_components.a_custom.custom_button import CustomButton
-from c_ui.b_components.a_custom.custom_title import CustomTitle
+from c_ui.b_components.a_custom_base.custom_label import CustomLabel
+from c_ui.b_components.a_custom_base.custom_button import CustomButton
+from c_ui.b_components.a_custom_base.custom_title import CustomTitle
 
-from c_ui.b_components.b_usercontrol.b_main_win_controls.posi_label_in_main import PosiLabelInMain
-from c_ui.b_components.b_usercontrol.b_main_win_controls.posi_input_in_main import PosiInputInMain
+from c_ui.b_components.c_custom_composit.icon_button import IconButton
+from c_ui.b_components.c_custom_composit.icon_label_button import IconLabelButton
+from c_ui.c_windows.a_main.posi_label_in_main import PosiLabelInMain
+from c_ui.c_windows.a_main.posi_input_in_main import PosiInputInMain
 
 class MainPosition(QWidget):
     sig_btn_clicked = Signal(str)
@@ -42,7 +43,7 @@ class MainPosition(QWidget):
 
         self.title_layout.addStretch()
 
-        self.btn_edit = CustomIconLabelButton("Edit", "\ue8b8")
+        self.btn_edit = IconLabelButton(text="Edit", icon_char="\ue8b8", icon_color ="black", icon_size_scale = 1.0 )
         self.btn_edit.setMinimumWidth(50)
         self.btn_edit.setMaximumHeight(18)
         self.title_layout.addWidget(self.btn_edit)

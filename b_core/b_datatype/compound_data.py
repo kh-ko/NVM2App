@@ -6,8 +6,8 @@ class CompoundData(NamedTuple):
     access_mode: int
     control_mode: int
     act_posi: float
-    act_pres: float
     target_posi: float
+    act_pres: float
     target_pres: float
     speed: float
     pres_contoller_selector: int

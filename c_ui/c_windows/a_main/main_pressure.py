@@ -6,12 +6,14 @@ from b_core.c_manager.local_setting_manager import LocalSettingManager
 
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 
-from c_ui.b_components.a_custom.custom_icon_label_button import CustomIconLabelButton
-from c_ui.b_components.a_custom.custom_label import CustomLabel
-from c_ui.b_components.a_custom.custom_button import CustomButton
-from c_ui.b_components.a_custom.custom_title import CustomTitle
-from c_ui.b_components.b_usercontrol.b_main_win_controls.pres_label_in_main import PresLabelInMain
-from c_ui.b_components.b_usercontrol.b_main_win_controls.pres_input_in_main import PresInputInMain
+from c_ui.b_components.a_custom_base.custom_label import CustomLabel
+from c_ui.b_components.a_custom_base.custom_button import CustomButton
+
+from c_ui.b_components.a_custom_base.custom_title import CustomTitle
+from c_ui.b_components.c_custom_composit.icon_button import IconButton
+from c_ui.b_components.c_custom_composit.icon_label_button import IconLabelButton
+from c_ui.c_windows.a_main.pres_input_in_main import PresInputInMain
+from c_ui.c_windows.a_main.pres_label_in_main import PresLabelInMain
 
 class MainPressure(QWidget):
 
@@ -43,7 +45,7 @@ class MainPressure(QWidget):
 
         self.title_layout.addStretch()
 
-        self.btn_edit = CustomIconLabelButton("Edit", "\ue8b8")
+        self.btn_edit = IconLabelButton(text="Edit", icon_char="\ue8b8", icon_color ="black", icon_size_scale = 1.0 )
         self.btn_edit.setMinimumWidth(50)
         self.btn_edit.setMaximumHeight(18)
         self.title_layout.addWidget(self.btn_edit)
@@ -141,7 +143,7 @@ class MainPressure(QWidget):
         self.converter = PresConverterManager()   
 
         LocalSettingManager().sig_pres_unit_changed.connect(self.handle_pres_unit_changed)
-        LocalSettingManager().sig_decimal_places_changed.connect(self.handle_decimal_places_changed)
+        LocalSettingManager().sig_pres_decimal_places_changed.connect(self.handle_pres_decimal_places_changed)
         LocalSettingManager().sig_pres_setpoint01_changed.connect(self.handle_pres_setpoint01_changed)
         LocalSettingManager().sig_pres_setpoint02_changed.connect(self.handle_pres_setpoint02_changed)
         LocalSettingManager().sig_pres_setpoint03_changed.connect(self.handle_pres_setpoint03_changed)
@@ -149,7 +151,7 @@ class MainPressure(QWidget):
         LocalSettingManager().sig_pres_setpoint05_changed.connect(self.handle_pres_setpoint05_changed)
         LocalSettingManager().sig_pres_setpoint06_changed.connect(self.handle_pres_setpoint06_changed)
         self.handle_pres_unit_changed()
-        self.handle_decimal_places_changed()
+        self.handle_pres_decimal_places_changed()
         self.handle_pres_setpoint01_changed()
         self.handle_pres_setpoint02_changed()
         self.handle_pres_setpoint03_changed()
@@ -220,8 +222,8 @@ class MainPressure(QWidget):
 
         self.handle_pres_range_changed()
 
-    def handle_decimal_places_changed(self):
-        current_decimal_places = LocalSettingManager().decimal_places
+    def handle_pres_decimal_places_changed(self):
+        current_decimal_places = LocalSettingManager().pres_decimal_places
         self.pres_input.setDecimals(current_decimal_places)
         self.status_actual.set_decimals(current_decimal_places)
         self.status_target.set_decimals(current_decimal_places)
@@ -230,32 +232,32 @@ class MainPressure(QWidget):
         self.handle_pres_range_changed()
     
     def handle_pres_setpoint01_changed(self):
-        current_decimal_places = LocalSettingManager().decimal_places
+        current_decimal_places = LocalSettingManager().pres_decimal_places
         display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint01)
         self.btn_01.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint02_changed(self):
-        current_decimal_places = LocalSettingManager().decimal_places
+        current_decimal_places = LocalSettingManager().pres_decimal_places
         display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint02)
         self.btn_02.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint03_changed(self):
-        current_decimal_places = LocalSettingManager().decimal_places
+        current_decimal_places = LocalSettingManager().pres_decimal_places
         display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint03)
         self.btn_03.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint04_changed(self):
-        current_decimal_places = LocalSettingManager().decimal_places
+        current_decimal_places = LocalSettingManager().pres_decimal_places
         display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint04)
         self.btn_04.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint05_changed(self):
-        current_decimal_places = LocalSettingManager().decimal_places
+        current_decimal_places = LocalSettingManager().pres_decimal_places
         display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint05)
         self.btn_05.setText(f"{display_value:.{current_decimal_places}f}")
         
     def handle_pres_setpoint06_changed(self):
-        current_decimal_places = LocalSettingManager().decimal_places
+        current_decimal_places = LocalSettingManager().pres_decimal_places
         display_value = self.converter.convert_sfs_to_dp_pres(LocalSettingManager().pres_setpoint06)
         self.btn_06.setText(f"{display_value:.{current_decimal_places}f}")  
         

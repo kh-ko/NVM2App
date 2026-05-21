@@ -5,10 +5,10 @@ from PySide6.QtCore import Qt
 
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 
-from c_ui.b_components.a_custom.custom_double_spin_box import CustomDoubleSpinBox
-from c_ui.b_components.a_custom.custom_label import CustomLabel
-from c_ui.b_components.a_custom.custom_panel import CustomPanel
-from c_ui.b_components.a_custom.custom_toolbar import CustomToolBar
+from c_ui.b_components.a_custom_base.custom_label import CustomLabel
+from c_ui.b_components.b_custom_layout.custom_panel import CustomPanel
+from c_ui.b_components.a_custom_base.custom_toolbar import CustomToolBar
+from c_ui.b_components.c_custom_composit.double_spin_input_widget import DoubleSpinInputWidget
 
 class MainPosiEditWin(QMainWindow):
     def __init__(self, parent=None):
@@ -42,7 +42,7 @@ class MainPosiEditWin(QMainWindow):
         ]
 
         for i, val in enumerate(current_values, start=1):
-            row_widget = CustomDoubleSpinBox(f"Setpoint {i:02d}")
+            row_widget = DoubleSpinInputWidget(f"Setpoint {i:02d}")
             row_widget.setValue(val * 100)
             row_widget.setDecimals(2)
             

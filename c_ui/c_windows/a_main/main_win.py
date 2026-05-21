@@ -10,22 +10,23 @@ from b_core.e_worker.compounds_run_worker import CompoundsRunWorker
 from b_core.e_worker.parameter_worker import ParameterWorker
 from b_core.d_dal.service_port import ServicePort
 from b_core.c_manager.parameter_manager import ParamManager
-from c_ui.c_windows.win_manager import WinManager
-from c_ui.c_windows.a_main.main_top_toolbar import MainTopToolBar
-from c_ui.c_windows.b_connection.connection_setting_win import ConnectionSettingWin
-from c_ui.c_windows.b_connection.connection_connect_win import ConnectionConnectWin
-from c_ui.b_components.b_usercontrol.user_statusbar import UserStatusBar
-from c_ui.b_components.a_custom.custom_panel import CustomPanel
-from c_ui.b_components.a_custom.custom_icon_button import CustomIconButton
-from c_ui.b_components.a_custom.custom_icon_label_button import CustomIconLabelButton
-from c_ui.b_components.a_custom.custom_button import CustomButton
 
+from c_ui.c_windows.a_main.main_win_statusbar import MainWinStatusBar
+from c_ui.c_windows.a_main.main_chart import MainChart
 from c_ui.c_windows.a_main.main_status import MainStatus
 from c_ui.c_windows.a_main.main_control import MainControl
 from c_ui.c_windows.a_main.main_position import MainPosition
 from c_ui.c_windows.a_main.main_pressure import MainPressure
 from c_ui.c_windows.a_main.main_posi_edit_win import MainPosiEditWin
 from c_ui.c_windows.a_main.main_pres_edit_win import MainPresEditWin
+
+from c_ui.c_windows.win_manager import WinManager
+from c_ui.c_windows.a_main.main_top_toolbar import MainTopToolBar
+from c_ui.c_windows.b_connection.connection_setting_win import ConnectionSettingWin
+from c_ui.c_windows.b_connection.connection_connect_win import ConnectionConnectWin
+from c_ui.c_windows.c_sys.sys_identification_win import SysIdentificationWin
+from c_ui.c_windows.c_sys.sys_statistics_win import SysStatisticsWin
+from c_ui.c_windows.c_sys.sys_warn_err_win import SysWarnErrWin
 
 class MainWin(QMainWindow):
     """
@@ -45,9 +46,8 @@ class MainWin(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        self.top_area = QFrame()
-        self.top_area.setStyleSheet("background-color: lightgray;") # 시각적 확인을 위한 색상
-        main_layout.addWidget(self.top_area)
+        self.chart = MainChart()
+        main_layout.addWidget(self.chart)
 
         self.bottom_area = QWidget()
         self.bottom_area.setFixedHeight(290)
@@ -86,9 +86,13 @@ class MainWin(QMainWindow):
         self.main_toolbar.reg_connection_settings_slot(self.on_clicked_connection_setting)
         self.main_toolbar.reg_connection_connect_slot(self.on_clicked_connection_connect)
         self.main_toolbar.reg_connection_disconnect_slot(self.on_clicked_connection_disconnect)
+        self.main_toolbar.reg_identification_slot(self.on_clicked_identification)
+        self.main_toolbar.reg_statistics_slot(self.on_clicked_statistics)
+        self.main_toolbar.reg_warning_error_slot(self.on_clicked_warning_error)
+        self.main_toolbar.reg_service_slot(self.on_clicked_service)
         # 4. 상태바(Status Bar) 초기화
-        self.custom_statusbar = UserStatusBar(self)
-        self.setStatusBar(self.custom_statusbar)
+        self.main_win_statusbar = MainWinStatusBar(self)
+        self.setStatusBar(self.main_win_statusbar)
 
         ServicePort().connect_info_changed.connect(self.handle_changed_connection_info)
 
@@ -168,6 +172,18 @@ class MainWin(QMainWindow):
         if reply == QMessageBox.StandardButton.Yes:
             ServicePort().close()
 
+    def on_clicked_identification(self):
+        WinManager().show_param_window(win_class=SysIdentificationWin, parent=self, is_modal=False)
+
+    def on_clicked_statistics(self):
+        WinManager().show_param_window(win_class=SysStatisticsWin, parent=self, is_modal=False)
+
+    def on_clicked_warning_error(self):
+        WinManager().show_param_window(win_class=SysWarnErrWin, parent=self, is_modal=False)
+
+    def on_clicked_service(self):
+        pass
+
     def on_clicked_warn_err_button(self):
         pass
 
@@ -225,12 +241,14 @@ class MainWin(QMainWindow):
             pass
 
     def handle_progress_changed(self, progress: int):
-        self.custom_statusbar.set_progress(progress)
+        self.main_win_statusbar.set_progress(progress)
 
     def handle_compounds_data(self):
         data_list = self.compounds_worker.pop_all_data()
 
         if data_list:
+            self.chart.update_chart(data_list)
+
             if len(data_list) > 1:
                 last_data = data_list[-1]
 
@@ -238,11 +256,11 @@ class MainWin(QMainWindow):
 
                 total_time_diff = last_data.timestamp - data_list[0].timestamp
                 avg_interval = total_time_diff / (len(data_list) - 1)
-                self.custom_statusbar.set_scan_rate(int(avg_interval))
+                self.main_win_statusbar.set_scan_rate(int(avg_interval))
             else:
-                self.custom_statusbar.set_scan_rate(-1)
+                self.main_win_statusbar.set_scan_rate(-1)
         else:
-            self.custom_statusbar.set_scan_rate(-1)
+            self.main_win_statusbar.set_scan_rate(-1)
 
     def handle_access_mode_changed(self):
         if not self.acc_mode_param.str_value:

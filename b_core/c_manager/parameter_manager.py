@@ -64,12 +64,15 @@ class ParamManager:
         self._add_param_enum  ("System.Identification.Configuration.Revision 3"                                             , "B0000100", 11, ParamAccType.RW, p_enum.Base36Enum           , False, False, False, "Valve Hardware Revision 3")
         self._add_param_hex   ("System.Identification.Configuration.Product Number"                                         , "B0000100", 12, ParamAccType.RW,                               False, False, False, "Product number")
         self._add_param_hex   ("System.Identification.Configuration.Product Number Ex"                                      , "B0000100", 13, ParamAccType.RW,                               False, False, False, "Extended Product Number")
+        self._add_param_text  ("System.Identification.Fimeware.Firmware ID"                                                 , "0F100301",  0, ParamAccType.RO,                               False, False, False, "Firmware ID")
+        self._add_param_text  ("System.Identification.Fimeware.Firmware Version"                                            , "0F100302",  0, ParamAccType.RO,                               False, False, False, "Firmware Version")
+        self._add_param_text  ("System.Identification.Fimeware.Interface Version"                                           , "0F100303",  0, ParamAccType.RO,                               False, False, False, "Interface Version")
         self._add_param_num   ("System.Statistics.Power Up Counter"                                                         , "0F200100",  0, ParamAccType.RO, un_min, un_max, ""          , False, False, False, "")
         self._add_param_real  ("System.Statistics.Total Time Powered"                                                       , "0F200200",  0, ParamAccType.RO, f_min, f_max, "sec"         , False, False, False, "")
         self._add_param_real  ("System.Statistics.Time Since Power On"                                                      , "0F200300",  0, ParamAccType.RO, f_min, f_max, "sec"         , False, False, False, "")
         self._add_param_bitmap("System.Warning/Error.Warning Bitmap"                                                        , "0F300100",  0, ParamAccType.RO, p_enum.SysWarningBitmap     , False, False, False, None)
         self._add_param_bitmap("System.Warning/Error.Error Bitmap"                                                          , "0F300500",  0, ParamAccType.RO, p_enum.SysErrorBitmap       , False, False, False, None)
-        self._add_param_3digi ("System.Warning/Error.Error Number"                                                          , "0F300600",  0, ParamAccType.RO, p_enum.SysErrorNumberComponent, p_enum.SysErrorNumberMode, p_enum.SysErrorNumberType, False, False, False, None)
+        self._add_param_3digi ("System.Warning/Error.Error Number"                                                          , "0F300600",  0, ParamAccType.RO, p_enum.SysErrorNumberComponent, "Component", p_enum.SysErrorNumberMode, "Mode", p_enum.SysErrorNumberType, "Type", False, False, False, None)
         self._add_param_enum  ("System.Warning/Error.Error Code"                                                            , "0F300700",  0, ParamAccType.RO, p_enum.SysErrorCodeEnum     , False, False, False, None)
         self._add_param_enum  ("System.Services.Restart Controller"                                                         , "0F500100",  0, ParamAccType.RW, p_enum.FalseTrueEnum        , False, False, False, "Emulates a power cycle")
         self._add_param_enum  ("System.Services.Configuration Lock Mode"                                                    , "0F500500",  0, ParamAccType.RW, p_enum.FalseTrueEnum        , False, False, False, "Locking the valve settings.<br>If true, no changes to the settings are possible.")
@@ -250,7 +253,7 @@ class ParamManager:
         self._add_param(Parameter(path, name, id, index, ParamDisplayType.BITMAP, ParamDataType.UINT32, param_acc, is_only_local_acc, is_nor_backup, is_fu_backup, "", int(0), int(4294967295), enum_class, description))
 
 
-    def _add_param_3digi(self, full_path: str, id: str, index: int, param_acc : ParamAccType, enum_class1: type, enum_class2: type, enum_class3: type, is_only_local_acc:bool, is_nor_backup: bool, is_fu_backup: bool, description: str | None):
+    def _add_param_3digi(self, full_path: str, id: str, index: int, param_acc : ParamAccType, enum_class1: type, name1: str, enum_class2: type, name2: str, enum_class3: type, name3: str, is_only_local_acc:bool, is_nor_backup: bool, is_fu_backup: bool, description: str | None):
         path, name = full_path.rsplit(".", 1)
 
         if not description:
@@ -260,9 +263,9 @@ class ParamManager:
             description = "<br>".join(items1 + items2 + items3)
 
         digiparam = ParameterDigi(path, name, id, index, ParamDisplayType.DIGI_NUM , ParamDataType.UINT32, param_acc, is_only_local_acc, is_nor_backup, is_fu_backup, "", int(0), int(4294967295), description)
-        digiparam.add_ref_list(enum_class1) 
-        digiparam.add_ref_list(enum_class2) 
-        digiparam.add_ref_list(enum_class3) 
+        digiparam.add_ref_list(name1, enum_class1) 
+        digiparam.add_ref_list(name2, enum_class2) 
+        digiparam.add_ref_list(name3, enum_class3) 
 
         self._add_param(digiparam)        
 
@@ -313,6 +316,13 @@ class ParamManager:
         if ret_param is None:
             LogManager().log(LogType.ERROR, f"[ParameterManager] 파라미터를 찾을 수 없습니다: {path}, {name}")
         return ret_param
+
+    def get_params_in_folder(self, folder_path: str) -> List[Parameter]:
+        ret_params: List[Parameter] = []
+        for param in self._parameters:
+            if param.path == folder_path:
+                ret_params.append(param)
+        return ret_params
 
     def get_all(self) -> List[Parameter]:
         """전체 파라미터 리스트를 가져옵니다."""

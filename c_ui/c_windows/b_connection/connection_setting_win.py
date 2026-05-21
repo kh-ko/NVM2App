@@ -11,12 +11,12 @@ from PySide6.QtGui import QColor
 from PySide6.QtSerialPort import QSerialPort 
 from b_core.a_define import file_folder_path
 
-from c_ui.b_components.a_custom.custom_list import CustomListWidget
-from c_ui.b_components.a_custom.custom_splitter import CustomSplitter
-from c_ui.b_components.a_custom.custom_combobox import CustomComboBox
-from c_ui.b_components.a_custom.custom_toolbar import CustomToolBar
-from c_ui.b_components.a_custom.custom_panel import CustomPanel
-from c_ui.b_components.a_custom.custom_line_edit import CustomLineEdit
+from c_ui.b_components.b_custom_layout.custom_list import CustomListWidget
+from c_ui.b_components.b_custom_layout.custom_splitter import CustomSplitter
+from c_ui.b_components.a_custom_base.custom_toolbar import CustomToolBar
+from c_ui.b_components.b_custom_layout.custom_panel import CustomPanel
+from c_ui.b_components.c_custom_composit.combo_input_widget import ComboInputWidget
+from c_ui.b_components.c_custom_composit.line_edit_widget import LineEditWidget
 
 class ConnectionSettingWin(QMainWindow):
     """
@@ -74,31 +74,31 @@ class ConnectionSettingWin(QMainWindow):
         self.panel = CustomPanel("Detail")
         self.splitter.addWidget(self.panel)
         
-        self.name_edit = CustomLineEdit("Name")
+        self.name_edit = LineEditWidget("Name")
         self.panel.add_widget(self.name_edit)
 
-        self.network_combo = CustomComboBox("Network")
+        self.network_combo = ComboInputWidget("Network")
         self.network_combo.addItem("RS232", 0)
         self.network_combo.addItem("RS485", 1)
         self.network_combo.addItem("TCP/IP", 2)
         self.network_combo.setEnabled(False)
         self.panel.add_widget(self.network_combo)
 
-        self.address_edit = CustomLineEdit("Address")
+        self.address_edit = LineEditWidget("Address")
         self.address_edit.setEnabled(False)
         self.panel.add_widget(self.address_edit)
 
-        self.baudrate_combo = CustomComboBox("Baudrate")
+        self.baudrate_combo = ComboInputWidget("Baudrate")
         for br in [9600, 19200, 38400, 57600, 115200]:
             self.baudrate_combo.addItem(str(br), br)
         self.panel.add_widget(self.baudrate_combo)
 
-        self.databits_combo = CustomComboBox("Data Bits")
+        self.databits_combo = ComboInputWidget("Data Bits")
         for db in [5, 6, 7, 8]:
             self.databits_combo.addItem(str(db), db)
         self.panel.add_widget(self.databits_combo)
 
-        self.parity_combo = CustomComboBox("Parity")
+        self.parity_combo = ComboInputWidget("Parity")
         self.parity_combo.addItem("NoParity", 0)
         self.parity_combo.addItem("EvenParity", 2)
         self.parity_combo.addItem("OddParity", 3)
@@ -106,13 +106,13 @@ class ConnectionSettingWin(QMainWindow):
         self.parity_combo.addItem("MarkParity", 5)
         self.panel.add_widget(self.parity_combo)
 
-        self.stopbits_combo = CustomComboBox("Stop Bits")
+        self.stopbits_combo = ComboInputWidget("Stop Bits")
         self.stopbits_combo.addItem("OneStop", 1)
         self.stopbits_combo.addItem("TwoStop", 2)
         self.stopbits_combo.addItem("OneAndHalfStop", 3)
         self.panel.add_widget(self.stopbits_combo)
 
-        self.termination_combo = CustomComboBox("Termination")
+        self.termination_combo = ComboInputWidget("Termination")
         self.termination_combo.addItem("CR+LF", 0)
         self.termination_combo.addItem("LF", 1)
         self.termination_combo.addItem("CR", 2)

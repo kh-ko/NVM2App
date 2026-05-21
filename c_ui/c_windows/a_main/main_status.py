@@ -5,10 +5,11 @@ from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QFrame
 
 from b_core.c_manager.parameter_manager import ParamManager
 
-from c_ui.b_components.a_custom.custom_title import CustomTitle
-from c_ui.b_components.a_custom.custom_icon_label_button import CustomIconLabelButton
-from c_ui.b_components.b_usercontrol.a_param_controls.param_enum_label_widget import ParamEnumLabelWidget
-from c_ui.b_components.b_usercontrol.a_param_controls.param_float_label_widget import ParamFloatLabelWidget
+from c_ui.b_components.a_custom_base.custom_title import CustomTitle
+from c_ui.b_components.c_custom_composit.icon_button import IconButton
+from c_ui.b_components.d_usercontrol.a_param_controls.param_enum_label_widget import ParamEnumLabelWidget
+from c_ui.b_components.d_usercontrol.a_param_controls.param_float_label_widget import ParamFloatLabelWidget
+
 
 class MainStatus(QWidget):
     def __init__(self, control_mode_param:str, posi_ctrl_speed_param:str, controller_select_param:str, warn_bitmap_param:str, err_bitmap_param:str,parent=None): # title의 기본값을 빈 문자열로 설정
@@ -57,8 +58,8 @@ class MainStatus(QWidget):
 
         self.main_layout.addWidget(self.scroll_area)
 
-        self.warn_list: List[Tuple[int, CustomIconLabelButton]] = []
-        self.err_list: List[Tuple[int, CustomIconLabelButton]] = []
+        self.warn_list: List[Tuple[int, IconButton]] = []
+        self.err_list: List[Tuple[int, IconButton]] = []
 
         control_mode_label = ParamEnumLabelWidget(control_mode_param, 180)
         self.add_widget(control_mode_label)
@@ -77,9 +78,7 @@ class MainStatus(QWidget):
                 bit_pos = member.value
                 description = member.description
 
-                button = CustomIconLabelButton(description, "\ue002")
-                button.set_icon_colors("#FFA000")
-                button.set_text_color("#F57C00")
+                button = IconButton(text = description, icon_char = "\ue002", icon_color = "#FFA000", icon_size_scale = 1.2)
                 button.setVisible(False)
                 button.clicked.connect(self.on_clicked_warn_err_button)
 
@@ -94,7 +93,7 @@ class MainStatus(QWidget):
                 bit_pos = member.value
                 description = member.description
 
-                button = CustomIconLabelButton(description, "\ue002")
+                button = IconButton(text = description, icon_char = "\ue002", icon_color = "#FFA000", icon_size_scale = 1.2)
                 button.set_icon_colors("#FF0000")
                 button.set_text_color("#F57C00")
                 button.setVisible(False)
