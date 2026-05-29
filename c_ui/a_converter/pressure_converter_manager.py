@@ -1,3 +1,4 @@
+from c_ui.a_converter.float_converter_manager import FloatConverterManager
 import threading
 import math
 
@@ -50,11 +51,14 @@ class PresConverterManager(QObject):
         super().__init__()
 
         self._initialized = True
+        self.local_setting = LocalSettingManager()
+        self.float_converter = FloatConverterManager()
 
         self.slope = 1.0
         self.intercept = 0.0
         self.unit_gain = 0.0
         self.unit_offset = 0.0
+        self.pres_decimal_places = 6
 
         self.iface_unit_param       = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Pressure.Pressure Unit"                   )
         self.iface_min_param        = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Pressure.Value Pressure 0"                )
@@ -72,7 +76,8 @@ class PresConverterManager(QObject):
         self.sens2_min_value_param = ParamManager().get_by_full_path("Sensor.Sensor 2.Range.Lower Limit Data Value"                                )
         self.sens2_max_value_param = ParamManager().get_by_full_path("Sensor.Sensor 2.Range.Upper Limit Data Value"                                )
         
-        LocalSettingManager().sig_pres_unit_changed.connect (self.handle_sens_cfg_changed )
+        self.local_setting.sig_pres_unit_changed.connect (self.handle_sens_cfg_changed)
+        self.local_setting.sig_pres_decimal_places_changed.connect (self.handle_pres_decimal_places_changed)
 
         self.iface_unit_param.sig_value_changed.connect      (self.handle_sens_cfg_changed )
         self.iface_min_param.sig_value_changed.connect       (self.handle_sens_cfg_changed )
@@ -88,7 +93,15 @@ class PresConverterManager(QObject):
         self.sens2_enable_param.sig_value_changed.connect   (self.handle_sens_cfg_changed )
         self.sens2_unit_param.sig_value_changed.connect     (self.handle_sens_cfg_changed )
         self.sens2_min_value_param.sig_value_changed.connect(self.handle_sens_cfg_changed )
-        self.sens2_max_value_param.sig_value_changed.connect(self.handle_sens_cfg_changed )    
+        self.sens2_max_value_param.sig_value_changed.connect(self.handle_sens_cfg_changed )  
+
+        self.handle_pres_decimal_places_changed()
+        self.handle_sens_cfg_changed()
+
+
+    def handle_pres_decimal_places_changed(self):
+        self.pres_decimal_places = self.local_setting.pres_decimal_places
+        self.sig_pres_range_changed.emit()
 
     def handle_sens_cfg_changed(self):
         params = [
@@ -151,31 +164,88 @@ class PresConverterManager(QObject):
         self.sig_pres_range_changed.emit()
 
     def get_dp_max_pres(self) -> float:
-        if self.iface_max_param.value:
-            return self.convert_iface_pres_to_dp_pres(self.iface_max_param.value)
-        else:
-            return 1.0
+        return self.convert_iface_pres_to_dp_pres(self.iface_max_param.value)
+        
+    def get_dp_max_pres_str(self) -> str:
+        converted_value = self.get_dp_max_pres()
+
+        if converted_value is None:
+            return None
+        
+        fmt_spec = f".{self.pres_decimal_places}f"
+        return format(Decimal(str(converted_value)), fmt_spec)
 
     def convert_iface_pres_to_dp_pres(self, ori_value: float) -> float:
+        if ori_value is None:
+            return None
+
         real_pres_in_sens_unit = (ori_value * self.slope) + self.intercept
         return (real_pres_in_sens_unit * self.unit_gain) + self.unit_offset
 
+    def convert_iface_pres_to_dp_pres_str(self, ori_value: float) -> str:
+        converted_value = self.convert_iface_pres_to_dp_pres(ori_value)
+
+        if converted_value is None:
+            return None
+             
+        fmt_spec = f".{self.pres_decimal_places}f"    
+        return format(Decimal(str(converted_value)), fmt_spec)
+
     def convert_dp_pres_to_iface_pres_str(self, value: float) -> str:
-        if self.slope == 0:
-            return ""
+        if self.slope == 0 or self.unit_gain == 0 or value is None:
+            return None
             
         real_pres_in_sens_unit = (value - self.unit_offset) / self.unit_gain
         result_value = (real_pres_in_sens_unit - self.intercept) / self.slope
-        return format(Decimal(str(result_value)), 'f')
+        return self.float_converter.to_str(result_value)
+
+    def convert_dp_pres_to_iface_pres(self, value: float) -> float:
+        if self.slope == 0 or self.unit_gain == 0 or value is None:
+            return None
+            
+        real_pres_in_sens_unit = (value - self.unit_offset) / self.unit_gain
+        result_value = (real_pres_in_sens_unit - self.intercept) / self.slope
+        return result_value
 
     def convert_sfs_to_dp_pres(self, value: float) -> float:
         pres_max = self.get_dp_max_pres()
+
+        if pres_max is None or value is None:
+            return None
+
         return pres_max * value
+
+    def convert_sfs_to_dp_pres_str(self, value: float) -> str:
+        pres_max = self.get_dp_max_pres()
+
+        if pres_max is None or value is None:
+            return None
+
+        fmt_spec = f".{self.pres_decimal_places}f"    
+        return format(Decimal(str(pres_max * value)), fmt_spec)       
 
     def convert_dp_pres_to_sfs(self, value: float) -> float:
         pres_max = self.get_dp_max_pres()
+
+        if pres_max is None or value is None:
+            return None
+
         if pres_max == 0: return 0.0
         return value / pres_max        
+
+    def convert_dp_pres_str_to_sfs(self, value: str) -> float:
+        try:
+            float_value = float(value)
+        except Exception:
+            return None
+
+        pres_max = self.get_dp_max_pres()
+
+        if pres_max is None or value is None:
+            return None
+            
+        if pres_max == 0: return 0.0
+        return float_value / pres_max             
 
     def _convert_pressure(self, value: float, from_unit_idx: int, to_unit_idx: int) -> float:
         gain, offset = self._get_unit_conversion(from_unit_idx, to_unit_idx)

@@ -1,3 +1,5 @@
+from c_ui.a_converter.float_converter_manager import FloatConverterManager
+from b_core.c_manager.local_setting_manager import LocalSettingManager
 import threading
 import math
 
@@ -29,10 +31,13 @@ class PosiConverterManager(QObject):
         super().__init__()
 
         self._initialized = True
+        self.local_setting = LocalSettingManager()
+        self.float_converter = FloatConverterManager()
 
         self.posi_unit = p_enum.RS232PositionUnitEnum.USER_SPECIFIC.value
         self.posi_min  = 0.0
         self.posi_max  = 100.0
+        self.posi_decimal_places = 2
 
         self.posi_unit_param = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Position.Position Unit"         )
         self.posi_min_param  = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Position.Value Closest Position")
@@ -41,6 +46,13 @@ class PosiConverterManager(QObject):
         self.posi_unit_param.sig_value_changed.connect(self.handle_posi_range_changed)
         self.posi_min_param.sig_value_changed.connect(self.handle_posi_range_changed)
         self.posi_max_param.sig_value_changed.connect(self.handle_posi_range_changed)    
+        self.local_setting.sig_posi_decimal_places_changed.connect(self.handle_posi_decimal_places_changed) 
+
+        self.handle_posi_decimal_places_changed() 
+
+    def handle_posi_decimal_places_changed(self):
+        self.posi_decimal_places = self.local_setting.posi_decimal_places
+        self.sig_posi_range_changed.emit()
 
     def handle_posi_range_changed(self):
         if not self.posi_unit_param.str_value:
@@ -79,10 +91,36 @@ class PosiConverterManager(QObject):
 
         self.sig_posi_range_changed.emit()
 
-    def convert_posi_to_display_value(self, ori_value: float) -> float:
-            
+    def convert_pfs_to_dp_posi_str(self, value:float):
+        if value is None:
+            return None 
+        
         if self.posi_unit == -1:
-            return -999.999
+            return None 
+
+        fmt_spec = f".{self.posi_decimal_places}f"    
+        return format(Decimal(str(value * 100)), fmt_spec)   
+
+    def convert_dp_posi_str_to_pfs(self, value: str) -> float:
+        try:
+            float_value = float(value)
+        except Exception:
+            return None
+
+        return float_value / 100 
+
+    def convert_dp_posi_to_pfs(self, value: float) -> float:
+        if value is None:
+            return None
+
+        return value / 100 
+
+    def convert_posi_to_display_value(self, ori_value: float) -> float:
+        if ori_value is None:
+            return None 
+        
+        if self.posi_unit == -1:
+            return None
 
         range_value = self.posi_max - self.posi_min
 
@@ -93,9 +131,18 @@ class PosiConverterManager(QObject):
 
             return converted_value
 
+    def convert_posi_to_display_value_str(self, ori_value: float) -> str:
+        converted_value = self.convert_posi_to_display_value(ori_value)
+
+        if converted_value is None:
+            return None
+        
+        fmt_spec = f".{self.posi_decimal_places}f"
+        return format(Decimal(str(converted_value)), fmt_spec)
+
     def convert_display_to_posi_value(self, display_value: float) -> float:
-        if self.posi_unit == -1:
-            return -999.999
+        if self.posi_unit == -1 or display_value is None:
+            return None
 
         range_value = self.posi_max - self.posi_min
 
@@ -106,8 +153,8 @@ class PosiConverterManager(QObject):
             return ori_value
 
     def convert_display_to_posi_value_str(self, display_value: float) -> str:
-        if self.posi_unit == -1:
-            return ""
+        if self.posi_unit == -1 or display_value is None:
+            return None
 
         result_value = 0
 
@@ -116,5 +163,5 @@ class PosiConverterManager(QObject):
         if range_value != 0:
             result_value = (display_value / 100.0) * range_value + self.posi_min
         
-        return format(Decimal(str(result_value)), 'f')
+        return self.float_converter.to_str(result_value)
         

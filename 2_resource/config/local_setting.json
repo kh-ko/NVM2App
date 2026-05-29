@@ -1,8 +1,8 @@
 {
-    "pres_unit": 4,
-    "posi_decimal_places": 3,
+    "pres_unit": 0,
+    "posi_decimal_places": 2,
     "pres_decimal_places": 2,
-    "posi_setpoint01": 1.07,
+    "posi_setpoint01": 1.11,
     "posi_setpoint02": 0.87,
     "posi_setpoint03": 0.8,
     "posi_setpoint04": 0.7,
@@ -16,12 +16,12 @@
     "pres_setpoint06": 0.5,
     "posi_chart_enable_actual": true,
     "posi_chart_enable_target": true,
-    "posi_chart_range_mode": 1,
-    "posi_chart_range_custom_min": 40.0,
+    "posi_chart_range_mode": 0,
+    "posi_chart_range_custom_min": 0.0,
     "posi_chart_range_custom_max": 50.0,
     "pres_chart_enable_actual": true,
     "pres_chart_enable_target": true,
-    "pres_chart_range_mode": 1,
-    "pres_chart_range_custom_min": 0.0,
-    "pres_chart_range_custom_max": 10.0
+    "pres_chart_range_mode": 2,
+    "pres_chart_range_custom_min": 0.02,
+    "pres_chart_range_custom_max": 20.0
 }

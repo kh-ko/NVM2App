@@ -1,5 +1,7 @@
 from enum import Enum, auto
 
+from b_core.b_datatype.param_enum import DescriptionEnum
+
 class LogType(Enum):
     INFO = auto()
     ERROR = auto()
@@ -19,12 +21,13 @@ class ParamDisplayType(Enum):
     NUMBER    = auto()
     HEX       = auto()
     BITMAP    = auto()
-    DIGI_NUM  = auto()
+    ERR_NUM   = auto()
     SENS_PRES = auto()
     H_SFS     = auto()
     L_SFS     = auto()
     REAL      = auto()
     POSI      = auto()
+    BTN       = auto()
 
 class ParamDataType(Enum):
     INT8   = auto()
@@ -92,4 +95,65 @@ class ParamParseErrType(Enum):
     ERR_89_NOT_SUPPORTED                                   = auto() # "89": "not supported", 
     ERR_A0_FUNCTION_IS_DISABLED                            = auto() # "A0": "function is disabled", 
     ERR_A1_ALREADY_DONE                                    = auto() # "A1": "already done"
+
+class MainChartRangeModeEnum(DescriptionEnum):
+    AUTO            = (0, "AUTO")
+    FULL            = (1, "FULL")
+    CUSTOM          = (2, "CUSTOM")
+
+class MainChartTimeRangeEnum(DescriptionEnum):
+    SEC_30          = (30000, "30초")
+    MIN_1           = (60000, "1분")
+    MIN_2           = (120000, "2분")
+    MIN_3           = (180000, "3분")
+    MIN_5           = (300000, "5분")
+    MIN_10          = (600000, "10분")
+
+class ConnectionNetworkEnum(DescriptionEnum):
+    RS232           = (0,"RS232" )
+    RS485           = (1,"RS485" )
+    TCP_IP          = (2,"TCP/IP")  
+    
+class ConnectionBaudRateEnum(DescriptionEnum):
+    BAUDRATE_9600   = (9600  , "9600"  )
+    BAUDRATE_19200  = (19200 , "19200" )
+    BAUDRATE_38400  = (38400 , "38400" )
+    BAUDRATE_57600  = (57600 , "57600" )  
+    BAUDRATE_115200 = (115200, "115200")  
+
+class ConnectionDataBitsEnum(DescriptionEnum):
+    DATABITS_5      = (5, "5")
+    DATABITS_6      = (6, "6")
+    DATABITS_7      = (7, "7")
+    DATABITS_8      = (8, "8")          
+
+class ConnectionParityEnum(DescriptionEnum):
+    NoParity        = (0, "NoParity"   )
+    EvenParity      = (2, "EvenParity" )
+    OddParity       = (3, "OddParity"  )
+    SpaceParity     = (4, "SpaceParity")
+    MarkParity      = (5, "MarkParity" )
+
+class ConnectionStopBitsEnum(DescriptionEnum):
+    OneStop         = (1, "OneStop"       )
+    TwoStop         = (2, "TwoStop"       )
+    OneAndHalfStop  = (3, "OneAndHalfStop")
+
+class ConnectionTerminationEnum(DescriptionEnum):
+    CR_LF           = (0, "CR_LF")
+    LF              = (1, "LF"   )
+    CR              = (2, "CR"   )    
+
+class DecimalPlacesEnum(DescriptionEnum):
+    DECIAML_PLACES_0 = (0, "0")
+    DECIAML_PLACES_1 = (1, "1")
+    DECIAML_PLACES_2 = (2, "2")
+    DECIAML_PLACES_3 = (3, "3")
+    DECIAML_PLACES_4 = (4, "4")
+    DECIAML_PLACES_5 = (5, "5")
+    DECIAML_PLACES_6 = (6, "6")    
+
+class PositionUnitEnum(DescriptionEnum):
+    POSI_UNIT_PERCENT = (0, "Percent(%)")    
+
     

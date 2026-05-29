@@ -7,9 +7,21 @@ class DescriptionEnum(Enum):
         obj.description = description
         return obj
 
+class OffOnEnum(DescriptionEnum):
+    OFF           = (0, "Off")
+    ON            = (1, "On")
+
 class FalseTrueEnum(DescriptionEnum):
     FALSE           = (0, "False")
     TRUE            = (1, "True")
+
+class DisableEnableEnum(DescriptionEnum):
+    Disable         = (0, "Disable")
+    Enable          = (1, "Enable")    
+
+class OkNotOkEnum(DescriptionEnum):
+    OK              = (0, "Ok")
+    NOT_OK          = (1, "Not Ok")        
 
 class Base36Enum(DescriptionEnum):
     ZERO  = (0, "0")
@@ -194,12 +206,14 @@ class SysErrorNumberMode(DescriptionEnum):
     HOMING          = (0, "Homing")
     OPERATION_MODE  = (2, "Operation Mode")
     OTHER           = (8, "Other")
+    NO_ERROR        = (10, "No Error")
 
 class SysErrorNumberType(DescriptionEnum):
-    POSITION_ERROR          = (0, "Position Error")
-    NOT_RUNNING             = (1, "Not running: No communication with component x")
-    ERROR_STATE             = (2, "Error State: component x is running but in Status Error")
-    OTHER                   = (8, "Other")    
+    POSITION_ERROR  = (0, "Position Error")
+    NOT_RUNNING     = (1, "Not running: No communication with component x")
+    ERROR_STATE     = (2, "Error State: component x is running but in Status Error")
+    OTHER           = (8, "Other")   
+    NO_ERROR        = (10, "No Error") 
          
 class SysErrorCodeEnum(DescriptionEnum):
     NO_ERROR                                                                            = (0, "No error")
@@ -235,6 +249,35 @@ class SysErrorCodeEnum(DescriptionEnum):
     WRONG_IDENT_CODE_AXIS_3_AND_AXIS_1                                                  = (705, "Wrong ident code axis 3 AND axis 1")
     WRONG_IDENT_CODE_AXIS_3_AND_AXIS_2                                                  = (706, "Wrong ident code axis 3 AND axis 2")
     WRONG_IDENT_CODE_AXIS_3_AND_AXIS_2_AND_AXIS_1                                       = (707, "Wrong ident code axis 3 AND axis 2 AND axis 1")
+
+class ValveEndCtrlModeEnum(DescriptionEnum):
+    POSI        = (2, "Position" )
+    CLOSE       = (3, "Close"    )
+    OPEN        = (4, "Open"     )
+    PRESS       = (5, "Pressure Control")
+
+class ValveStartConditionEnum(DescriptionEnum):
+    STD            = (0, "Standard"             )
+    OPEN_CMD       = (1, "Open Command"         )
+    MOVE_CMD       = (2, "Move Command"         )
+    AT_STARTUP     = (3, "At Startup"           )  
+    HOME_CMD       = (4, "Homing Command"       )
+    MOVE_CMD_STD   = (5, "Move Command/Standard")
+
+class ValveHomingStatusEnum(DescriptionEnum):
+    NOT_STARTED    = (0, "Not Started")
+    IN_PROGRESS    = (1, "In Progress")
+    COMPLETED      = (2, "Completed Successfully")
+    ERROR          = (3, "Error Occurred")
+
+class ValveIsolStateEnum(DescriptionEnum):
+    NOT_ISOL    = (0, "Not Isolated")
+    ISOL        = (1, "Isolated"    )
+
+class ValvePosiStateEnum(DescriptionEnum):
+    INTERMEDIATE= (0, "Intermediate")
+    CLOSED      = (1, "Closed"      )    
+    OPEN        = (2, "OPEN"        )    
 
 class SensInSrcEnum(DescriptionEnum):
     ANALOG      = (0, "Analog")

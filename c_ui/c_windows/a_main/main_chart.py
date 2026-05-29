@@ -1,20 +1,21 @@
 from PySide6.QtCore import QTimer
-import bisect
 from typing import List
 import numpy as np
 
 import pyqtgraph as pg
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
 from PySide6.QtCore import Qt, QDateTime
 
 from b_core.b_datatype.compound_data import CompoundData
+from b_core.b_datatype.general_enum import MainChartTimeRangeEnum
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 
 from c_ui.a_converter.position_converter_manager import PosiConverterManager
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
-from c_ui.b_components.a_custom_base.custom_combobox import CustomComboBox
-from c_ui.b_components.a_custom_base.custom_description import CustomDescription
-from c_ui.b_components.c_custom_composit.combo_input_widget import ComboInputWidget
+
+from c_ui.b_control_packet.controls_with_label.l_enum_rw_widget import LEnumReadWriteWidget
+from c_ui.b_control_packet.controls.my_labeldescription import MyLabelDescription
+
 from c_ui.c_windows.a_main.main_chart_setting import MainChartSettingPanel
 
 class MainChart(QWidget):
@@ -76,8 +77,8 @@ class MainChart(QWidget):
         time_label_layout = QHBoxLayout()
         time_label_layout.setContentsMargins(50, 0, 50, 10) # Y축 너비만큼 여백을 주어 차트 양끝에 맞춤
         
-        self.lbl_start_time = CustomDescription("00:00:00")
-        self.lbl_end_time = CustomDescription("00:00:00")
+        self.lbl_start_time = MyLabelDescription("00:00:00")
+        self.lbl_end_time = MyLabelDescription("00:00:00")
         self.lbl_start_time.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.lbl_end_time.setAlignment(Qt.AlignRight | Qt.AlignTop)
         
@@ -89,11 +90,11 @@ class MainChart(QWidget):
 
         self.control_layout = QHBoxLayout()
         self.control_layout.setContentsMargins(50, 0, 50, 10)
-        self.time_combobox = ComboInputWidget("Range", label_width = 40)
+        self.time_combobox = LEnumReadWriteWidget(enum_class=MainChartTimeRangeEnum, label_text = "Range", label_width = 40)
         self.time_combobox.setMaximumWidth(150)
-        self.time_combobox.combo_box.addItems(["30초", "1분", "2분", "3분", "5분", "10분"])
-        self.time_combobox.combo_box.setCurrentIndex(0)
-        self.time_combobox.combo_box.currentIndexChanged.connect(self.on_time_range_changed)
+        self.time_combobox.set_value(MainChartTimeRangeEnum.SEC_30.value)
+        self.time_combobox.commit()
+        self.time_combobox.sig_value_changed.connect(self.on_time_range_changed)
         self.control_layout.addWidget(self.time_combobox)
         self.control_layout.addStretch()
 
@@ -225,24 +226,21 @@ class MainChart(QWidget):
 
         QTimer.singleShot(0, updateViews)
 
-    def on_time_range_changed(self, index: int):
+    def on_time_range_changed(self):
         self.time_combobox.commit()
-
-        spans = [30, 60, 120, 180, 300, 600]
-        if 0 <= index < len(spans):
-            self.time_span_ms = spans[index] * 1000
-            self.jump_step_ms = int(self.time_span_ms / 10)
-            
-            if self.current_x_max is not None:
-                self.current_x_min = self.current_x_max - self.time_span_ms
-                self._update_xaxis_bounds()
+        self.time_span_ms = self.time_combobox.get_value()
+        self.jump_step_ms = int(self.time_span_ms / 10)
+        
+        if self.current_x_max is not None:
+            self.current_x_min = self.current_x_max - self.time_span_ms
+            self._update_xaxis_bounds()
 
     def on_posi_setting_changed(self):
         self.local_setting_manager.posi_chart_enable_actual = self.posi_setting_panel.chk_actual.isChecked()
         self.local_setting_manager.posi_chart_enable_target = self.posi_setting_panel.chk_target.isChecked()
-        self.local_setting_manager.posi_chart_range_mode = self.posi_setting_panel.mode_combo.currentIndex()
-        self.local_setting_manager.posi_chart_range_custom_min = self.posi_setting_panel.spin_min.value()
-        self.local_setting_manager.posi_chart_range_custom_max = self.posi_setting_panel.spin_max.value()
+        self.local_setting_manager.posi_chart_range_mode = self.posi_setting_panel.mode_combo.get_value()
+        self.local_setting_manager.posi_chart_range_custom_min = self.posi_setting_panel.spin_min.get_value()
+        self.local_setting_manager.posi_chart_range_custom_max = self.posi_setting_panel.spin_max.get_value()
 
         self.curve_act_posi.setVisible(self.local_setting_manager.posi_chart_enable_actual)
         self.curve_target_posi.setVisible(self.local_setting_manager.posi_chart_enable_target)
@@ -260,9 +258,9 @@ class MainChart(QWidget):
     def on_pres_setting_changed(self):
         self.local_setting_manager.pres_chart_enable_actual = self.pres_setting_panel.chk_actual.isChecked()
         self.local_setting_manager.pres_chart_enable_target = self.pres_setting_panel.chk_target.isChecked()
-        self.local_setting_manager.pres_chart_range_mode = self.pres_setting_panel.mode_combo.currentIndex()
-        self.local_setting_manager.pres_chart_range_custom_min = self.pres_setting_panel.spin_min.value()
-        self.local_setting_manager.pres_chart_range_custom_max = self.pres_setting_panel.spin_max.value()
+        self.local_setting_manager.pres_chart_range_mode = self.pres_setting_panel.mode_combo.get_value()
+        self.local_setting_manager.pres_chart_range_custom_min = self.pres_setting_panel.spin_min.get_value()
+        self.local_setting_manager.pres_chart_range_custom_max = self.pres_setting_panel.spin_max.get_value()
 
         self.curve_act_pres.setVisible(self.local_setting_manager.pres_chart_enable_actual)
         self.curve_target_pres.setVisible(self.local_setting_manager.pres_chart_enable_target)
@@ -275,10 +273,14 @@ class MainChart(QWidget):
         if self.pres_chart_range_mode == 1:  # Full
             min_val = 0.0
             max_val = self.pres_converter.get_dp_max_pres()
+
+            if max_val is None:
+                max_val = 100.0
+            
             self.view_pres.setYRange(min_val, max_val, padding=0)
         elif self.pres_chart_range_mode == 2: # Custom
             min_val, max_val = self._cal_pres_value_range()
-            self.view_pres.setYRange(min_val, max_val, padding=0)
+            self.view_pres.setYRange(self.local_setting_manager.pres_chart_range_custom_min, self.local_setting_manager.pres_chart_range_custom_max, padding=0)
 
     def _update_xaxis_bounds(self):
         # 충분한 패딩(0.03)을 주어 좌우 가장자리의 텍스트 잘림을 완전히 방지합니다.
@@ -290,8 +292,8 @@ class MainChart(QWidget):
         end_str = datetime.datetime.fromtimestamp(self.current_x_max / 1000.0).strftime("%H:%M:%S")
         
         # 네이티브 라벨에 시간 업데이트 (절대 사라지지 않음)
-        self.lbl_start_time.setText(start_str)
-        self.lbl_end_time.setText(end_str)
+        self.lbl_start_time.set_text(start_str)
+        self.lbl_end_time.set_text(end_str)
 
     def update_chart(self, new_data_list: List[CompoundData]):
         if not new_data_list:
@@ -416,6 +418,8 @@ class MainChart(QWidget):
         if self.pres_chart_range_mode == 1: # 0:Auto, 1:Full, 2:Custom
             min_val = 0.0
             max_val = self.pres_converter.get_dp_max_pres()
+            if max_val is None:
+                max_val = 100.0
             self.view_pres.setYRange(min_val, max_val, padding=0)
     
     

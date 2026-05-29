@@ -7,7 +7,7 @@ from PySide6.QtCore import QThread, Signal, QObject, QCoreApplication, Slot, Qt
 
 from b_core.b_datatype import param_enum as p_enum
 from b_core.b_datatype.parameter import Parameter
-from b_core.b_datatype.general_enum import SvcPortErrType, ParamParseErrType
+from b_core.b_datatype.general_enum import ParamAccType, SvcPortErrType, ParamParseErrType
 from b_core.d_dal.service_port import ServicePort
 
 class ParameterThread(QObject):
@@ -157,7 +157,7 @@ class ParameterWorker(QObject):
             self._show_warning_msgbox("Connection Error", "Communication is not connected. Please check the connection status.")
             return
 
-        self._total_target_count = len(self.init_param_list) + len(self.read_param_list)
+        self._total_target_count = len(self.init_param_list) + len(self.read_param_list) + len(self.write_param_list)
         self._processed_count = 0
         
         self.is_working = True
@@ -249,7 +249,11 @@ class ParameterWorker(QObject):
         if self._current_phase == "WRITE_AFTER_READ":
             if self._current_index < len(self.write_param_proc_list):
                 param = self.write_param_proc_list[self._current_index][0]
-                self._send_read_request(param)
+
+                if param.acc == ParamAccType.WO:
+                    self._request_read_next_skip()
+                else:
+                    self._send_read_request(param)
                 return
             else:
                 self._current_phase = "READ"
@@ -276,6 +280,16 @@ class ParameterWorker(QObject):
                 
             param = self.monitor_param_list[self._current_index]
             self._send_read_request(param)
+
+    def _request_read_next_skip(self):
+        if self._current_phase in ["INIT", "READ_WRITE_PARAM", "WRITE_AFTER_READ", "READ"]:
+            self._processed_count += 1
+            if self._total_target_count > 0:
+                self.progress = int((self._processed_count / self._total_target_count) * 100)
+
+        self._current_index += 1
+        self._request_read_next()
+
 
     def _send_read_request(self, param: Parameter):
         packet = f"p:0B{param.id}{param.index:02X}"

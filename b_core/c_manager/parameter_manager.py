@@ -9,7 +9,7 @@ from b_core.a_define import file_folder_path as path_def
 from b_core.b_datatype import param_enum as p_enum
 from b_core.b_datatype.general_enum import LogType, ParamDataType, ParamAccType, ParamDisplayType
 from b_core.c_manager.log_manager import LogManager
-from b_core.b_datatype.parameter_digi import ParameterDigi
+from b_core.b_datatype.parameter_errnum import ParameterErrNum 
 from b_core.b_datatype.parameter import Parameter
 
 
@@ -72,11 +72,32 @@ class ParamManager:
         self._add_param_real  ("System.Statistics.Time Since Power On"                                                      , "0F200300",  0, ParamAccType.RO, f_min, f_max, "sec"         , False, False, False, "")
         self._add_param_bitmap("System.Warning/Error.Warning Bitmap"                                                        , "0F300100",  0, ParamAccType.RO, p_enum.SysWarningBitmap     , False, False, False, None)
         self._add_param_bitmap("System.Warning/Error.Error Bitmap"                                                          , "0F300500",  0, ParamAccType.RO, p_enum.SysErrorBitmap       , False, False, False, None)
-        self._add_param_3digi ("System.Warning/Error.Error Number"                                                          , "0F300600",  0, ParamAccType.RO, p_enum.SysErrorNumberComponent, "Component", p_enum.SysErrorNumberMode, "Mode", p_enum.SysErrorNumberType, "Type", False, False, False, None)
+        self._add_param_errnum("System.Warning/Error.Error Number"                                                          , "0F300600",  0, ParamAccType.RO, p_enum.SysErrorNumberComponent, "Component", p_enum.SysErrorNumberMode, "Mode", p_enum.SysErrorNumberType, "Type", False, False, False, None)
         self._add_param_enum  ("System.Warning/Error.Error Code"                                                            , "0F300700",  0, ParamAccType.RO, p_enum.SysErrorCodeEnum     , False, False, False, None)
-        self._add_param_enum  ("System.Services.Restart Controller"                                                         , "0F500100",  0, ParamAccType.RW, p_enum.FalseTrueEnum        , False, False, False, "Emulates a power cycle")
-        self._add_param_enum  ("System.Services.Configuration Lock Mode"                                                    , "0F500500",  0, ParamAccType.RW, p_enum.FalseTrueEnum        , False, False, False, "Locking the valve settings.<br>If true, no changes to the settings are possible.")
-       
+        self._add_param_btn   ("System.Services.Restart Controller"                                                         , "0F500100",  0, ParamAccType.WO, "1"                         , True , False, False, "Emulates a power cycle")
+        self._add_param_btn   ("System.Services.Error Recover"                                                              , "0F506600",  0, ParamAccType.WO, "1"                         , True , False, False, "Clear error status")
+        self._add_param_btn   ("System.Services.Restore Factory Parameters"                                                 , "0F500205",  0, ParamAccType.WO, "1"                         , True , False, False, "Factory reset")
+        self._add_param_enum  ("System.Services.Test Mode"                                                                  , "0F030000",  0, ParamAccType.RW, p_enum.OffOnEnum            , True , False, False, "Test mode on/off")
+
+        '''       
+        Valve       
+        '''     
+        self._add_param_posi  ("Valve.Basic.Actual Position"                                                                , "10010000",  0, ParamAccType.RO,                               False, False, False, "Show position of the valve plate")
+        self._add_param_enum  ("Valve.Basic.Isolation State"                                                                , "10110000",  0, ParamAccType.RO, p_enum.ValveIsolStateEnum   , False, False, False, None)
+        self._add_param_enum  ("Valve.Basic.Position State"                                                                 , "10100000",  0, ParamAccType.RO, p_enum.ValvePosiStateEnum   , False, False, False, None)
+        self._add_param_enum  ("Valve.Compressed Air.Error Enable"                                                          , "10A90000",  0, ParamAccType.RW, p_enum.DisableEnableEnum    , False, False, False, None)
+        self._add_param_enum  ("Valve.Compressed Air.Pressure"                                                              , "10A40000",  0, ParamAccType.RO, p_enum.OkNotOkEnum          , False, False, False, None)
+        self._add_param_num   ("Valve.Cycle Counter.Control Cycles"                                                         , "10300100",  0, ParamAccType.RO, un_min, un_max, ""          , False, False, False, "The valve movement is summarized.<br>The distance open > close > open is 1 Control Cycle.<br>This value can be manipulated by the customer<br>(set to 0 after service, for example)")
+        self._add_param_num   ("Valve.Cycle Counter.Control Cycles Total"                                                   , "10300200",  0, ParamAccType.RO, un_min, un_max, ""          , False, False, False, "This value is the number of Control Cycles in valve lifespan")
+        self._add_param_btn   ("Valve.Cycle Counter.Reset Control Cycles"                                                   , "10300100",  0, ParamAccType.WO, "0"                         , False, False, False, "Reset Control Cycles")
+        self._add_param_num   ("Valve.Cycle Counter.Isolation Cycles"                                                       , "10300300",  0, ParamAccType.RO, un_min, un_max, ""          , False, False, False, "A Isolation Cycle is done if the valve has reached the sealed state.<br>This value can be manipulated by the customer.<br>(set to 0 after service, for example)")
+        self._add_param_num   ("Valve.Cycle Counter.Isolation Cycles Total"                                                 , "10300400",  0, ParamAccType.RO, un_min, un_max, ""          , False, False, False, "This value is the number of Isolation Cycles in valve lifespan")
+        self._add_param_btn   ("Valve.Cycle Counter.Reset Isolation Cycles"                                                 , "10300300",  0, ParamAccType.WO, "0"                         , False, False, False, "Reset Isolation Cycles")
+        self._add_param_enum  ("Valve.Homing.End Control Mode"                                                              , "10200300",  0, ParamAccType.RW, p_enum.ValveEndCtrlModeEnum , False, False, False, None)
+        self._add_param_posi  ("Valve.Homing.End Position"                                                                  , "10200400",  0, ParamAccType.RW,                               False, False, False, "Position to End Control Mode (2: Position)")
+        self._add_param_enum  ("Valve.Homing.Start Condition"                                                               , "10200100",  0, ParamAccType.RW, p_enum.ValveStartConditionEnum, False, False, False, None)
+        self._add_param_enum  ("Valve.Homing.Status"                                                                        , "10201100",  0, ParamAccType.RO, p_enum.ValveHomingStatusEnum, False, False, False, None)
+
         '''       
         Sensor       
         '''       
@@ -233,6 +254,12 @@ class ParamManager:
         #for i in range(0, 20):
         #    self._add_param_nvm_compound(f"Compound Commands.NVM For Sevice.Compound Commands 2.2 [{i}]", "B10A0200", i, ParamAccType.RW, False, False, None)
 
+    def _add_param_btn(self, full_path: str, id: str, index: int, param_acc : ParamAccType, write_str: str, is_only_local_acc:bool, is_nor_backup: bool, is_fu_backup: bool, description: str | None):
+        path, name = full_path.rsplit(".", 1)
+
+        self._add_param(Parameter(path, name, id, index, ParamDisplayType.BTN, ParamDataType.UINT32, param_acc, is_only_local_acc, is_nor_backup, is_fu_backup, "", int(0), int(0), None, description, write_str))
+
+
     def _add_param_enum(self, full_path: str, id: str, index: int, param_acc : ParamAccType, enum_class: type, is_only_local_acc:bool, is_nor_backup: bool, is_fu_backup: bool, description: str | None):
         path, name = full_path.rsplit(".", 1)
 
@@ -253,7 +280,7 @@ class ParamManager:
         self._add_param(Parameter(path, name, id, index, ParamDisplayType.BITMAP, ParamDataType.UINT32, param_acc, is_only_local_acc, is_nor_backup, is_fu_backup, "", int(0), int(4294967295), enum_class, description))
 
 
-    def _add_param_3digi(self, full_path: str, id: str, index: int, param_acc : ParamAccType, enum_class1: type, name1: str, enum_class2: type, name2: str, enum_class3: type, name3: str, is_only_local_acc:bool, is_nor_backup: bool, is_fu_backup: bool, description: str | None):
+    def _add_param_errnum(self, full_path: str, id: str, index: int, param_acc : ParamAccType, enum_class1: type, name1: str, enum_class2: type, name2: str, enum_class3: type, name3: str, is_only_local_acc:bool, is_nor_backup: bool, is_fu_backup: bool, description: str | None):
         path, name = full_path.rsplit(".", 1)
 
         if not description:
@@ -262,12 +289,12 @@ class ParamManager:
             items3 = [f"{item.value}: {item.description}" for item in enum_class3]
             description = "<br>".join(items1 + items2 + items3)
 
-        digiparam = ParameterDigi(path, name, id, index, ParamDisplayType.DIGI_NUM , ParamDataType.UINT32, param_acc, is_only_local_acc, is_nor_backup, is_fu_backup, "", int(0), int(4294967295), description)
-        digiparam.add_ref_list(name1, enum_class1) 
-        digiparam.add_ref_list(name2, enum_class2) 
-        digiparam.add_ref_list(name3, enum_class3) 
+        errnumparam = ParameterErrNum(path, name, id, index, ParamDisplayType.ERR_NUM , ParamDataType.UINT32, param_acc, is_only_local_acc, is_nor_backup, is_fu_backup, "", int(0), int(4294967295), description)
+        errnumparam.add_ref_list(name1, enum_class1) 
+        errnumparam.add_ref_list(name2, enum_class2) 
+        errnumparam.add_ref_list(name3, enum_class3) 
 
-        self._add_param(digiparam)        
+        self._add_param(errnumparam)        
 
 
     def _add_param_text(self, full_path: str, id: str, index: int, param_acc : ParamAccType, is_only_local_acc:bool, is_nor_backup: bool, is_fu_backup: bool, description: str):

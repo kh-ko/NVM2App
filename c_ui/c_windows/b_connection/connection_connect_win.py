@@ -1,19 +1,19 @@
-from b_core.d_dal.service_port import ServicePort
 import json
 import os
 from PySide6.QtWidgets import (QListWidgetItem, QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QMessageBox, QWidget, QFormLayout, QLineEdit, QCheckBox, QSplitter, QComboBox, QLabel, QFrame)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtSerialPort import QSerialPort
+
 from b_core.a_define import file_folder_path
+from b_core.d_dal.service_port import ServicePort
 
 from b_core.e_worker.comport_scan_run_worker import PortScanThread
-
-from c_ui.b_components.b_custom_layout.custom_list import CustomListWidget
-from c_ui.b_components.b_custom_layout.custom_splitter import CustomSplitter
-from c_ui.b_components.a_custom_base.custom_toolbar import CustomToolBar
-from c_ui.b_components.b_custom_layout.custom_panel import CustomPanel
 from b_core.e_worker.comport_scan_run_worker import ComportScanRunWorker
+
+from c_ui.b_control_packet.layout.my_list_widget import MyListWidget
+from c_ui.b_control_packet.layout.my_splitter import MySplitter
+from c_ui.b_control_packet.base.base_toolbar import BaseToolBar
 
 class ConnectionConnectWin(QMainWindow):      
     """
@@ -54,7 +54,7 @@ class ConnectionConnectWin(QMainWindow):
         self._load_connection_infos()
         
     def _init_ui(self):
-        self.toolbar = CustomToolBar(self) # 이전에 만든 Custom 툴바 클래스
+        self.toolbar = BaseToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
         self.toolbar.add_action("Scan", self.on_clicked_scan)
 
@@ -64,16 +64,16 @@ class ConnectionConnectWin(QMainWindow):
         main_layout.setContentsMargins(10, 10, 10, 10)
 
         # Splitter
-        self.splitter = CustomSplitter(Qt.Horizontal)
+        self.splitter = MySplitter(Qt.Horizontal)
         main_layout.addWidget(self.splitter)
 
         # Left: List Widget
-        self.connection_list_widget = CustomListWidget()
+        self.connection_list_widget = MyListWidget()
         self.connection_list_widget.currentRowChanged.connect(self.on_change_connection_item)
         self.splitter.addWidget(self.connection_list_widget)
 
         # Right: Panel
-        self.port_list_widget = CustomListWidget()
+        self.port_list_widget = MyListWidget()
         self.port_list_widget.doubleClicked.connect(self.on_select_port_item)
         self.splitter.addWidget(self.port_list_widget)
 

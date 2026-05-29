@@ -55,7 +55,7 @@ class Parameter(QObject):
     FLOAT_TYPES = (ParamDataType.FLOAT, ParamDataType.DOUBLE)
     STR_TYPES = (ParamDataType.STR,)
 
-    def __init__(self, path: str, name: str, id: str, index: int, display_type: ParamDisplayType, data_type: ParamDataType, acc: ParamAccType, is_only_local_acc:bool,is_nor_backup: bool, is_fu_backup: bool, unit: str, min_value: Union[int, float, None], max_value: Union[int, float, None], ref_list: Optional[Type[DescriptionEnum]], description: str):
+    def __init__(self, path: str, name: str, id: str, index: int, display_type: ParamDisplayType, data_type: ParamDataType, acc: ParamAccType, is_only_local_acc:bool,is_nor_backup: bool, is_fu_backup: bool, unit: str, min_value: Union[int, float, None], max_value: Union[int, float, None], ref_list: Optional[Type[DescriptionEnum]], description: str, btn_str_value : str = ""):
         super().__init__()
         self.path : str = path
         self.name : str = name
@@ -72,6 +72,7 @@ class Parameter(QObject):
         self.max_value : Union[int, float, None] = max_value
         self.ref_list : Optional[Type[DescriptionEnum]] = ref_list
         self.description : str = description
+        self.btn_str_value : str = btn_str_value
         
         self._value : Union[int, float, str, None] = None
         self.str_value : str = ""
@@ -127,6 +128,8 @@ class Parameter(QObject):
             elif self.data_type in self.STR_TYPES:
                 self.str_value = new_val
                 self.value = new_val
+                
+            self.is_err = False
         except ValueError:
             print(f"[Parameter]set_force_value() : 설정 값이 잘못 되었습니다. {self.path}, {self.name}, {new_val}")
             pass

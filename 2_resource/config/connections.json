@@ -6,7 +6,7 @@
         "name": "9600",
         "parity": 0,
         "stopBits": 2,
-        "network": 1,
+        "network": 0,
         "address": "0",
         "termination": 0
     },
@@ -17,7 +17,7 @@
         "name": "38400",
         "parity": 2,
         "stopBits": 1,
-        "network": 1,
+        "network": 0,
         "address": "0",
         "termination": 0
     },
@@ -28,7 +28,7 @@
         "name": "115200",
         "parity": 0,
         "stopBits": 1,
-        "network": 1,
+        "network": 0,
         "address": "0",
         "termination": 0
     }

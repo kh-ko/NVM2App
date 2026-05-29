@@ -9,37 +9,18 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtSerialPort import QSerialPort 
-from b_core.a_define import file_folder_path
 
-from c_ui.b_components.b_custom_layout.custom_list import CustomListWidget
-from c_ui.b_components.b_custom_layout.custom_splitter import CustomSplitter
-from c_ui.b_components.a_custom_base.custom_toolbar import CustomToolBar
-from c_ui.b_components.b_custom_layout.custom_panel import CustomPanel
-from c_ui.b_components.c_custom_composit.combo_input_widget import ComboInputWidget
-from c_ui.b_components.c_custom_composit.line_edit_widget import LineEditWidget
+from b_core.a_define import file_folder_path
+from b_core.b_datatype.general_enum import ConnectionBaudRateEnum, ConnectionDataBitsEnum, ConnectionNetworkEnum, ConnectionParityEnum, ConnectionStopBitsEnum, ConnectionTerminationEnum
+
+from c_ui.b_control_packet.base.base_toolbar import BaseToolBar
+from c_ui.b_control_packet.layout.my_splitter import MySplitter
+from c_ui.b_control_packet.layout.my_panel_widget import MyPanelWidget
+from c_ui.b_control_packet.layout.my_list_widget import MyListWidget
+from c_ui.b_control_packet.controls_with_label.l_enum_rw_widget import LEnumReadWriteWidget
+from c_ui.b_control_packet.controls_with_label.l_text_rw_widget import LTextReadWriteWidget
 
 class ConnectionSettingWin(QMainWindow):
-    """
-    통신 설정(connections.json) 데이터를 관리(생성, 저장, 삭제)하는 윈도우 클래스입니다.
-    마스터-디테일(Master-Detail) 구조로 구현되어 있으며, 좌우 스플리터(Splitter)로 영역을 분할합니다.
-
-    [주요 구성 및 동작]
-    1. 툴바 (TopToolBar): 
-       - 새로운 통신 설정 추가(Create), 현재 설정 수정/저장(Save), 선택된 설정 삭제(Delete) 기능을 제공합니다.
-    2. 좌측 리스트 (CustomListWidget):
-       - 저장된 통신 설정 데이터의 이름("name") 목록을 표시합니다.
-       - 항목 선택 시 우측 상세 패널에 해당 설정의 값이 로딩됩니다.
-    3. 우측 상세 패널 (CustomPanel - Detail):
-       - 선택된 통신 설정의 상세 정보를 확인하고 수정할 수 있는 입력 폼입니다.
-       - Name : 통신 설정의 이름 (CustomLineEdit)
-       - Network : 네트워크 방식(RS232, RS485, TCP/IP) - 예정 기능으로 비활성화 (CustomComboBox)
-       - Address : 연결 주소 - 예정 기능으로 비활성화 (CustomLineEdit)
-       - Baudrate : 통신 속도(9600~115200) 지정 (CustomComboBox)
-       - Data Bits : 데이터 비트(5~8) 지정 (CustomComboBox)
-       - Parity : 패리티 비트(No, Even, Odd, Space, Mark) 지정 (CustomComboBox)
-       - Stop Bits : 정지 비트(One, Two, OneAndHalf) 지정 (CustomComboBox)
-       - Termination : 종료 문자(CR+LF, LF, CR) 지정 (CustomComboBox)
-    """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Connection >> Settings")
@@ -53,7 +34,7 @@ class ConnectionSettingWin(QMainWindow):
         self._load_connection_infos()
 
     def init_ui(self):
-        self.toolbar = CustomToolBar(self)
+        self.toolbar = BaseToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
         self.toolbar.add_action("Create", self.add_connection_info)
         self.toolbar.add_action("Save", self.save_connection_info)
@@ -64,58 +45,40 @@ class ConnectionSettingWin(QMainWindow):
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
 
-        self.splitter = CustomSplitter(Qt.Horizontal)
+        self.splitter = MySplitter(Qt.Horizontal)
         main_layout.addWidget(self.splitter)
 
-        self.list_widget = CustomListWidget()
+        self.list_widget = MyListWidget()
         self.list_widget.currentRowChanged.connect(self.on_change_item)
         self.splitter.addWidget(self.list_widget)
 
-        self.panel = CustomPanel("Detail")
+        self.panel = MyPanelWidget("Detail")
         self.splitter.addWidget(self.panel)
         
-        self.name_edit = LineEditWidget("Name")
+        self.name_edit = LTextReadWriteWidget("Name")
         self.panel.add_widget(self.name_edit)
 
-        self.network_combo = ComboInputWidget("Network")
-        self.network_combo.addItem("RS232", 0)
-        self.network_combo.addItem("RS485", 1)
-        self.network_combo.addItem("TCP/IP", 2)
+        self.network_combo = LEnumReadWriteWidget(enum_class=ConnectionNetworkEnum, label_text="Network")
         self.network_combo.setEnabled(False)
         self.panel.add_widget(self.network_combo)
 
-        self.address_edit = LineEditWidget("Address")
+        self.address_edit = LTextReadWriteWidget("Address")
         self.address_edit.setEnabled(False)
         self.panel.add_widget(self.address_edit)
 
-        self.baudrate_combo = ComboInputWidget("Baudrate")
-        for br in [9600, 19200, 38400, 57600, 115200]:
-            self.baudrate_combo.addItem(str(br), br)
+        self.baudrate_combo = LEnumReadWriteWidget(enum_class=ConnectionBaudRateEnum, label_text="Baudrate")
         self.panel.add_widget(self.baudrate_combo)
 
-        self.databits_combo = ComboInputWidget("Data Bits")
-        for db in [5, 6, 7, 8]:
-            self.databits_combo.addItem(str(db), db)
+        self.databits_combo = LEnumReadWriteWidget(enum_class=ConnectionDataBitsEnum, label_text="Data Bits")
         self.panel.add_widget(self.databits_combo)
 
-        self.parity_combo = ComboInputWidget("Parity")
-        self.parity_combo.addItem("NoParity", 0)
-        self.parity_combo.addItem("EvenParity", 2)
-        self.parity_combo.addItem("OddParity", 3)
-        self.parity_combo.addItem("SpaceParity", 4)
-        self.parity_combo.addItem("MarkParity", 5)
+        self.parity_combo = LEnumReadWriteWidget(enum_class=ConnectionParityEnum, label_text="Parity")
         self.panel.add_widget(self.parity_combo)
 
-        self.stopbits_combo = ComboInputWidget("Stop Bits")
-        self.stopbits_combo.addItem("OneStop", 1)
-        self.stopbits_combo.addItem("TwoStop", 2)
-        self.stopbits_combo.addItem("OneAndHalfStop", 3)
+        self.stopbits_combo = LEnumReadWriteWidget(enum_class=ConnectionStopBitsEnum, label_text="Stop Bits")
         self.panel.add_widget(self.stopbits_combo)
 
-        self.termination_combo = ComboInputWidget("Termination")
-        self.termination_combo.addItem("CR+LF", 0)
-        self.termination_combo.addItem("LF", 1)
-        self.termination_combo.addItem("CR", 2)
+        self.termination_combo = LEnumReadWriteWidget(enum_class=ConnectionTerminationEnum, label_text="Termination")
         self.panel.add_widget(self.termination_combo)
 
         self.panel.add_stretch()
@@ -145,7 +108,7 @@ class ConnectionSettingWin(QMainWindow):
             self.list_widget.setCurrentRow(0)
 
     def add_connection_info(self):
-        base_name = self.name_edit.text().strip()
+        base_name = self.name_edit.get_value().strip()
         if not base_name:
             base_name = "New_Connection"
             
@@ -159,13 +122,13 @@ class ConnectionSettingWin(QMainWindow):
 
         new_data = {
             "name": new_name,
-            "network": self.network_combo.currentData(),
-            "address": self.address_edit.text(),
-            "baudrate": self.baudrate_combo.currentData(),
-            "dataBits": self.databits_combo.currentData(),
-            "parity": self.parity_combo.currentData(),
-            "stopBits": self.stopbits_combo.currentData(),
-            "termination": self.termination_combo.currentData(),
+            "network": self.network_combo.get_value(),
+            "address": self.address_edit.get_value(),
+            "baudrate": self.baudrate_combo.get_value(),
+            "dataBits": self.databits_combo.get_value(),
+            "parity": self.parity_combo.get_value(),
+            "stopBits": self.stopbits_combo.get_value(),
+            "termination": self.termination_combo.get_value(),
             "isSelect": False
         }
 
@@ -192,7 +155,7 @@ class ConnectionSettingWin(QMainWindow):
             QMessageBox.warning(self, "Warning", "Please select an item to save.")
             return
 
-        new_name = self.name_edit.text().strip()
+        new_name = self.name_edit.get_value().strip()
         if not new_name:
             QMessageBox.warning(self, "Warning", "Please enter a name.")
             return
@@ -217,13 +180,13 @@ class ConnectionSettingWin(QMainWindow):
         }
 
         data["name"] = new_name
-        data["network"] = self.network_combo.currentData()
-        data["address"] = self.address_edit.text()
-        data["baudrate"] = self.baudrate_combo.currentData()
-        data["dataBits"] = self.databits_combo.currentData()
-        data["parity"] = self.parity_combo.currentData()
-        data["stopBits"] = self.stopbits_combo.currentData()
-        data["termination"] = self.termination_combo.currentData()
+        data["network"] = self.network_combo.get_value()
+        data["address"] = self.address_edit.get_value()
+        data["baudrate"] = self.baudrate_combo.get_value()
+        data["dataBits"] = self.databits_combo.get_value()
+        data["parity"] = self.parity_combo.get_value()
+        data["stopBits"] = self.stopbits_combo.get_value()
+        data["termination"] = self.termination_combo.get_value()
 
         try:
             os.makedirs(os.path.dirname(self.json_path), exist_ok=True)
@@ -292,25 +255,26 @@ class ConnectionSettingWin(QMainWindow):
         data = self.connection_data[current_row]
 
         # 1. 텍스트 입력창 업데이트
-        self.name_edit.setText(str(data.get("name", "")))
-        self.address_edit.setText(str(data.get("address", "0")))
+        self.name_edit.set_value(str(data.get("name", "")))
+        self.name_edit.commit()
+        self.address_edit.set_value(str(data.get("address", "0")))
+        self.address_edit.commit()
 
         # 2. 콤보박스 업데이트 (데이터 값에 해당하는 index를 찾아 설정)
-        self.network_combo.setCurrentIndex(
-            self.network_combo.findData(data.get("network", 0))
-        )
-        self.baudrate_combo.setCurrentIndex(
-            self.baudrate_combo.findData(data.get("baudrate", 9600))
-        )
-        self.databits_combo.setCurrentIndex(
-            self.databits_combo.findData(data.get("dataBits", 8))
-        )
-        self.parity_combo.setCurrentIndex(
-            self.parity_combo.findData(data.get("parity", 0))
-        )
-        self.stopbits_combo.setCurrentIndex(
-            self.stopbits_combo.findData(data.get("stopBits", 1))
-        )
-        self.termination_combo.setCurrentIndex(
-            self.termination_combo.findData(data.get("termination", 0))
-        )
+        self.network_combo.set_value(data.get("network", 0))
+        self.network_combo.commit()
+
+        self.baudrate_combo.set_value(data.get("baudrate", 9600))
+        self.baudrate_combo.commit()
+
+        self.databits_combo.set_value(data.get("dataBits", 8))
+        self.databits_combo.commit()
+
+        self.parity_combo.set_value(data.get("parity", 0))
+        self.parity_combo.commit()
+
+        self.stopbits_combo.set_value(data.get("stopBits", 1))
+        self.stopbits_combo.commit()
+
+        self.termination_combo.set_value(data.get("termination", 0))
+        self.termination_combo.commit()
