@@ -7,6 +7,7 @@ class LBaseWidget(QWidget):
     def __init__(self, label_text="", label_width=150, parent=None):
         super().__init__(parent)
 
+        self.original_value = None
         self.value_widget = None
 
         # 1. 레이아웃 구성
@@ -37,5 +38,11 @@ class LBaseWidget(QWidget):
     def set_support(self, support : bool):
         if self.value_widget is not None:
             self.value_widget.set_support(support)
+
+    def restore(self):
+        pass
+
+        
+
         
         

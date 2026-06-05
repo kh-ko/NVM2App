@@ -148,7 +148,7 @@ class CompoundsRunWorker(QObject):
             ("Position Control.Basic.Target Position Used", 3),
             ("Pressure Control.Basic.Actual Pressure", 4),
             ("Pressure Control.Basic.Target Pressure Used", 5),
-            ("Position Control.Basic.Position Control Speed", 6),
+            ("Position Control.Basic.Position Control Speed Used", 6),
             ("Pressure Control.Basic.Controller Selector Used", 7),
             ("System.Warning/Error.Warning Bitmap", 8),
             ("System.Warning/Error.Error Bitmap", 9),

@@ -15,7 +15,7 @@ class LEnumReadWriteWidget(LBaseReadWriteWidget):
         self.add_widget(self.value_widget)
 
     def _on_input_changed(self, value):
-        self.dirty_label.setVisible(self.isDirty()) 
+        self.dirty_label.setVisible(self.is_dirty()) 
         self.sig_value_changed.emit()
 
     def commit(self):
@@ -28,7 +28,7 @@ class LEnumReadWriteWidget(LBaseReadWriteWidget):
     def get_value(self) -> int:
         return self.value_widget.get_value()
 
-    def isDirty(self) -> bool:
+    def is_dirty(self) -> bool:
         if self.value_widget.get_value() is None:
             return False
 

@@ -101,6 +101,15 @@ class PosiConverterManager(QObject):
         fmt_spec = f".{self.posi_decimal_places}f"    
         return format(Decimal(str(value * 100)), fmt_spec)   
 
+    def convert_pfs_to_dp_posi(self, value:float) -> float:
+        if value is None:
+            return None 
+        
+        if self.posi_unit == -1:
+            return None 
+
+        return value * 100
+
     def convert_dp_posi_str_to_pfs(self, value: str) -> float:
         try:
             float_value = float(value)

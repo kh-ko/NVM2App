@@ -18,7 +18,7 @@ class LNumberReadWriteWidget(LBaseReadWriteWidget):
         self.sig_value_changed.emit()
 
     def _on_input_changed(self):
-        self.dirty_label.setVisible(self.isDirty()) 
+        self.dirty_label.setVisible(self.is_dirty()) 
 
     def commit(self):
         self.original_value = self.value_widget.get_value()
@@ -33,7 +33,7 @@ class LNumberReadWriteWidget(LBaseReadWriteWidget):
     def get_value(self) -> int:
         return self.value_widget.get_value()
 
-    def isDirty(self) -> bool:
+    def is_dirty(self) -> bool:
         input_value = self.value_widget.get_value()
 
         if input_value is None:

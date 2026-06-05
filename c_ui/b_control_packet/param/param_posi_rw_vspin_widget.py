@@ -4,7 +4,7 @@ from b_core.c_manager.parameter_manager import ParamManager
 from c_ui.b_control_packet.controls_with_label.l_float_rw_vspin_widget import LFloatReadWriteVerticalSpinWidget
 
 
-class ParamFloatReadWriteVerticalSpinWidget(LFloatReadWriteVerticalSpinWidget):
+class ParamPosiReadWriteVerticalSpinWidget(LFloatReadWriteVerticalSpinWidget):
     def __init__(self, param_full_path : str, label_text = None, enable_wrap_border=False, is_only_enter_finished = False, parent = None):
         self.param = ParamManager().get_by_full_path(param_full_path)
         self.converter = PosiConverterManager()

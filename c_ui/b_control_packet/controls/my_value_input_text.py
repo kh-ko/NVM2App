@@ -20,3 +20,12 @@ class MyValueInputText(BaseLineEdit):
     def get_value(self) -> str:
         value = self.text()
         return value
+
+    def set_support(self, support : bool):
+        if not support:
+            self.setPlaceholderText("Not Support")
+            self.set_value(None)
+            self.setEnabled(False)
+        else:
+            self.setPlaceholderText("Unknown (None)")
+            self.setEnabled(True)  

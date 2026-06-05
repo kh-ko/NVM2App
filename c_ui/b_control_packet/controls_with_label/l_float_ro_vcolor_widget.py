@@ -2,10 +2,10 @@ from PySide6.QtCore import Signal
 from PySide6.QtCore import Qt
 
 from c_ui.b_control_packet.base import my_style
-from c_ui.b_control_packet.controls_with_label.l_base_v_rw_widget import LBaseVerticalReadWriteWidget
+from c_ui.b_control_packet.controls_with_label.l_base_v_ro_widget import LBaseVerticalReadOnlyWidget
 from c_ui.b_control_packet.controls.my_value_label_float_color import MyValueLabelFloatColor
 
-class LFloatReadOnlyVerticalColorWidget(LBaseVerticalReadWriteWidget):    
+class LFloatReadOnlyVerticalColorWidget(LBaseVerticalReadOnlyWidget):    
     sig_value_changed = Signal()
 
     def __init__(self, label_text="", label_color=my_style.STYLE_LABEL_COLOR, bg_color=my_style.STYLE_BORDER_COLOR, parent=None):

@@ -55,14 +55,14 @@ class BaseLabelColorBox(QLabel):
             * {{
                 color: {label_color};
                 background-color: {bg_color};
-                border-color: {border_color};
+                border: 1px solid {border_color};
                 border-radius: 4px;
                 padding: 4px;
             }}
             *:disabled {{
                 color: {label_disabled_color};
                 background-color: {bg_disabled_color};
-                border-color: {border_disabled_color};
+                border: 1px solid {border_disabled_color};
                 border-radius: 4px;
                 padding: 4px;
             }}

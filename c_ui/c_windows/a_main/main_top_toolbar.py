@@ -50,6 +50,8 @@ class MainTopToolBar(BaseToolBar):
         self.conn_btn.setMenu(self.conn_menu)
         self.addWidget(self.conn_btn)
 
+        self.addSeparator()
+
         self.sys_btn = QToolButton(self)
         self.sys_btn.setText("System")
         self.sys_btn.setProperty("menuBtn", "true") # 커스텀 CSS(마우스 오버 등) 적용
@@ -81,22 +83,60 @@ class MainTopToolBar(BaseToolBar):
 
         self.valve_menu = QMenu(self.valve_btn)
 
-        self.action_valve_basic       = QAction("Basic"               , self)
-        self.action_valve_air         = QAction("Compressed Air"      , self)
+        self.action_valve_basic       = QAction("Basic State"         , self)
         self.action_valve_cycle       = QAction("Cycle Counter"       , self)
-        self.action_valve_homeing     = QAction("Homing"              , self)
-        self.action_valve_restriction = QAction("Position Restriction", self)
-        self.action_valve_adaption    = QAction("Position Adaption"   , self)
+        self.action_valve_setting     = QAction("Setting"             , self)
 
         self.valve_menu.addAction(self.action_valve_basic      )
-        self.valve_menu.addAction(self.action_valve_air        )
         self.valve_menu.addAction(self.action_valve_cycle      )
-        self.valve_menu.addAction(self.action_valve_homeing    )
-        self.valve_menu.addAction(self.action_valve_restriction)
-        self.valve_menu.addAction(self.action_valve_adaption   )
+        self.valve_menu.addAction(self.action_valve_setting    )
 
         self.valve_btn.setMenu(self.valve_menu)
         self.addWidget(self.valve_btn)   
+
+        self.sens_btn = QToolButton(self)
+        self.sens_btn.setText("Sensor")
+        self.sens_btn.setProperty("menuBtn", "true") # 커스텀 CSS(마우스 오버 등) 적용
+        self.sens_btn.setPopupMode(QToolButton.InstantPopup) # 클릭 시 즉시 메뉴 펼침
+
+        self.sens_menu = QMenu(self.sens_btn)
+
+        self.action_sens_zero    = QAction("Zero"    , self)
+        self.action_sens_setting = QAction("Setting" , self)
+
+        self.sens_menu.addAction(self.action_sens_zero    )
+        self.sens_menu.addAction(self.action_sens_setting )
+
+        self.sens_btn.setMenu(self.sens_menu)
+        self.addWidget(self.sens_btn) 
+
+        self.posi_ctrl_btn = QToolButton(self)
+        self.posi_ctrl_btn.setText("Position Control")
+        self.posi_ctrl_btn.setProperty("menuBtn", "true") # 커스텀 CSS(마우스 오버 등) 적용
+        self.posi_ctrl_btn.setPopupMode(QToolButton.InstantPopup) # 클릭 시 즉시 메뉴 펼침
+
+        self.posi_ctrl_menu = QMenu(self.posi_ctrl_btn)
+
+        self.action_posi_ctrl_setting = QAction("Setting", self)
+
+        self.posi_ctrl_menu.addAction(self.action_posi_ctrl_setting)
+
+        self.posi_ctrl_btn.setMenu(self.posi_ctrl_menu)
+        self.addWidget(self.posi_ctrl_btn)   
+
+        self.pres_ctrl_btn = QToolButton(self)
+        self.pres_ctrl_btn.setText("Pressure Control")
+        self.pres_ctrl_btn.setProperty("menuBtn", "true") # 커스텀 CSS(마우스 오버 등) 적용
+        self.pres_ctrl_btn.setPopupMode(QToolButton.InstantPopup) # 클릭 시 즉시 메뉴 펼침
+
+        self.pres_ctrl_menu = QMenu(self.pres_ctrl_btn)
+
+        self.action_pres_ctrl_setting = QAction("Setting", self)
+
+        self.pres_ctrl_menu.addAction(self.action_pres_ctrl_setting)
+
+        self.pres_ctrl_btn.setMenu(self.pres_ctrl_menu)
+        self.addWidget(self.pres_ctrl_btn)  
 
     def reg_local_btn_slot(self, slot):
         self.local_btn.clicked.connect(slot, Qt.QueuedConnection)
@@ -131,17 +171,20 @@ class MainTopToolBar(BaseToolBar):
     def reg_valve_basic_slot(self, slot):
         self.action_valve_basic.triggered.connect(slot, Qt.QueuedConnection)
 
-    def reg_valve_comporessed_air_slot(self, slot):
-        self.action_valve_air.triggered.connect(slot, Qt.QueuedConnection)
-
     def reg_valve_cycle_counter_slot(self, slot):
         self.action_valve_cycle.triggered.connect(slot, Qt.QueuedConnection)
 
-    def reg_valve_homing_slot(self, slot):
-        self.action_valve_homeing.triggered.connect(slot, Qt.QueuedConnection)        
+    def reg_valve_setting_slot(self, slot):
+        self.action_valve_setting.triggered.connect(slot, Qt.QueuedConnection)   
 
-    def reg_valve_posi_restriction_slot(self, slot):
-        self.action_valve_restriction.triggered.connect(slot, Qt.QueuedConnection)      
+    def reg_sens_zero_slot(self, slot):
+        self.action_sens_zero.triggered.connect(slot, Qt.QueuedConnection)
 
-    def reg_valve_posi_adaption_slot(self, slot):
-        self.action_valve_adaption.triggered.connect(slot, Qt.QueuedConnection)                    
+    def reg_sens_setting_slot(self, slot):
+        self.action_sens_setting.triggered.connect(slot, Qt.QueuedConnection) 
+
+    def reg_posi_ctrl_setting_slot(self, slot):
+        self.action_posi_ctrl_setting.triggered.connect(slot, Qt.QueuedConnection) 
+
+    def reg_pres_ctrl_setting_slot(self, slot):
+        self.action_pres_ctrl_setting.triggered.connect(slot, Qt.QueuedConnection)

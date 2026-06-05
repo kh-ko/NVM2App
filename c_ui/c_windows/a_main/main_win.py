@@ -1,5 +1,4 @@
-from typing import List, Tuple
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QMessageBox, QFrame, QHBoxLayout
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMessageBox, QHBoxLayout
 from PySide6.QtCore import Qt, QTimer
 
 from b_core.a_define import app_info
@@ -17,9 +16,23 @@ from c_ui.c_windows.a_main.main_chart import MainChart
 from c_ui.c_windows.a_main.main_valve_status import MainValveStatus
 from c_ui.c_windows.a_main.main_valve_control import MainValveControl
 from c_ui.c_windows.a_main.main_valve_position import MainValvePosition
+from c_ui.c_windows.a_main.main_setpoint_posi_edit_win import MainSetpointPosiEditWin
+from c_ui.c_windows.a_main.main_valve_pressure import MainValvePressure
+from c_ui.c_windows.a_main.main_setpoint_pres_edit_win import MainSetpointPresEditWin
 
 from c_ui.c_windows.b_connection.connection_setting_win import ConnectionSettingWin
 from c_ui.c_windows.b_connection.connection_connect_win import ConnectionConnectWin
+from c_ui.c_windows.c_sys.sys_identification_win import SysIdentificationWin
+from c_ui.c_windows.c_sys.sys_warn_err_win import SysWarnErrWin
+from c_ui.c_windows.c_sys.sys_statistics_win import SysStatisticsWin
+from c_ui.c_windows.c_sys.sys_service_win import SysServiceWin
+from c_ui.c_windows.d_valve.valve_basic_win import ValveBasicWin
+from c_ui.c_windows.d_valve.valve_cycle_counter_win import ValveCycleCounterWin
+from c_ui.c_windows.d_valve.valve_setting_win import ValveSettingWin
+from c_ui.c_windows.e_sensor.sensor_zero_win import SensorZeroWin
+from c_ui.c_windows.e_sensor.sensor_setting_win import SensorSettingWin
+from c_ui.c_windows.f_posi_ctrl.posi_ctrl_setting_win import PosiCtrlSettingWin
+from c_ui.c_windows.g_pres_ctrl.pres_ctrl_setting_win import PresCtrlSettingWin
 
 class MainWin(QMainWindow):
     """
@@ -49,7 +62,7 @@ class MainWin(QMainWindow):
         bottom_layout.setContentsMargins(0, 0, 0, 0) # 영역 간 마진 없애기
         bottom_layout.setSpacing(0)
 
-        section = MainValveStatus("System.Control Mode", "Position Control.Basic.Position Control Speed", "Pressure Control.Basic.Controller Selector Used", "System.Warning/Error.Warning Bitmap", "System.Warning/Error.Error Bitmap")
+        section = MainValveStatus("System.Control Mode", "Position Control.Basic.Position Control Speed Used", "Pressure Control.Basic.Controller Selector Used", "System.Warning/Error.Warning Bitmap", "System.Warning/Error.Error Bitmap")
         bottom_layout.addWidget(section, 26)
 
         self.ctrl_panel = MainValveControl(); 
@@ -62,14 +75,14 @@ class MainWin(QMainWindow):
         self.posi_panel = MainValvePosition()
         bottom_layout.addWidget(self.posi_panel, 20)
         self.posi_panel.posi_input.sig_value_changed.connect(self.on_posi_input_finished, Qt.QueuedConnection)
-        #self.posi_panel.sig_btn_clicked.connect(self.on_clicked_posi_btn, Qt.QueuedConnection)
-        #self.posi_panel.btn_edit.clicked.connect(self.on_clicked_posi_edit_btn, Qt.QueuedConnection)
+        self.posi_panel.sig_btn_clicked.connect(self.on_clicked_posi_btn, Qt.QueuedConnection)
+        self.posi_panel.btn_edit.clicked.connect(self.on_clicked_posi_edit_btn, Qt.QueuedConnection)
 
-        self.pres_panel = QWidget() #MainPressure()
+        self.pres_panel = MainValvePressure()
         bottom_layout.addWidget(self.pres_panel, 20)
-        #self.pres_panel.pres_input.sig_value_changed.connect(self.on_pres_input_finished, Qt.QueuedConnection)
-        #self.pres_panel.sig_btn_clicked.connect(self.on_clicked_pres_btn, Qt.QueuedConnection)
-        #self.pres_panel.btn_edit.clicked.connect(self.on_clicked_pres_edit_btn, Qt.QueuedConnection)
+        self.pres_panel.pres_input.sig_value_changed.connect(self.on_pres_input_finished, Qt.QueuedConnection)
+        self.pres_panel.sig_btn_clicked.connect(self.on_clicked_pres_btn, Qt.QueuedConnection)
+        self.pres_panel.btn_edit.clicked.connect(self.on_clicked_pres_edit_btn, Qt.QueuedConnection)
 
         # 메인 레이아웃에 하단 영역 추가
         main_layout.addWidget(self.bottom_area)
@@ -88,11 +101,12 @@ class MainWin(QMainWindow):
         self.main_top_toolbar.reg_sys_warning_error_slot(self.on_clicked_sys_warning_error)
         self.main_top_toolbar.reg_sys_service_slot(self.on_clicked_sys_service)
         self.main_top_toolbar.reg_valve_basic_slot(self.on_clicked_valve_basic)
-        self.main_top_toolbar.reg_valve_comporessed_air_slot(self.on_clicked_valve_comporessed_air)
         self.main_top_toolbar.reg_valve_cycle_counter_slot(self.on_clicked_valve_cycle_counter)
-        self.main_top_toolbar.reg_valve_homing_slot(self.on_clicked_valve_homing)
-        self.main_top_toolbar.reg_valve_posi_restriction_slot(self.on_clicked_valve_posi_restriction)
-        self.main_top_toolbar.reg_valve_posi_adaption_slot(self.on_clicked_valve_posi_adaption)
+        self.main_top_toolbar.reg_valve_setting_slot(self.on_clicked_valve_setting)
+        self.main_top_toolbar.reg_sens_zero_slot(self.on_clicked_sens_zero)
+        self.main_top_toolbar.reg_sens_setting_slot(self.on_clicked_sens_setting)
+        self.main_top_toolbar.reg_posi_ctrl_setting_slot(self.on_clicked_posi_ctrl_setting)
+        self.main_top_toolbar.reg_pres_ctrl_setting_slot(self.on_clicked_pres_ctrl_setting)
 
         # 4. 상태바(Status Bar) 초기화
         self.main_foot_statusbar = MainFootStatusBar(self)
@@ -122,14 +136,14 @@ class MainWin(QMainWindow):
         self.param_worker.add_init_param("Sensor.Sensor 1.Basic.Scale")
         self.param_worker.add_init_param("Sensor.Sensor 1.Range.Upper Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 1.Range.Lower Limit Data Value")
-        self.param_worker.add_init_param("Sensor.Sensor 1.Range.Voltage Per Decade")
+        self.param_worker.add_init_param("Sensor.Sensor 1.Range.Voltage Per Decade [V]")
         self.param_worker.add_init_param("Sensor.Sensor 2.Basic.Available")  
         self.param_worker.add_init_param("Sensor.Sensor 2.Basic.Enable")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Data Unit")
         self.param_worker.add_init_param("Sensor.Sensor 2.Basic.Scale")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Upper Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Lower Limit Data Value")
-        self.param_worker.add_init_param("Sensor.Sensor 2.Range.Voltage Per Decade")
+        self.param_worker.add_init_param("Sensor.Sensor 2.Range.Voltage Per Decade [V]")
         self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Pressure Unit")
         self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure 0")
         self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure Sensor Full Scale")
@@ -179,45 +193,37 @@ class MainWin(QMainWindow):
             pass
 
     def on_clicked_sys_identification(self):
-        #WinManager().show_param_window(win_class=SysIdentificationWin, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=SysIdentificationWin, parent=self, is_modal=False)
 
     def on_clicked_sys_statistics(self):
-        #WinManager().show_param_window(win_class=SysStatisticsWin, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=SysStatisticsWin, parent=self, is_modal=False)
 
     def on_clicked_sys_warning_error(self):
-        #WinManager().show_param_window(win_class=SysWarnErrWin, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=SysWarnErrWin, parent=self, is_modal=False)
 
     def on_clicked_sys_service(self):
-        #WinManager().show_param_window(win_class=SysServiceWin, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=SysServiceWin, parent=self, is_modal=False)
 
     def on_clicked_valve_basic(self):
-        #WinManager().show_param_window(win_class=ValveBasicWin, parent=self, is_modal=False)
-        pass
-
-    def on_clicked_valve_comporessed_air(self):
-        #WinManager().show_param_window(win_class=ValveCompressedAirWin, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=ValveBasicWin, parent=self, is_modal=False)
 
     def on_clicked_valve_cycle_counter(self):
-        #WinManager().show_param_window(win_class=ValveCycleCounterWin, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=ValveCycleCounterWin, parent=self, is_modal=False)
 
-    def on_clicked_valve_homing(self):
-        pass
+    def on_clicked_valve_setting(self):
+        WinManager().show_param_window(win_class=ValveSettingWin, parent=self, is_modal=False)
 
-    def on_clicked_valve_posi_restriction(self):
-        pass
+    def on_clicked_sens_zero(self):
+        WinManager().show_param_window(win_class=SensorZeroWin, parent=self, is_modal=False)
 
-    def on_clicked_valve_posi_adaption(self):
-        pass
+    def on_clicked_sens_setting(self):
+        WinManager().show_param_window(win_class=SensorSettingWin, parent=self, is_modal=False)
 
-    def on_clicked_sys_warn_err_button(self):
-        #WinManager().show_param_window(win_class=SysWarnErrWin, parent=self, is_modal=False)
-        pass
+    def on_clicked_posi_ctrl_setting(self):
+        WinManager().show_param_window(win_class=PosiCtrlSettingWin, parent=self, is_modal=False)
+
+    def on_clicked_pres_ctrl_setting(self):
+        WinManager().show_param_window(win_class=PresCtrlSettingWin, parent=self, is_modal=False)
 
     def on_clicked_open_btn(self):
         self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.OPEN.value}"
@@ -242,33 +248,32 @@ class MainWin(QMainWindow):
         self.param_worker.write()
         
     def on_clicked_posi_btn(self, write_str_value=""):
-        #self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.POSITION.value}"
-        #self.posi_target_param.write_str_value = write_str_value
-        #print(f"click posi_value : {write_str_value}")
-        #self.param_worker.write()
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.POSITION.value}"
+        self.posi_target_param.write_str_value = write_str_value
+        self.param_worker.write()
         pass
 
     def on_clicked_posi_edit_btn(self):
-        #WinManager().show_window(win_class=MainPosiEditWin, parent=self, is_modal=True)
+        WinManager().show_window(win_class=MainSetpointPosiEditWin, parent=self, is_modal=True)
         pass
         
     def on_pres_input_finished(self):
-        #write_value_str = self.pres_panel.pres_input.getParamWriteValue()
-        #print(f"input pres_value : {write_value_str}")
-        #self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.PRESSURE.value}"
-        #self.pres_target_param.write_str_value = write_value_str
-        #self.param_worker.write()
+        write_value_str = self.pres_panel.pres_input.get_param_write_value()
+        print(f"input pres_value : {write_value_str}")
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.PRESSURE.value}"
+        self.pres_target_param.write_str_value = write_value_str
+        self.param_worker.write()
         pass
 
     def on_clicked_pres_btn(self, write_str_value=""):
-        #self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.PRESSURE.value}"
-        #print(f"click pres_value : {write_str_value}")
-        #self.pres_target_param.write_str_value = write_str_value
-        #self.param_worker.write()
+        self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.PRESSURE.value}"
+        print(f"click pres_value : {write_str_value}")
+        self.pres_target_param.write_str_value = write_str_value
+        self.param_worker.write()
         pass
 
     def on_clicked_pres_edit_btn(self):
-        #WinManager().show_window(win_class=MainPresEditWin, parent=self, is_modal=True)
+        WinManager().show_window(win_class=MainSetpointPresEditWin, parent=self, is_modal=True)
         pass
 
     def handle_changed_connection_info(self, info: str):

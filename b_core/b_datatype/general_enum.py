@@ -154,6 +154,6 @@ class DecimalPlacesEnum(DescriptionEnum):
     DECIAML_PLACES_6 = (6, "6")    
 
 class PositionUnitEnum(DescriptionEnum):
-    POSI_UNIT_PERCENT = (0, "Percent(%)")    
+    POSI_UNIT_PERCENT = (0, "Percent(%)")     
 
     

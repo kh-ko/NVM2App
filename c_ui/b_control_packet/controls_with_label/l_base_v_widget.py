@@ -1,5 +1,4 @@
 from PySide6.QtWidgets import QVBoxLayout
-from PySide6.QtWidgets import QHBoxLayout
 
 from c_ui.b_control_packet.base import my_style
 from c_ui.b_control_packet.controls.my_label import MyLabel
@@ -12,9 +11,9 @@ class LBaseVerticalWidget(BaseGroupBox):
         self.enable_wrap_border = enable_wrap_border
         self.value_widget = None
        
-        self.layout = QHBoxLayout(self)
+        self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 5, 0, 0) 
-        self.layout.setSpacing(0)
+        self.layout.setSpacing(5)
 
         self.dirty_label = MyLabel("*")
         self.dirty_label.set_color(my_style.STYLE_ERR_COLOR)

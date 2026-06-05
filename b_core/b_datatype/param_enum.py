@@ -16,12 +16,20 @@ class FalseTrueEnum(DescriptionEnum):
     TRUE            = (1, "True")
 
 class DisableEnableEnum(DescriptionEnum):
-    Disable         = (0, "Disable")
-    Enable          = (1, "Enable")    
+    DISABLE         = (0, "Disable")
+    ENABLE          = (1, "Enable")    
 
 class OkNotOkEnum(DescriptionEnum):
     OK              = (0, "Ok")
     NOT_OK          = (1, "Not Ok")        
+
+class DeactiveActiveEnum(DescriptionEnum):
+    DEACTIVE        = (0, "Deactive")
+    ACTIVE          = (1, "Active")   
+
+class NotAvailAvailEnum(DescriptionEnum):
+    NOT_AVAILABLE   = (0, "Not available")
+    AVAILABLE       = (1, "Available")   
 
 class Base36Enum(DescriptionEnum):
     ZERO  = (0, "0")
@@ -279,6 +287,24 @@ class ValvePosiStateEnum(DescriptionEnum):
     CLOSED      = (1, "Closed"      )    
     OPEN        = (2, "OPEN"        )    
 
+class ValvePosiAdapModeEnum(DescriptionEnum):
+    OFFSET      = (0, "Offset")
+
+class ValvePosiActPosiEnum(DescriptionEnum):
+    REAL        = (0, "Real(with added offset value)")
+    ADAPTED     = (1, "Adapted(without added offset value)")
+
+class SensZeroExeEnum(DescriptionEnum):
+    NONE            = (0, "None")
+    ZERO_ADJUST     = (1, "Execute Zero Adjust")
+    CLEAR_OFFSET    = (2, "Clear Offset Value")
+
+class SensZeroSelEnum(DescriptionEnum):
+    SEN_1_AND_2     = (0, "Sensor 1+2")
+    SEN_1           = (1, "Sensor 1")
+    SEN_2           = (2, "Sensor 2")
+    NONE            = (3, "None")
+
 class SensInSrcEnum(DescriptionEnum):
     ANALOG      = (0, "Analog")
     DIGITAL     = (1, "Digital")
@@ -302,6 +328,10 @@ class SensCrossModeEnum(DescriptionEnum):
     SOFT_SWITCH     = (0, "Soft Switch")
     HARD_SWITCH     = (1, "Hard Switch")
     TARGET_PRESSURE = (2, "Target Pressure")
+
+class SensLogPresOnIFace(DescriptionEnum):
+    LINEAR      = (0, "Linear:Linear signal is used on Interface")
+    LOGARITHMIC = (1, "Logarithmic:Logarithmic signal is used on Interface")
 
 class PosiRampModeEnum(DescriptionEnum):
     USE_RAMP_TIME   = (0, "Use Ramp Time")
@@ -362,9 +392,25 @@ class PresCtrlSelBitmap(DescriptionEnum):
     CONTROLLER_3    = (2, "Controller 3")
     CONTROLLER_4    = (3, "Controller 4")
 
+class PresCtrlSegSelBitmap(DescriptionEnum):
+    SEG_1         = (0, "Segment 1")
+    SEG_2         = (1, "Segment 2")
+    SEG_3         = (2, "Segment 3")
+    SEG_4         = (3, "Segment 4")
+    SEG_5         = (4, "Segment 5")
+    SEG_6         = (5, "Segment 6")
+    SEG_7         = (6, "Segment 7")
+    SEG_8         = (7, "Segment 8")
+    SEG_9         = (8, "Segment 9")
+    SEG_10        = (9, "Segment 10")
+
 class PresCtrlThresCondEnum(DescriptionEnum):
     LOWER_OR_EQUAL    = (0, "Lower Or Equal")
     EQUAL             = (1, "Equal")
+
+class PresCtrlRampThresModeEnum(DescriptionEnum):
+    ACTUAL_PRESSURE = (0, "Actual Pressure")
+    TARGET_PRESSURE = (1, "Target Pressure Used")
 
 class RS232OpModeEnum(DescriptionEnum):
     RS232 = (0, "RS232")
