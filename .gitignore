@@ -23,6 +23,7 @@ Thumbs.db
 # Distribution / packaging
 dist/
 build/
+3_build/
 *.egg-info/
 .eggs/
 

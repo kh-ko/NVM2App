@@ -32,7 +32,14 @@ if %errorlevel% neq 0 (
 
 :: 3.5. Get today's date and define release folder name
 for /f %%i in ('python -c "from datetime import datetime; print(datetime.now().strftime('%%Y%%m%%d'))"') do set TODAY=%%i
-set RELEASE_DIR=%TODAY%-%USER_VERSION%
+set RELEASE_DIR=3_build\%TODAY%-%USER_VERSION%
+
+:: 3.7. Clean and recreate 3_build directory
+echo Cleaning and preparing 3_build directory...
+if exist "3_build" (
+    rd /s /q "3_build"
+)
+mkdir "3_build"
 
 :: 4. Build resource file
 echo [1/4] Compiling resource file...
