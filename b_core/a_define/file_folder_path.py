@@ -32,6 +32,7 @@ RSRC_BASE = os.path.join(EXE_BASE, "2_resource")
 RSRC_CONFIG_PATH = os.path.join(RSRC_BASE, "config")
 RSRC_CONNECTIONS_JSON_FILE = os.path.join(RSRC_CONFIG_PATH, "connections.json")
 RSRC_LOCAL_SETTING_JSON_FILE = os.path.join(RSRC_CONFIG_PATH, "local_setting.json")
+RSRC_FTP_SETTING_FILE = os.path.join(RSRC_CONFIG_PATH, "ftp_connection.json")
 
 RSRC_PARAM_SCHEMA_PATH = os.path.join(RSRC_BASE, "param_schema")
 RSRC_PARAM_SCHEMA_JSON_FILE = os.path.join(RSRC_PARAM_SCHEMA_PATH, "param.json")

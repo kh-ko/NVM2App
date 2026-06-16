@@ -1,3 +1,4 @@
+
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMessageBox, QHBoxLayout
 from PySide6.QtCore import Qt, QTimer
 
@@ -42,6 +43,7 @@ from c_ui.c_windows.h_learn.learn_bank4_win import LearnBank4Win
 from c_ui.c_windows.i_pfo.pfo_win import PfoWin
 from c_ui.c_windows.j_iface.iface_pwr_io_win import IfacePwrIoWin
 from c_ui.c_windows.j_iface.iface_dnet_win import IfaceDnetWin
+from c_ui.c_windows.p_help.help_nvm_update_win import HelpNvmUpdateWin
 
 class MainWin(QMainWindow):
     """
@@ -361,7 +363,7 @@ class MainWin(QMainWindow):
         pass
 
     def on_clicked_help_update(self):
-        #WinManager().show_param_window(win_class=HelpUpdateWin, parent=self, is_modal=False)
+        WinManager().show_param_window(win_class=HelpNvmUpdateWin, parent=self, is_modal=False)
         pass
 
     def on_clicked_help_about(self):
