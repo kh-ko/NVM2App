@@ -33,6 +33,7 @@ class MyCardWidget(QWidget):
         else:
             lbl_title = MyLabelDescription(title)
 
+        lbl_title.setWordWrap(False)
         self.title_layout.addWidget(lbl_title)
         self.title_layout.addStretch()
         self.main_layout.addLayout(self.title_layout)

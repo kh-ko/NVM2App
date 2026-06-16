@@ -1,3 +1,4 @@
+from inspect import CO_COROUTINE
 from enum import Enum
 
 class DescriptionEnum(Enum):
@@ -6,6 +7,13 @@ class DescriptionEnum(Enum):
         obj._value_ = value
         obj.description = description
         return obj
+
+    @classmethod
+    def get_desc(cls, value, default="Unknown"):
+        try:
+            return cls(value).description
+        except ValueError:
+            return default
 
 class OffOnEnum(DescriptionEnum):
     OFF           = (0, "Off")
@@ -19,6 +27,10 @@ class DisableEnableEnum(DescriptionEnum):
     DISABLE         = (0, "Disable")
     ENABLE          = (1, "Enable")    
 
+class NotDisableEnableEnum(DescriptionEnum):
+    NOT_DISABLED    = (0, "Not Disabled")
+    NOT_ENABLED     = (1, "Not Enabled")        
+
 class OkNotOkEnum(DescriptionEnum):
     OK              = (0, "Ok")
     NOT_OK          = (1, "Not Ok")        
@@ -30,6 +42,14 @@ class DeactiveActiveEnum(DescriptionEnum):
 class NotAvailAvailEnum(DescriptionEnum):
     NOT_AVAILABLE   = (0, "Not available")
     AVAILABLE       = (1, "Available")   
+
+class NotUsedUsed(DescriptionEnum):
+    NOT_USED        = (0, "Not Used")
+    USED            = (1, "Used")
+
+class OnlineOfflineEnum(DescriptionEnum):
+    ONLINE  = (0, "Online")
+    OFFLINE = (1, "Offline")    
 
 class Base36Enum(DescriptionEnum):
     ZERO  = (0, "0")
@@ -366,6 +386,34 @@ class LearnDataSelEnum(DescriptionEnum):
     LEARN_BANK_3 = (2, "Learn Bank 3")
     LEARN_BANK_4 = (3, "Learn Bank 4")
 
+class LearnStatusEnum(DescriptionEnum):
+    NOT_STARTED      = (0, "Not Started")
+    IN_PROGRESS      = (1, "In Progress")
+    COMPLETED_SUCCESS= (2, "Completed Successfully")
+    ABORTED          = (3, "Aborted")
+    FAILED           = (4, "Failed")
+
+class LearnBankStatusEnum(DescriptionEnum):
+    NOT_USED            = (0, "Not Used")
+    AVAILABLE           = (1, "Available")
+    AVAILABLE_WARNING   = (2, "Available with Warnings")
+
+class LearnWarnInfoBitmap(DescriptionEnum):
+    RUNNING                = (0, "Running")
+    CHECKSUM_ERROR         = (1, "Checksum error")
+    TERM_BY_USER           = (2, "Terminated by user")
+    UNSUITABLE_COND_HIGH   = (3, "Unsuitable learn condition / pressure too high")
+    UNSUITABLE_COND_LOW    = (4, "Unsuitable learn condition / pressure too low")
+    PRESSURE_DECREASING    = (5, "Pressure decreasing instead of rising")
+    PRESSURE_UNSTABILITY   = (6, "Pressure unstability")
+    TERM_BY_PROGRAM        = (7, "Terminated by program")
+    NEGATIVE_OPEN_PRESSURE = (8, "Negative open pressure")    
+
+class LearnBankType(DescriptionEnum):
+    STANDARD    = (0, "Standard")
+    SHORT       = (1, "Short")
+    CALCULATED  = (2, "Calculated")
+
 class CtrlDirEnum(DescriptionEnum):
     DOWNSTREAM = (0, "Downstream")
     UPSTREAM   = (1, "Upstream")
@@ -411,6 +459,30 @@ class PresCtrlThresCondEnum(DescriptionEnum):
 class PresCtrlRampThresModeEnum(DescriptionEnum):
     ACTUAL_PRESSURE = (0, "Actual Pressure")
     TARGET_PRESSURE = (1, "Target Pressure Used")
+
+class PfoFuncEnum(DescriptionEnum):
+    OPEN    = (0, "Open")
+    CLOSE   = (1, "Close")
+
+class PfoStateEnum(DescriptionEnum):
+    BATTERY_IS_CHARGING = (0, "Battery is Charging")
+    READY_TO_USE        = (1, "Ready To Use")
+    ACTIVE              = (2, "Active")
+    FAILURE             = (3, "Failure")
+
+class DigitalInFuncEnum(DescriptionEnum):
+    INTERLOCK_OPEN    = (0, "Interlock Open")
+    INTERLOCK_CLOSE   = (1, "Interlock Close")
+    HOLD              = (2, "Hold")
+
+class DigitalOutFuncEnum(DescriptionEnum):
+    OPEN    = (0, "Open")
+    CLOSE   = (1, "Close")
+    HOLD    = (2, "Hold")    
+
+class DigitalIOInvertEnum(DescriptionEnum):
+    NOT_INVERTED    = (0, "Not inverted")
+    INVERTED        = (1, "inverted")
 
 class RS232OpModeEnum(DescriptionEnum):
     RS232 = (0, "RS232")
@@ -481,5 +553,181 @@ class RS232PressureUnitEnum(DescriptionEnum):
     PSI = (6, "psi")
     USER_SPECIFIC = (7, "User specific")
 
+class DeviceNetDevTypeEnum(DescriptionEnum):
+    GENERIC_DEVICE            = (0x0 , "Generic Device")
+    COMMUNICATIONS_ADAPTER    = (0xC , "Communications Adapter")
+    PROCESS_CONTROL_DEVICE    = (0x1D, "Process Control Device")
+    GENERIC_DEVICE_2          = (0x2B, "Generic Device")
+    PRESSURE_CONTROL_VALVE    = (0x64, "Pressure Control Valve")
+
+class DeviceNetBaudRateEnum(DescriptionEnum):
+    BAUD_125K = (0, "125k")
+    BAUD_250K = (1, "250k")
+    BAUD_500K = (2, "500k")
+    AUTO      = (3, "Auto")    
+
+class DeviceNetProfileTypeEnum(DescriptionEnum):
+    PROCESS_CONTROL_DEVICE = (0, "Process Control Device")
+    GENERIC_DEVICE_C       = (1, "Generic Device C (new)")
+    GENERIC_DEVICE_B       = (2, "Generic Device B (old)")    
+
+class DeviceNetDataTypeEnum(DescriptionEnum):
+    INT16   = (195, "INT16")
+    FLOAT32 = (202, "FLOAT32")
+
+class DeviceNetOutputConsumedAssy(DescriptionEnum):
+    CUSTOMIZED = (0,   "(0)CUSTOMIZED")
+    NUM_7      = (7,   "(7)SETPOINT/SETPOINT TYPE")
+    NUM_8      = (8,   "(8)CONTROL MODE/SETPOINT/SETPOINT TYPE")
+    NUM_23     = (23,  "(23)SETPOINT/SETPOINT TYPE")
+    NUM_24     = (24,  "(24)CONTROL MODE/SETPOINT/SETPOINT TYPE")
+    NUM_32     = (32,  "(32)CONTROL MODE/SETPOINT/KP(GAIN FACTOR)/KI(DLETA FACTOR)/RAMP TIME")
+    NUM_102    = (102, "(102)CONTROL MODE/SETPOINT/SETPOINT TYPE/LEARN/LEARN PRES. LIMIT/ZERO")
+    NUM_103    = (103, "(103)CONTROL MODE/SETPOINT/SETPOINT TYPE/CLUSTER ADDR./CLUSTER ACTION")
+    NUM_107    = (107, "(107)CONTROL MODE/SETPOINT/SETPOINT TYPE/LEARN/LEARN PRES. LIMIT/ZERO")
+    NUM_108    = (108, "(108)CONTROL MODE/SETPOINT/SETPOINT TYPE/CLUSTER ADDR./CLUSTER ACTION")
+    NUM_110    = (110, "(110)CONTROL MODE/SETPOINT PRESSURE/SETPOINT POSITION/SETPOINT TYPE/LEARN/LEARN PRES. LIMIT/ZERO/CLUSTER ADDR./CLUSTER ACTION")
+    NUM_112    = (112, "(112)CONTROL MODE/SETPOINT PRESSURE/SETPOINT POSITION/SETPOINT TYPE/LEARN/LEARN PRES. LIMIT/ZERO/CLUSTER ADD./CLUSTER ACTION")
+    NUM_151    = (151, "(151)CONTROL MODE/SETPOINT PRESSURE/SETPOINT POSITION/SETPOINT TYPE/CLUSTER ADDR./CLUSTER ACTION")
+
+class DeviceNetInputProducedAssy(DescriptionEnum):
+    CUSTOMIZED = (0,   "(0)CUSTOMIZE"                                                                                                                              )
+    NUM_1      = (1,   "(1)PRESSURE"                                                                                                                               )
+    NUM_2      = (2,   "(2)EXCEPTION STATUS/PRESSURE"                                                                                                              )
+    NUM_3      = (3,   "(3)EXCEPTION STATUS/PRESSURE/POSITION"                                                                                                     )
+    NUM_4      = (4,   "(4)EXCEPTION STATUS/PRESSURE/SETPOINT"                                                                                                     )
+    NUM_5      = (5,   "(5)EXCEPTION STATUS/PRESSURE/SETPOINT/POSITION"                                                                                            )
+    NUM_6      = (6,   "(6)EXCEPTION STATUS/PRESSURE/SETPOINT/CONTROL MODE/POSITION"                                                                               )
+    NUM_10     = (10,  "(10)EXCEPTION STATUS"                                                                                                                      )
+    NUM_11     = (11,  "(11)EXCEPTION STATUS/PRESSURE/POSITION/CLOSE OPEN CHECK"                                                                                   )
+    NUM_13     = (13,  "(13)EXCEPTION STATUS/EXCEPTION DETAIL ALARM"                                                                                               )
+    NUM_14     = (14,  "(14)EXCEPTION STATUS/PRESSURE/POSITION/CLOSE OPEN CHECK"                                                                                   )
+    NUM_17     = (17,  "(17)PRESSURE"                                                                                                                              )
+    NUM_18     = (18,  "(18)EXCEPTION STATUS/PRESSURE"                                                                                                             )
+    NUM_19     = (19,  "(19)EXCEPTION STATUS/PRESSURE/POSITION"                                                                                                    )
+    NUM_20     = (20,  "(20)EXCEPTION STATUS/PRESSURE/SETPOINT"                                                                                                    )
+    NUM_21     = (21,  "(21)EXCEPTION STATUS/PRESSURE/SETPOINT/POSITION"                                                                                           )
+    NUM_22     = (22,  "(22)EXCEPTION STATUS/PRESSURE/SETPOINT/CONTROL MODE/POSITION"                                                                              )
+    NUM_26     = (26,  "(26)EXCEPTION STATUS/PRESSURE/POSITION/CLOSE OPEN CHECK"                                                                                   )
+    NUM_100    = (100, "(100)EXCEPTION STATUS/PRESSURE/POSITION/DEVICE STATUS 2/ACCESS MODE"                                                                       )
+    NUM_101    = (101, "(101)EXCEPTION STATUS/PRESSURE/POSITION/CLOSE OPEN CHECK/DEVICE STATUS 2"                                                                  )
+    NUM_104    = (104, "(104)EXCEPTION STATUS/PRESSURE/SENSOR 2 READING/POSITION/ACCESS MODE/DEVICE STATUS 2/CLUSTER INFOMATION"                                   )
+    NUM_105    = (105, "(105)EXCEPTION STATUS/PRESSURE/POSITION/DEVICE STATUS 2/ACCESS MODE"                                                                       )
+    NUM_106    = (106, "(106)EXCEPTION STATUS/PRESSURE/POSITION/SETPOINT/DEVICE STATUS 2"                                                                          )
+    NUM_109    = (109, "(109)EXCEPTION STATUS/PRESSURE/SENSOR 2 READING/POSITION/ACCESS MODE/DEVICE STATUS 2/CLUSTER INFOMATION"                                   )
+    NUM_111    = (111, "(111)EXCEPTION STATUS/PRESSURE/POSITION/SENSOR 1 READING/SENSOR 2 READING/CLOSE OPEN CHECK/DEVICE STATUTS2/ACCESS MODE/CLUSTER INFORMATION")
+    NUM_113    = (113, "(113)EXCEPTION STATUS/PRESSURE/POSITION/SENSOR 1 READING/SENSOR 2 READING/CLOSE OPEN CHECK/DEVICE STATUTS2/ACCESS MODE/CLUSTER INFORMATION")
+    NUM_150    = (150, "(150)EXCEPTION STATUS/SENSOR 1 READING/SENSOR 2 READING/POSITION/READING SENSOR/CLOSE OPEN CHECK"                                          )
 
 
+class DeviceNetOutOldBitmap(DescriptionEnum):
+    CTRL_MODE              = (0 , "Control Mode [Length: 1]")
+    SETPOINT_INT           = (1 , "Setpoint(INT) [Length: 2]")
+    SETPOINT_FLOAT         = (2 , "Setpoint(FLOAT) [Length: 4]")
+    SETPOINT_TYPE          = (3 , "Setpoint Type [Length: 1]")
+    LEARN                  = (4 , "Learn [Length: 1]")
+    LEARN_PRES_LIMIT_INT   = (5 , "Learn Pressure Limit(INT) [Length: 2]")
+    LEARN_PRES_LIMIT_FLOAT = (6 , "Learn Pressure Limit(FLOAT) [Length: 4]")
+    ZERO                   = (7 , "Zero [Length: 1]")
+    CONTROLLER_CTRL_MODE   = (8 , "Controller Control Mode [Length: 1]")
+    CONTROLLER_SELECTOR    = (9 , "Controller Selector [Length: 1]")
+    CTRL_GAIN              = (10, "Control Gain(P-Gain) [Length: 4]")
+    SENSOR_DELAY           = (11, "Sensor Delay [Length: 4]")
+    RAMP_TIME              = (12, "Ramp Time [Length: 4]")
+    RAMP_MODE              = (13, "Ramp Mode [Length: 1]")
+    DIRECTION_MODE         = (18, "Direction Mode(Fixed Control) [Length: 1]")
+    CTRL_DELTA_GAIN        = (19, "Control Delta Gain(I-Gain) [Length: 4]")
+    CALIBRATION            = (20, "Calibration [Length: 1]")
+    DUMMY                  = (21, "Dummy [Length: 1]")
+
+class DeviceNetInOldBitmap(DescriptionEnum):
+    EXCEPTION_STATUS       = (0 , "Exception Status [Length: 1]")
+    PRES_INT               = (1 , "Pressure(INT) [Length: 2]")
+    PRES_FLOAT             = (2 , "Pressure(FLOAT) [Length: 4]")
+    SETPOINT_INT           = (3 , "Setpoint(INT) [Length: 2]")
+    SETPOINT_FLOAT         = (4 , "Setpoint(FLOAT) [Length: 4]")
+    POSITION_INT           = (5 , "Position(INT) [Length: 2]")
+    POSITION_FLOAT         = (6 , "Position(FLOAT) [Length: 4]")
+    EXCEPTION_DETAIL_ALARM = (7 , "Exception Detail Alarm [Length: 15]")
+    EXCEPTION_DETAIL_WARN  = (8 , "Exception Detail Warning [Length: 15]")
+    CLOSE_OPEN_CHECK       = (9 , "Valve Close/Open Check [Length: 1]")
+    DEVICE_STATUS_2        = (10, "Device Status 2 [Length: 1]")
+    ACCESS_MODE            = (11, "Access Mode [Length: 1]")
+    CONTROLLER_CTRL_MODE   = (12, "Controller Control Mode [Length: 1]")
+    CONTROLLER_SELECTOR    = (13, "Controller Selector [Length: 1]")
+    CTRL_GAIN              = (14, "Control Gain(P-Gain) [Length: 4]")
+    SENSOR_DELAY           = (15, "Sensor Delay [Length: 4]")
+    RAMP_TIME              = (16, "Ramp Time [Length: 4]")
+    RAMP_MODE              = (17, "Ramp Mode [Length: 1]")
+    DIRECTION_MODE         = (22, "Direction Mode(Fixed Control) [Length: 1]")
+    CTRL_DELTA_GAIN        = (23, "Control Delta Gain(I-Gain) [Length: 4]")
+    SENSOR1_READ_INT       = (24, "Sensor 1 Reading(INT) [Length: 2]")
+    SENSOR1_READ_FLOAT     = (25, "Sensor 1 Reading(FLOAT) [Length: 4]")
+    SENSOR2_READ_INT       = (26, "Sensor 2 Reading(INT) [Length: 2]")
+    SENSOR2_READ_FLOAT     = (27, "Sensor 2 Reading(FLOAT) [Length: 4]")
+    DUMMY                  = (28, "Dummy [Length: 1]")
+
+
+class DeviceNetOutSelector(DescriptionEnum):
+    NONE                   = (0, "NONE")
+    CTRL_MODE              = (1, "CONTROL MODE")
+    SETPOINT               = (2, "SETPOINT")
+    SETPOINT_PRESSURE      = (3, "SETPOINT PRESSURE")
+    SETPOINT_POSITION      = (4, "SETPOINT POSITION")
+    SETPOINT_TYPE          = (5, "SETPOINT TYPE")
+    LEARN                  = (6, "LEARN")
+    LEARN_PRESSURE_LIMIT   = (7, "LEARN PRESSURE LIMIT")
+    ZERO                   = (8, "ZERO")
+    KP                     = (9, "KP (Gain Factor)")
+    KI                     = (10, "KI (Delta Factor)")
+    KD                     = (11, "KD (Ramp Time)")
+    CLUSTER_ADDRESS        = (12, "CLUSTER ADDRESS")
+    CLUSTER_ACTION         = (13, "CLUSTER ACTION")
+
+class DeviceNetInSelector(DescriptionEnum):
+    NONE                   = (0, "NONE")
+    EXCEPTION_STATUS       = (1, "EXCEPTION STATUS")
+    EXCEPTION_DETAIL_ALARM = (2, "EXCEPTION DETAIL ALARM")
+    EXCEPTION_DETAIL_WARN  = (3, "EXCEPTION DETAIL WARNING")
+    PRESSURE               = (4, "PRESSURE")
+    POSITION               = (5, "POSITION")
+    CLOSE_OPEN_CHECK       = (6, "CLOSE/OPEN CHECK")
+    DEVICE_STATUS_2        = (7, "DEVICE STATUS 2")
+    SENSOR1_READING        = (8, "SENSOR 1 READING")
+    SENSOR2_READING        = (9, "SENSOR 2 READING")
+    READING_SENSOR         = (10, "READING SENSOR")
+    CTRL_MODE              = (11, "CONTROL MODE")
+    SETPOINT               = (12, "SETPOINT")
+    SETPOINT_PRESSURE      = (13, "SETPOINT PRESSURE")
+    SETPOINT_POSITION      = (14, "SETPOINT POSITION")
+    SETPOINT_TYPE          = (15, "SETPOINT TYPE")
+    ACCESS_MODE            = (16, "ACCESS MODE")
+    CLUSTER_INFORMATION    = (17, "CLUSTER INFORMATION")
+    CLUSTER_ACTION         = (18, "CLUSTER ACTION")
+
+class DeviceNetPositionUnitEnum(DescriptionEnum):
+    COUNT   = (4097, "Count")
+    PERCENT = (4103, "Percnet")
+    DEGREE  = (5891, "Degree")
+
+class DeviceNetPressureUnitEnum(DescriptionEnum):
+    COUNTS    = (4097, "Counts")
+    PERCENT   = (4103, "Percent")
+    PSI       = (4864, "PSI")
+    TORR      = (4865, "Torr")
+    MTORR     = (4866, "mTorr")
+    BAR       = (4871, "Bar")
+    MBAR      = (4872, "mBar")
+    PA        = (4873, "Pa")
+    ATM       = (4875, "atm")
+
+class DeviceNetLossFunEnum(DescriptionEnum):
+    OPEN = (0, "Open")
+    CLOSE = (1, "Close")
+    KEEP_POSITION = (2, "Keep Position")    
+
+class SlaveLossFunEnum(DescriptionEnum):
+    CLOSE = (0, "Close")
+    OPEN = (1, "Open")
+    KEEP_POSITION = (2, "Keep Position")        
+    

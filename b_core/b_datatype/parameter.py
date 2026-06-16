@@ -6,6 +6,16 @@ from b_core.b_datatype.param_enum import DescriptionEnum
 
 from b_core.c_manager.log_manager import LogManager
 
+class ParamCondition(QObject):
+    def __init__(self, parent:QObject):
+        super().__init__(parent)
+
+        self.ref_id = None
+        self.ref_index = 0
+        self.values : List[Union[int, float, str, None]] = []
+        
+        
+
 class Parameter(QObject):
     # 값이 변경되었을 때 발생하는 시그널 (새로운 값을 문자열로 전달)
     sig_value_changed = Signal()
@@ -55,7 +65,7 @@ class Parameter(QObject):
     FLOAT_TYPES = (ParamDataType.FLOAT, ParamDataType.DOUBLE)
     STR_TYPES = (ParamDataType.STR,)
 
-    def __init__(self, path: str, name: str, id: str, index: int, display_type: ParamDisplayType, data_type: ParamDataType, acc: ParamAccType, is_only_local_acc:bool,is_nor_backup: bool, is_fu_backup: bool, unit: str, min_value: Union[int, float, None], max_value: Union[int, float, None], ref_list: Optional[Type[DescriptionEnum]], description: str, btn_str_value : str = ""):
+    def __init__(self, path: str, name: str, id: str, index: int, display_type: ParamDisplayType, data_type: ParamDataType, acc: ParamAccType, is_only_local_acc:bool,is_nor_backup: bool, is_fu_backup: bool, unit: str, min_value: Union[int, float, None], max_value: Union[int, float, None], ref_list: Optional[Type[DescriptionEnum]], enable_condition, visible_condition, description: str, btn_str_value : str = "", is_need_reconnect:bool=False):
         super().__init__()
         self.path : str = path
         self.name : str = name
@@ -73,7 +83,28 @@ class Parameter(QObject):
         self.ref_list : Optional[Type[DescriptionEnum]] = ref_list
         self.description : str = description
         self.btn_str_value : str = btn_str_value
+        self.is_need_reconnect : bool = is_need_reconnect
+
+        if enable_condition is not None:
+            self.enable_conditions = []
+            for cond in enable_condition:
+                param_cond = ParamCondition(self)
+                param_cond.ref_id = cond.get("id")
+                param_cond.values = cond.get("conditions", [])
+                self.enable_conditions.append(param_cond)
+        else:
+            self.enable_conditions = None
         
+        if visible_condition is not None:
+            self.visible_conditions = []
+            for cond in visible_condition:
+                param_cond = ParamCondition(self)
+                param_cond.ref_id = cond.get("id")
+                param_cond.values = cond.get("conditions", [])
+                self.visible_conditions.append(param_cond)
+        else:
+            self.visible_conditions = None
+
         self._value : Union[int, float, str, None] = None
         self.str_value : str = ""
         self._is_not_support : bool = False
@@ -117,6 +148,12 @@ class Parameter(QObject):
             self._is_err = new_val
             self.sig_is_err_changed.emit()
 
+    def set_enable_condition(self, condition: ParamCondition | None):
+        self.enable_condition = condition
+
+    def set_visible_condition(self, condition: ParamCondition | None):
+        self.visible_condition = condition
+        
     def set_force_value(self, new_val: str):
         try:
             if self.data_type in self.INT_TYPES:
@@ -157,7 +194,11 @@ class Parameter(QObject):
             except ValueError:
                 return ParamParseErrType.DATA_TYPE_ERROR, True
         else:
-            return ParamParseErrType.WRONG_PARAM_LENGTH, True
+            if self.data_type is ParamDataType.STR and len(resp_msg) == 16:
+                self.str_value = ""
+                self.value = ""
+            else:
+                return ParamParseErrType.WRONG_PARAM_LENGTH, True
 
         return parse_err_type, False
 

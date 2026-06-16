@@ -7,7 +7,7 @@ class ParamHexReadWriteWidget(LHexReadWriteWidget):
     def __init__(self, param_full_path : str, label_width : int = 150, parent = None):
         self.param = ParamManager().get_by_full_path(param_full_path)
 
-        super().__init__(label_text=self.param.name, label_width=label_width, parent = parent)
+        super().__init__(label_text=f"{self.param.name} [Hex]", label_width=label_width, parent = parent)
         self.set_range(self.param.min_value, self.param.max_value)
 
         self.param.sig_value_changed.connect(self.handle_value_changed)

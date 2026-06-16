@@ -1,4 +1,3 @@
-from c_ui.b_control_packet.param.param_btn_wo_widget import ParamBtnWriteOnlyWidget
 import json
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
@@ -13,6 +12,8 @@ from b_core.e_worker.parameter_worker import ParameterWorker
 from c_ui.b_control_packet.base.base_toolbar import BaseToolBar
 from c_ui.b_control_packet.param_container.param_folder_widget import ParamFolderWidget
 from c_ui.b_control_packet.param_container.param_setting_statusbar import ParamSettingStatusBar
+from c_ui.b_control_packet.param.param_enum_wo_widget import ParamEnumWriteOnlyWidget
+from c_ui.b_control_packet.param.param_btn_wo_widget import ParamBtnWriteOnlyWidget
 
 class ParamSettingWin(QMainWindow):
     def __init__(self, parent=None):
@@ -72,15 +73,26 @@ class ParamSettingWin(QMainWindow):
             self.toolbar.add_action("Apply", self.on_clicked_apply)
 
     def init_end(self):
+        self.param_worker.win_name = self.windowTitle()
+
         for widget in self.parameter_folder_widgets:
             for param_component in widget.param_components:
                 if param_component.param.acc == ParamAccType.RO:
                     self.param_worker.add_read_param_ptr(param_component.param)
+                    self.param_worker.add_monitor_param_ptr(param_component.param)
                 else:
                     self.param_worker.add_write_param_ptr(param_component.param)
 
+                if param_component.param.enable_conditions is not None:
+                    for enable_condition in param_component.param.enable_conditions:
+                        ref_component = self._find_component_by_param_id(enable_condition.ref_id)
+                        param_component.reg_enable_condition(ref_component, enable_condition.values)
+
                 if isinstance(param_component, ParamBtnWriteOnlyWidget):
                     param_component.sig_value_changed.connect(self.on_btn_widget_clicked)
+
+                if isinstance(param_component, ParamEnumWriteOnlyWidget):
+                    param_component.sig_value_changed.connect(self.on_enum_widget_clicked)
 
         self.param_worker.sig_progress_changed.connect(self.handle_progress_changed)
         self.content_widget.setEnabled(False)
@@ -185,6 +197,10 @@ class ParamSettingWin(QMainWindow):
         param.write_str_value = param.btn_str_value
         self.param_worker.write()
 
+    def on_enum_widget_clicked(self, param : Parameter, write_value:str):
+        param.write_str_value = write_value
+        self.param_worker.write()
+
     def closeEvent(self, event: QCloseEvent):
         self.param_worker.cleanup()
         event.accept()
@@ -196,3 +212,10 @@ class ParamSettingWin(QMainWindow):
             self.content_widget.setEnabled(False)
         else:
             self.content_widget.setEnabled(True)
+
+    def _find_component_by_param_id(self, id):
+        for widget in self.parameter_folder_widgets:
+            for param_component in widget.param_components:
+                if param_component.param.id == id:
+                    return param_component
+        return None

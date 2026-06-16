@@ -8,6 +8,7 @@ class ParamFloatReadWriteWidget(LFloatReadWriteWidget):
         self.param = ParamManager().get_by_full_path(param_full_path)
 
         super().__init__(label_text=self.param.name, label_width=label_width, parent = parent)
+        super().set_range(self.param.min_value, self.param.max_value)
 
         self.param.sig_value_changed.connect(self.handle_value_changed)
         self.param.sig_is_err_changed.connect(self.handle_is_err_changed)

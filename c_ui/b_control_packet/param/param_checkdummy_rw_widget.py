@@ -12,6 +12,7 @@ class ParamCheckDummyReadWriteWidget(QObject):
 
         self.param = ParamManager().get_by_full_path(param_full_path)
 
+        self.enable_conditions = []
         self.item_list = []
 
         enum_class=self.param.ref_list
@@ -65,6 +66,11 @@ class ParamCheckDummyReadWriteWidget(QObject):
             check_box.set_value(check_box.original_value)
         self.commit()
 
+    def reg_enable_condition(self, ref_widget, conditions):
+        self.enable_conditions.append((ref_widget, conditions))
+        ref_widget.sig_value_changed.connect(self.on_enable_condition_changed)
+        self.on_enable_condition_changed()
+
     def set_error(self, value : bool):
         for check_box, item_value in self.item_list:
             check_box.set_error(value)
@@ -98,6 +104,16 @@ class ParamCheckDummyReadWriteWidget(QObject):
             if check_box.is_dirty():
                 return True
         return False
+
+    def on_enable_condition_changed(self):
+        for ref_widget, conditions in self.enable_conditions:
+            if ref_widget.get_value() not in conditions:
+                self.restore()
+                for check_box, item_value in self.item_list:
+                    check_box.setEnabled(False)
+                return
+        for check_box, item_value in self.item_list:
+            check_box.setEnabled(True)
           
         
 

@@ -29,6 +29,8 @@ class LBaseWidget(QWidget):
         self.dirty_label.setVisible(False) # 초기에는 숨김
         self.layout.addWidget(self.dirty_label)     
 
+        self.enable_conditions = []
+
     def add_widget(self, widget):
         self.layout.addWidget(widget, 1)   
 
@@ -41,6 +43,19 @@ class LBaseWidget(QWidget):
 
     def restore(self):
         pass
+
+    def reg_enable_condition(self, ref_widget, conditions):
+        self.enable_conditions.append((ref_widget, conditions))
+        ref_widget.sig_value_changed.connect(self.on_enable_condition_changed)
+        self.on_enable_condition_changed()
+
+    def on_enable_condition_changed(self):
+        for ref_widget, conditions in self.enable_conditions:
+            if ref_widget.get_value() not in conditions:
+                self.setEnabled(False)
+                self.restore()
+                return
+        self.setEnabled(True)
 
         
 

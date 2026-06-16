@@ -39,7 +39,7 @@ class MainValvePosition(MyCardWidget):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(5)
         
-        self.posi_input = ParamPosiReadWriteVerticalSpinWidget(label_text = "Target", param_full_path="Position Control.Basic.Target Position", enable_wrap_border=True, is_only_enter_finished = True)        
+        self.posi_input = ParamPosiReadWriteVerticalSpinWidget(label_text = "Target", param_full_path="Position Control.Basic.Target.Target Position", enable_wrap_border=True, is_only_enter_finished = True)        
         right_layout.addWidget(self.posi_input)
 
         self.btn_01 = BaseButton("")

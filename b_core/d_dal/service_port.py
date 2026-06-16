@@ -27,6 +27,12 @@ class ServicePort(QObject):
         self.serial_port: serial.Serial | None = None
         self._connect_info : str = ""
         self._termination_chars = b"\r\n" # 기본값
+        self._port_name = ""
+        self._baudrate = 0
+        self._data_bits = 0
+        self._parity = 0
+        self._stop_bits = 0
+        self._termination = 0
         self._mutex = QRecursiveMutex()
 
         app = QCoreApplication.instance()
@@ -47,6 +53,12 @@ class ServicePort(QObject):
 
     def open(self,  port_name: str, baudrate: int, data_bits: int, parity: int, stop_bits: int, termination: int):
         with QMutexLocker(self._mutex): 
+            self.port_name = port_name
+            self.baudrate = baudrate
+            self.data_bits = data_bits
+            self.parity = parity
+            self.stop_bits = stop_bits
+            self.termination = termination
             parity_map = {0: serial.PARITY_NONE, 2: serial.PARITY_EVEN, 3: serial.PARITY_ODD, 4: serial.PARITY_SPACE, 5: serial.PARITY_MARK}
             stop_map = {1: serial.STOPBITS_ONE, 2: serial.STOPBITS_TWO, 3: serial.STOPBITS_ONE_POINT_FIVE}
             term_map_bytes = {0: b"\r\n", 1: b"\n", 2: b"\r"}
@@ -77,6 +89,9 @@ class ServicePort(QObject):
     def close(self):
         with QMutexLocker(self._mutex):
             self._close_internal()      
+
+    def reconnect(self):
+        self.open(self.port_name, self.baudrate, self.data_bits, self.parity, self.stop_bits, self.termination)
 
     def request_string(self, command: str) -> tuple[str | None, SvcPortErrType | None]:
         cmd_bytes = command.encode('utf-8')

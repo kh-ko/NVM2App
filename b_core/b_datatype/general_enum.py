@@ -26,8 +26,13 @@ class ParamDisplayType(Enum):
     H_SFS     = auto()
     L_SFS     = auto()
     REAL      = auto()
+    SCALE     = auto()
     POSI      = auto()
     BTN       = auto()
+    SENS1_PRES = auto()
+    SENS2_PRES = auto()
+    PRESS_SLOPE = auto()
+    IFACE_GAIN = auto()
 
 class ParamDataType(Enum):
     INT8   = auto()

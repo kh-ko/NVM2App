@@ -10,6 +10,7 @@ from b_core.c_manager.parameter_manager import ParamManager
 from c_ui.b_control_packet.layout.my_card_widget import MyCardWidget
 from c_ui.b_control_packet.param.param_text_ro_widget import ParamTextReadOnlyWidget
 from c_ui.b_control_packet.param.param_enum_ro_widget import ParamEnumReadOnlyWidget
+from c_ui.b_control_packet.param.param_enum_wo_widget import ParamEnumWriteOnlyWidget
 from c_ui.b_control_packet.param.param_enum_rw_widget import ParamEnumReadWriteWidget
 from c_ui.b_control_packet.param.param_hex_rw_widget import ParamHexReadWriteWidget
 from c_ui.b_control_packet.param.param_btn_wo_widget import ParamBtnWriteOnlyWidget
@@ -23,6 +24,11 @@ from c_ui.b_control_packet.param.param_pres_rw_widget import ParamPresReadWriteW
 from c_ui.b_control_packet.param.param_pres_ro_widget import ParamPresReadOnlyWidget
 from c_ui.b_control_packet.param.param_float_rw_widget import ParamFloatReadWriteWidget
 from c_ui.b_control_packet.param.param_bitmap_rw_widget import ParamBitmapReadWriteWidget
+from c_ui.b_control_packet.param.param_scale_rw_widget import ParamScaleReadWriteWidget
+from c_ui.b_control_packet.param.param_scale_ro_widget import ParamScaleReadOnlyWidget
+from c_ui.b_control_packet.param.param_ifacegain_rw_widget import ParamIfaceGainReadWriteWidget
+from c_ui.b_control_packet.param.param_num_rw_widget import ParamNumReadWriteWidget
+from c_ui.b_control_packet.param.param_hex_ro_widget import ParamHexReadOnlyWidget
 
 class ParamFolderWidget(MyCardWidget):
     """타이틀, 구분선, 컨텐츠 영역을 가지는 카드 형태의 커스텀 위젯"""
@@ -56,24 +62,35 @@ class ParamFolderWidget(MyCardWidget):
         elif param.display_type == ParamDisplayType.ENUM:
             if param.acc == ParamAccType.RO:
                 widget = ParamEnumReadOnlyWidget(param_full_path=f"{param.path}.{param.name}", label_width=self.label_width)
+            elif param.acc == ParamAccType.WO:
+                widget = ParamEnumWriteOnlyWidget(param_full_path=f"{param.path}.{param.name}", label_width=self.label_width)
             else:
                 widget = ParamEnumReadWriteWidget(param_full_path=f"{param.path}.{param.name}",label_width=self.label_width)
         elif param.display_type == ParamDisplayType.HEX:
             if param.acc == ParamAccType.RO:
-                pass
+                widget = ParamHexReadOnlyWidget(param_full_path=f"{param.path}.{param.name}",label_width=self.label_width)
             else:
                 widget = ParamHexReadWriteWidget(param_full_path=f"{param.path}.{param.name}",label_width=self.label_width)
         elif param.display_type == ParamDisplayType.NUMBER:
             if param.acc == ParamAccType.RO:
-                widget = ParamNumReadOnlyWidget(f"{param.path}.{param.name}",label_width=self.label_width)
+                widget = ParamNumReadOnlyWidget(param_full_path=f"{param.path}.{param.name}",label_width=self.label_width)
             else:
-                pass
-                #widget = ParamNumberInputWidget(f"{param.path}.{param.name}")
+                widget = ParamNumReadWriteWidget(param_full_path=f"{param.path}.{param.name}",label_width=self.label_width)
         elif param.display_type == ParamDisplayType.REAL:
             if param.acc == ParamAccType.RO:
-                widget = ParamFloatReadOnlyWidget(f"{param.path}.{param.name}",label_width=self.label_width)
+                widget = ParamFloatReadOnlyWidget(param_full_path=f"{param.path}.{param.name}",label_width=self.label_width)
             else:
-                widget = ParamFloatReadWriteWidget(f"{param.path}.{param.name}",label_width=self.label_width)
+                widget = ParamFloatReadWriteWidget(param_full_path=f"{param.path}.{param.name}",label_width=self.label_width)
+        elif param.display_type == ParamDisplayType.IFACE_GAIN:
+            if param.acc == ParamAccType.RO:
+                pass
+            else:
+                widget = ParamIfaceGainReadWriteWidget(f"{param.path}.{param.name}",label_width=self.label_width)
+        elif param.display_type == ParamDisplayType.SCALE:
+            if param.acc == ParamAccType.RO:
+                widget = ParamScaleReadOnlyWidget(f"{param.path}.{param.name}",label_width=self.label_width)
+            else:
+                widget = ParamScaleReadWriteWidget(f"{param.path}.{param.name}",label_width=self.label_width)
         elif param.display_type == ParamDisplayType.BITMAP:
             if param.acc == ParamAccType.RO:
                 widget = ParamBitmapReadOnlyWidget(f"{param.path}.{param.name}")
@@ -91,7 +108,7 @@ class ParamFolderWidget(MyCardWidget):
                 widget = ParamPosiReadOnlyWidget(f"{param.path}.{param.name}",label_width=self.label_width)
             else:
                 widget = ParamPosiReadWriteWidget(f"{param.path}.{param.name}",label_width=self.label_width)
-        elif param.display_type == ParamDisplayType.SENS_PRES:
+        elif param.display_type == ParamDisplayType.SENS_PRES or param.display_type == ParamDisplayType.SENS1_PRES or param.display_type == ParamDisplayType.SENS2_PRES or param.display_type == ParamDisplayType.PRESS_SLOPE:
             if param.acc == ParamAccType.RO:
                 widget = ParamPresReadOnlyWidget(f"{param.path}.{param.name}",label_width=self.label_width)
             else:

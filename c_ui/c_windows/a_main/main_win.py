@@ -32,7 +32,16 @@ from c_ui.c_windows.d_valve.valve_setting_win import ValveSettingWin
 from c_ui.c_windows.e_sensor.sensor_zero_win import SensorZeroWin
 from c_ui.c_windows.e_sensor.sensor_setting_win import SensorSettingWin
 from c_ui.c_windows.f_posi_ctrl.posi_ctrl_setting_win import PosiCtrlSettingWin
-from c_ui.c_windows.g_pres_ctrl.pres_ctrl_setting_win import PresCtrlSettingWin
+from c_ui.c_windows.g_pres_ctrl.pres_ctrl_gen_setting_win import PresCtrlGenSettingWin
+from c_ui.c_windows.g_pres_ctrl.pres_ctrl_controller_setting_win import PresCtrlControllerSettingWin
+from c_ui.c_windows.h_learn.learn_exe_win import LearnExeWin
+from c_ui.c_windows.h_learn.learn_bank1_win import LearnBank1Win
+from c_ui.c_windows.h_learn.learn_bank2_win import LearnBank2Win
+from c_ui.c_windows.h_learn.learn_bank3_win import LearnBank3Win
+from c_ui.c_windows.h_learn.learn_bank4_win import LearnBank4Win
+from c_ui.c_windows.i_pfo.pfo_win import PfoWin
+from c_ui.c_windows.j_iface.iface_pwr_io_win import IfacePwrIoWin
+from c_ui.c_windows.j_iface.iface_dnet_win import IfaceDnetWin
 
 class MainWin(QMainWindow):
     """
@@ -62,8 +71,8 @@ class MainWin(QMainWindow):
         bottom_layout.setContentsMargins(0, 0, 0, 0) # 영역 간 마진 없애기
         bottom_layout.setSpacing(0)
 
-        section = MainValveStatus("System.Control Mode", "Position Control.Basic.Position Control Speed Used", "Pressure Control.Basic.Controller Selector Used", "System.Warning/Error.Warning Bitmap", "System.Warning/Error.Error Bitmap")
-        bottom_layout.addWidget(section, 26)
+        section = MainValveStatus("System.Control Mode", "Position Control.Basic.Position Control Speed Used (%)", "Pressure Control.Basic.Controller Selector Used", "System.Warning/Error.Warning Bitmap", "System.Warning/Error.Error Bitmap")
+        bottom_layout.addWidget(section, 27)
 
         self.ctrl_panel = MainValveControl(); 
         self.ctrl_panel.open_btn.clicked.connect(self.on_clicked_open_btn, Qt.QueuedConnection); 
@@ -73,7 +82,7 @@ class MainWin(QMainWindow):
         bottom_layout.addWidget(self.ctrl_panel, 10)
             
         self.posi_panel = MainValvePosition()
-        bottom_layout.addWidget(self.posi_panel, 20)
+        bottom_layout.addWidget(self.posi_panel, 19)
         self.posi_panel.posi_input.sig_value_changed.connect(self.on_posi_input_finished, Qt.QueuedConnection)
         self.posi_panel.sig_btn_clicked.connect(self.on_clicked_posi_btn, Qt.QueuedConnection)
         self.posi_panel.btn_edit.clicked.connect(self.on_clicked_posi_edit_btn, Qt.QueuedConnection)
@@ -106,8 +115,35 @@ class MainWin(QMainWindow):
         self.main_top_toolbar.reg_sens_zero_slot(self.on_clicked_sens_zero)
         self.main_top_toolbar.reg_sens_setting_slot(self.on_clicked_sens_setting)
         self.main_top_toolbar.reg_posi_ctrl_setting_slot(self.on_clicked_posi_ctrl_setting)
-        self.main_top_toolbar.reg_pres_ctrl_setting_slot(self.on_clicked_pres_ctrl_setting)
-
+        self.main_top_toolbar.reg_pres_ctrl_gen_setting_slot(self.on_clicked_pres_ctrl_gen_setting)
+        self.main_top_toolbar.reg_pres_ctrl_controller_setting_slot(self.on_clicked_pres_ctrl_controller_setting)
+        self.main_top_toolbar.reg_learn_slot(self.on_clicked_learn)
+        self.main_top_toolbar.reg_learn_bank1_setting_slot(self.on_clicked_learn_bank1_setting)
+        self.main_top_toolbar.reg_learn_bank2_setting_slot(self.on_clicked_learn_bank2_setting)
+        self.main_top_toolbar.reg_learn_bank3_setting_slot(self.on_clicked_learn_bank3_setting)
+        self.main_top_toolbar.reg_learn_bank4_setting_slot(self.on_clicked_learn_bank4_setting)
+        self.main_top_toolbar.reg_learn_list_setting_slot(self.on_clicked_learn_list_setting)
+        self.main_top_toolbar.reg_pfo_setting_slot(self.on_clicked_pfo_setting)
+        self.main_top_toolbar.reg_iface_pwr_io_slot(self.on_clicked_iface_pwr_io)
+        self.main_top_toolbar.reg_iface_dnet_slot(self.on_clicked_iface_dnet)
+        self.main_top_toolbar.reg_iface_trace_slot(self.on_clicked_iface_trace)
+        self.main_top_toolbar.reg_cluster_master_setting_slot(self.on_clicked_cluster_master_setting)
+        self.main_top_toolbar.reg_cluster_slave_setting_slot(self.on_clicked_cluster_slave_setting)
+        self.main_top_toolbar.reg_cluster_slave_monitor_slot(self.on_clicked_cluster_slave_monitor)
+        self.main_top_toolbar.reg_compound1_setting_slot(self.on_clicked_compound1_setting)
+        self.main_top_toolbar.reg_compound2_setting_slot(self.on_clicked_compound2_setting)
+        self.main_top_toolbar.reg_compound3_setting_slot(self.on_clicked_compound3_setting)
+        self.main_top_toolbar.reg_compound4_setting_slot(self.on_clicked_compound4_setting)
+        self.main_top_toolbar.reg_advenced_backup_slot(self.on_clicked_advenced_backup)
+        self.main_top_toolbar.reg_advenced_restore_slot(self.on_clicked_advenced_restore)
+        self.main_top_toolbar.reg_advenced_lagacy_slot(self.on_clicked_advenced_lagacy)
+        self.main_top_toolbar.reg_analysis_sensor_slot(self.on_clicked_analysis_sensor)
+        self.main_top_toolbar.reg_analysis_terminal_slot(self.on_clicked_analysis_terminal)
+        self.main_top_toolbar.reg_factory_adc_calib_slot(self.on_clicked_factory_adc_calib)
+        self.main_top_toolbar.reg_factory_firmware_update_slot(self.on_clicked_factory_firmware_update)
+        self.main_top_toolbar.reg_help_update_slot(self.on_clicked_help_update)
+        self.main_top_toolbar.reg_help_about_slot(self.on_clicked_help_about)
+        
         # 4. 상태바(Status Bar) 초기화
         self.main_foot_statusbar = MainFootStatusBar(self)
         self.setStatusBar(self.main_foot_statusbar)
@@ -122,7 +158,7 @@ class MainWin(QMainWindow):
         self.compounds_timer.timeout.connect(self.handle_compounds_data)
         self.compounds_timer.start()
 
-        self.param_worker = ParameterWorker(self)   
+        self.param_worker = ParameterWorker(parent=self, win_name="Main Win")   
         self.param_worker.add_init_param("System.Identification.Serial Number")    
         self.param_worker.add_init_param("System.Identification.Configuration.Valve Type") 
         self.param_worker.add_init_param("System.Identification.Configuration.Contract Method")
@@ -145,11 +181,13 @@ class MainWin(QMainWindow):
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Lower Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Voltage Per Decade [V]")
         self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Pressure Unit")
-        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure 0")
+        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure Min")
         self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure Sensor Full Scale")
         self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Position Unit")
         self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Value Open Position")
         self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Value Closest Position")
+
+        self.pre_ctrl_mode = p_enum.ControlModeEnum.INIT.value
 
         self.acc_mode_param = self.param_worker.add_write_param("System.Access Mode")    
 
@@ -163,10 +201,16 @@ class MainWin(QMainWindow):
             self.ctrl_mode_param.sig_value_changed.connect(self.handle_ctrl_mode_changed)
             self.handle_ctrl_mode_changed()
 
+        self.user_iface_param = self.param_worker.add_write_param("System.Identification.Configuration.User Interface")    
+
+        if self.user_iface_param:
+            self.user_iface_param.sig_value_changed.connect(self.handle_user_iface_changed)
+            self.handle_user_iface_changed()    
+
         self.param_worker.sig_progress_changed.connect(self.handle_progress_changed)
 
-        self.posi_target_param = self.param_worker.add_write_param("Position Control.Basic.Target Position")    
-        self.pres_target_param = self.param_worker.add_write_param("Pressure Control.Basic.Target Pressure")
+        self.posi_target_param = self.param_worker.add_write_param("Position Control.Basic.Target.Target Position")    
+        self.pres_target_param = self.param_worker.add_write_param("Pressure Control.Basic.Target.Target Pressure")
 
     def on_clicked_local_btn(self):
         self.acc_mode_param.write_str_value = f"{p_enum.AccModeEnum.LOCAL.value}"
@@ -222,8 +266,107 @@ class MainWin(QMainWindow):
     def on_clicked_posi_ctrl_setting(self):
         WinManager().show_param_window(win_class=PosiCtrlSettingWin, parent=self, is_modal=False)
 
-    def on_clicked_pres_ctrl_setting(self):
-        WinManager().show_param_window(win_class=PresCtrlSettingWin, parent=self, is_modal=False)
+    def on_clicked_pres_ctrl_gen_setting(self):
+        WinManager().show_param_window(win_class=PresCtrlGenSettingWin, parent=self, is_modal=False)
+
+    def on_clicked_pres_ctrl_controller_setting(self):
+        WinManager().show_param_window(win_class=PresCtrlControllerSettingWin, parent=self, is_modal=False)
+
+    def on_clicked_learn(self):
+        WinManager().show_param_window(win_class=LearnExeWin, parent=self, is_modal=False)
+
+    def on_clicked_learn_bank1_setting(self):
+        WinManager().show_param_window(win_class=LearnBank1Win, parent=self, is_modal=False)
+
+    def on_clicked_learn_bank2_setting(self):
+        WinManager().show_param_window(win_class=LearnBank2Win, parent=self, is_modal=False)
+
+    def on_clicked_learn_bank3_setting(self):
+        WinManager().show_param_window(win_class=LearnBank3Win, parent=self, is_modal=False)
+
+    def on_clicked_learn_bank4_setting(self):
+        WinManager().show_param_window(win_class=LearnBank4Win, parent=self, is_modal=False)
+
+    def on_clicked_learn_list_setting(self):
+        #WinManager().show_param_window(win_class=LearnListWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_pfo_setting(self):
+        WinManager().show_param_window(win_class=PfoWin, parent=self, is_modal=False)
+
+    def on_clicked_iface_pwr_io(self):
+        WinManager().show_param_window(win_class=IfacePwrIoWin, parent=self, is_modal=False)
+
+    def on_clicked_iface_dnet(self):
+        WinManager().show_param_window(win_class=IfaceDnetWin, parent=self, is_modal=False)
+
+    def on_clicked_iface_trace(self):
+        #WinManager().show_param_window(win_class=IfaceTraceWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_cluster_master_setting(self):
+        #WinManager().show_param_window(win_class=ClusterMasterWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_cluster_slave_setting(self):
+        #WinManager().show_param_window(win_class=ClusterSlaveWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_cluster_slave_monitor(self):
+        #WinManager().show_param_window(win_class=ClusterSlaveMonitorWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_compound1_setting(self):
+        #WinManager().show_param_window(win_class=Compound1Win, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_compound2_setting(self):
+        #WinManager().show_param_window(win_class=Compound2Win, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_compound3_setting(self):
+        #WinManager().show_param_window(win_class=Compound3Win, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_compound4_setting(self):
+        #WinManager().show_param_window(win_class=Compound4Win, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_advenced_backup(self):
+        #WinManager().show_param_window(win_class=AdvencedBackupWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_advenced_restore(self):
+        #WinManager().show_param_window(win_class=AdvencedRestoreWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_advenced_lagacy(self):
+        #WinManager().show_param_window(win_class=AdvencedLagacyWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_analysis_sensor(self):
+        #WinManager().show_param_window(win_class=AnalysisSensorWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_analysis_terminal(self):
+        #WinManager().show_param_window(win_class=AnalysisTerminalWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_factory_adc_calib(self):
+        #WinManager().show_param_window(win_class=FactoryAdcCalibWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_factory_firmware_update(self):
+        #WinManager().show_param_window(win_class=FactoryFirmwareUpdateWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_help_update(self):
+        #WinManager().show_param_window(win_class=HelpUpdateWin, parent=self, is_modal=False)
+        pass
+
+    def on_clicked_help_about(self):
+        #WinManager().show_param_window(win_class=HelpAboutWin, parent=self, is_modal=False)
+        pass
 
     def on_clicked_open_btn(self):
         self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.OPEN.value}"
@@ -251,11 +394,9 @@ class MainWin(QMainWindow):
         self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.POSITION.value}"
         self.posi_target_param.write_str_value = write_str_value
         self.param_worker.write()
-        pass
 
     def on_clicked_posi_edit_btn(self):
         WinManager().show_window(win_class=MainSetpointPosiEditWin, parent=self, is_modal=True)
-        pass
         
     def on_pres_input_finished(self):
         write_value_str = self.pres_panel.pres_input.get_param_write_value()
@@ -263,28 +404,26 @@ class MainWin(QMainWindow):
         self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.PRESSURE.value}"
         self.pres_target_param.write_str_value = write_value_str
         self.param_worker.write()
-        pass
 
     def on_clicked_pres_btn(self, write_str_value=""):
         self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.PRESSURE.value}"
         print(f"click pres_value : {write_str_value}")
         self.pres_target_param.write_str_value = write_str_value
         self.param_worker.write()
-        pass
 
     def on_clicked_pres_edit_btn(self):
         WinManager().show_window(win_class=MainSetpointPresEditWin, parent=self, is_modal=True)
-        pass
 
     def handle_changed_connection_info(self, info: str):
         if info:
-            self.param_worker.refresh()
+            self.compounds_worker.refresh()
+            if self.pre_ctrl_mode != p_enum.ControlModeEnum.INIT.value:
+                self.param_worker.refresh()
         else:
             pass
 
     def handle_progress_changed(self, progress: int):
         self.main_foot_statusbar.set_progress(progress)
-        pass
 
     def handle_compounds_data(self):
         data_list = self.compounds_worker.pop_all_data()
@@ -328,5 +467,15 @@ class MainWin(QMainWindow):
         if self.ctrl_mode_param.value is None:
             self.ctrl_panel.set_ctrl_mode_value(p_enum.ControlModeEnum.INIT.value)
             return
-        
+
+        if self.pre_ctrl_mode == p_enum.ControlModeEnum.INIT.value and self.ctrl_mode_param.value != p_enum.ControlModeEnum.INIT.value:
+            self.param_worker.refresh()
+
+        self.pre_ctrl_mode = self.ctrl_mode_param.value
         self.ctrl_panel.set_ctrl_mode_value(self.ctrl_mode_param.value)
+
+    def handle_user_iface_changed(self):
+        if self.user_iface_param.value is None:
+            return
+        
+        self.main_top_toolbar.set_iface(self.user_iface_param.value)

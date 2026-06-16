@@ -1,4 +1,7 @@
 
+from b_core.b_datatype.param_enum import SensUnitEnum
+from b_core.b_datatype.general_enum import ParamDisplayType
+from b_core.c_manager.local_setting_manager import LocalSettingManager
 from PySide6.QtWidgets import QVBoxLayout
 from PySide6.QtWidgets import QHeaderView
 
@@ -13,20 +16,21 @@ from c_ui.b_control_packet.param.param_pres_rw_widget import ParamPresReadWriteW
 class ParamFolderPresCtrlRampWidget(ParamFolderWidget):
     def __init__(self, parent=None):
         super().__init__(folder_name="Profile Ramp", param_path=None, label_width = 210, parent=parent)
-
+        self.local_setting = LocalSettingManager()
         self.param_manager = ParamManager()
 
-        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Enable")       
-        self.add_param(param)             
-        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Threshold Mode")   
-        self.add_param(param)         
-        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Ramp Type")                 
-        self.add_param(param)
-        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Actual Slope")              
-        self.add_param(param)
-        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Controller Selector Bitmap")
-        self.add_param(param)
+        slope_text = f"Slope [{SensUnitEnum.get_desc(self.local_setting.pres_unit)}/sec]"
+        threshold_text = f"Threshold [{SensUnitEnum.get_desc(self.local_setting.pres_unit)}]"
+
+
+        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Enable")                    ; self.add_param(param)             
+        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Threshold Mode")            ; self.add_param(param)         
+        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Ramp Type")                 ; self.add_param(param)
+        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Actual Slope")              ; self.add_param(param)
+        param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Controller Selector Bitmap"); self.add_param(param)
+        
         param = ParamManager().get_by_full_path("Pressure Control.General Settings.Profile Ramp.Segment Selector Bitmap")   
+
         self.selection_seg_dummy_component = ParamCheckDummyReadWriteWidget(param_full_path=f"{param.path}.{param.name}", parent=self)
         self.param_components.append(self.selection_seg_dummy_component)
 
@@ -36,7 +40,7 @@ class ParamFolderPresCtrlRampWidget(ParamFolderWidget):
         
         self.seg_table = BaseTableWidget()
         self.seg_table.setColumnCount(3)
-        self.seg_table.setHorizontalHeaderLabels(["Select", "Slope", "Threshold"])
+        self.seg_table.setHorizontalHeaderLabels(["Select", slope_text, threshold_text])
         
         # 테스트를 위해 3개의 행(Row)을 생성
         self.seg_table.setRowCount(10)
@@ -64,3 +68,10 @@ class ParamFolderPresCtrlRampWidget(ParamFolderWidget):
 
         self.seg_layout.addWidget(self.seg_table) 
         self.add_widget(self.seg_group)
+
+        self.local_setting.sig_pres_unit_changed.connect(self.handle_pres_unit_changed)
+
+    def handle_pres_unit_changed(self):
+        slope_text = f"Slope [{SensUnitEnum.get_desc(self.local_setting.pres_unit)}/sec]"
+        threshold_text = f"Threshold [{SensUnitEnum.get_desc(self.local_setting.pres_unit)}]"
+        self.seg_table.setHorizontalHeaderLabels(["Select", slope_text, threshold_text])

@@ -61,7 +61,7 @@ class PresConverterManager(QObject):
         self.pres_decimal_places = 6
 
         self.iface_unit_param       = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Pressure.Pressure Unit"                   )
-        self.iface_min_param        = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Pressure.Value Pressure 0"                )
+        self.iface_min_param        = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Pressure.Value Pressure Min"              )
         self.iface_max_param        = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Pressure.Value Pressure Sensor Full Scale")   
 
         self.sens1_avail_param     = ParamManager().get_by_full_path("Sensor.Sensor 1.Basic.Available"                                             )

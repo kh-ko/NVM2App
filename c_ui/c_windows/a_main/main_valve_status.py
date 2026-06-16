@@ -5,7 +5,7 @@ from b_core.c_manager.parameter_manager import ParamManager
 from c_ui.b_control_packet.controls.my_buttonwarn import MyButtonWarn
 from c_ui.b_control_packet.layout.my_panel_widget import MyPanelWidget
 from c_ui.b_control_packet.param.param_enum_ro_widget import ParamEnumReadOnlyWidget
-from c_ui.b_control_packet.param.param_float_ro_widget import ParamFloatReadOnlyWidget
+from c_ui.b_control_packet.param.param_scale_ro_widget import ParamScaleReadOnlyWidget
 
 class MainValveStatus(MyPanelWidget):
     def __init__(self, control_mode_param:str, posi_ctrl_speed_param:str, controller_select_param:str, warn_bitmap_param:str, err_bitmap_param:str,parent=None): # title의 기본값을 빈 문자열로 설정
@@ -14,13 +14,13 @@ class MainValveStatus(MyPanelWidget):
         self.warn_list: List[Tuple[int, MyButtonWarn]] = []
         self.err_list: List[Tuple[int, MyButtonWarn]] = []
 
-        control_mode_label = ParamEnumReadOnlyWidget(control_mode_param, 180)
+        control_mode_label = ParamEnumReadOnlyWidget(control_mode_param, 217)
         self.add_widget(control_mode_label)
 
-        posi_ctrl_speed_label = ParamFloatReadOnlyWidget(posi_ctrl_speed_param, 180)
+        posi_ctrl_speed_label = ParamScaleReadOnlyWidget(posi_ctrl_speed_param, 217)
         self.add_widget(posi_ctrl_speed_label)
         
-        controller_select_label = ParamEnumReadOnlyWidget(controller_select_param, 180)
+        controller_select_label = ParamEnumReadOnlyWidget(controller_select_param, 217)
         self.add_widget(controller_select_label)
 
         self.warn_param = ParamManager().get_by_full_path(warn_bitmap_param)

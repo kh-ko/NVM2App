@@ -8,6 +8,7 @@ from c_ui.b_control_packet.base import my_style
 class BaseLabel(QLabel):    
     def __init__(self, text="", type = my_style.STYLE_LABEL_BASE, parent=None):
         super().__init__(text, parent)
+        self.setWordWrap(True)
 
         if type != my_style.STYLE_LABEL_BASE:
             base_font = QApplication.font()

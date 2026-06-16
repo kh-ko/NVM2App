@@ -1,3 +1,4 @@
+from PySide6.QtCore import QTimer
 from datetime import datetime
 
 from b_core.c_manager.parameter_manager import ParamManager
@@ -13,6 +14,7 @@ from b_core.d_dal.service_port import ServicePort
 class ParameterThread(QObject):
     sig_read_result = Signal(str, str, object, SvcPortErrType)
     sig_write_result = Signal(str, str, object, SvcPortErrType)
+    sig_monitor_result = Signal(str, str, object, SvcPortErrType)
 
     # sample code
     @Slot(str, object)
@@ -32,9 +34,18 @@ class ParameterThread(QObject):
             
         self.sig_write_result.emit(packet, response, param, err_type)
 
+    @Slot(str, object)
+    def process_monitor_request(self, packet: str, param: Parameter):
+        response, err_type = ServicePort().request_string(packet)
+        if err_type != SvcPortErrType.NONE:
+            QThread.msleep(100)
+            
+        self.sig_monitor_result.emit(packet, response, param, err_type)        
+
 class ParameterWorker(QObject):
     sig_read_request = Signal(str, object)
     sig_write_request = Signal(str, object)
+    sig_monitor_request = Signal(str, object)
 
     sig_progress_changed = Signal(int)
 
@@ -60,9 +71,15 @@ class ParameterWorker(QObject):
             self._is_working = is_working
             self.sig_is_working_changed.emit(is_working)        
 
-    def __init__(self, parent=None):
+    def __init__(self, win_name:str="Param Worker", monitor_tick=100, parent=None):
         super().__init__(parent)
 
+        self.monitor_timer = QTimer(self)
+        self.monitor_timer.setSingleShot(True)
+        self.monitor_timer.timeout.connect(self._on_timeout_monitor)
+        self.monitor_time_tick = monitor_tick
+
+        self.win_name = win_name
         self._is_cleaned = False
 
         self._acc_mode_param: Parameter = ParamManager().get_by_full_path("System.Access Mode")
@@ -74,16 +91,20 @@ class ParameterWorker(QObject):
 
         self.sig_read_request.connect(self._param_thread.process_read_request)
         self.sig_write_request.connect(self._param_thread.process_write_request)
+        self.sig_monitor_request.connect(self._param_thread.process_monitor_request)
         
         self._param_thread.sig_read_result.connect(self.handle_read_result)
         self._param_thread.sig_write_result.connect(self.handle_write_result)
+        self._param_thread.sig_monitor_result.connect(self.handle_monitor_result)
 
         self._is_working = False
         self._progress = 0 # 0 ~ 100 (단위 %)
 
-        self._current_phase = ""  # "INIT", "READ", "MONITOR", "STOP"
+        self._current_phase = ""  # "INIT", "READ", "STOP"
         self._current_index = 0
         self._current_param: Optional[Parameter] = None
+        self._monitor_index = 0
+        self._monitor_param: Optional[Parameter] = None
         self._processed_count = 0
         self._total_target_count = 0
         self._monitor_log_count = 0
@@ -138,6 +159,10 @@ class ParameterWorker(QObject):
         if param is not None:
             self.monitor_param_list.append(param)
 
+    def add_monitor_param_ptr(self, param: Parameter):
+        if param is not None:
+            self.monitor_param_list.append(param)
+
     def refresh(self):  
         if ServicePort().connect_info:
             is_connected = True
@@ -146,6 +171,9 @@ class ParameterWorker(QObject):
 
         self._close_active_msg_box()
 
+        self.monitor_timer.stop()
+        self._monitor_param = None
+        self._monitor_index = 0
         self._current_param = None
         self._current_phase = "STOP" 
         self.is_working = False
@@ -171,6 +199,22 @@ class ParameterWorker(QObject):
     def read(self):
         # 추후 구현
         pass
+
+    def _on_timeout_monitor(self):
+        if len(self.monitor_param_list) < 1:
+            return
+
+        if self._monitor_index >= len(self.monitor_param_list):
+            self._monitor_log_count += 1
+            
+            if self._monitor_log_count > 30:
+                self._monitor_log_count = 0
+
+            self._monitor_index = 0        
+
+        self._monitor_param = self.monitor_param_list[self._monitor_index]
+        packet = f"p:0B{self._monitor_param.id}{self._monitor_param.index:02X}"
+        self.sig_monitor_request.emit(packet, self._monitor_param)
 
     def write(self):
         if ServicePort().connect_info:
@@ -222,6 +266,9 @@ class ParameterWorker(QObject):
         self._current_phase = "WRITE"
         self._current_index = 0
         
+        self.monitor_timer.stop()
+        self._monitor_param = None
+        self._monitor_index = 0
         self._request_write_next()        
 
     def _request_read_next(self):        
@@ -267,19 +314,23 @@ class ParameterWorker(QObject):
             else:
                 self.is_working = False
                 self.progress = 0
-                
-                self._current_phase = "MONITOR"
-                self._current_index = 0           
 
-        if self._current_phase == "MONITOR":
-            if not self.monitor_param_list:
-                return
-            
-            if self._current_index >= len(self.monitor_param_list):
-                self._current_index = 0
+                self._current_phase = "STOP"
+                self._current_index = 0     
                 
-            param = self.monitor_param_list[self._current_index]
-            self._send_read_request(param)
+                if len(self.monitor_param_list) > 0:
+                    self.monitor_timer.stop()
+                    self.monitor_timer.start(self.monitor_time_tick)
+                      
+
+        #if self._current_phase == "MONITOR":
+        #    pass
+            #if not self.monitor_param_list:
+            #    return
+            #if self._current_index >= len(self.monitor_param_list):
+            #    self._current_index = 0
+            #param = self.monitor_param_list[self._current_index]
+            #self._send_read_request(param)
 
     def _request_read_next_skip(self):
         if self._current_phase in ["INIT", "READ_WRITE_PARAM", "WRITE_AFTER_READ", "READ"]:
@@ -343,6 +394,29 @@ class ParameterWorker(QObject):
         self._request_read_next()
 
     @Slot(str, str, object, SvcPortErrType)
+    def handle_monitor_result(self, req_msg:str, resp_msg: str, param: Parameter, err_type:SvcPortErrType):
+        if self._monitor_param != param:
+            return
+
+        self._add_log(req_msg=req_msg, resp_msg=resp_msg, param=param,is_monitor=True)
+
+        param_err_type, need_retry = param.set_read_response_packet(resp_msg)
+
+        if err_type != SvcPortErrType.NONE:
+            self._add_log(req_msg=req_msg, resp_msg=resp_msg, param=param, err_msg=err_type.name, is_monitor=True, is_error=True)
+            self.monitor_timer.start(self.monitor_time_tick)   
+            return
+
+        if param_err_type != ParamParseErrType.NONE:
+            self._add_log(req_msg=req_msg, resp_msg=resp_msg, param=param, err_msg=param_err_type.name, is_monitor=True, is_error=True)
+            if need_retry:
+                self.monitor_timer.start(self.monitor_time_tick)   
+                return
+
+        self._monitor_index += 1
+        self.monitor_timer.start(self.monitor_time_tick)       
+
+    @Slot(str, str, object, SvcPortErrType)
     def handle_write_result(self, req_msg:str, resp_msg: str, param: Parameter, err_type:SvcPortErrType):
         if self._current_param != param or self._current_phase == "STOP":
             return
@@ -362,23 +436,23 @@ class ParameterWorker(QObject):
             if self._total_target_count > 0:
                 self.progress = int((self._processed_count / self._total_target_count) * 100)
 
+        if param.is_need_reconnect:
+            ServicePort().reconnect()
+            
         self._current_index += 1
         self._request_write_next()     
 
-    def _add_log(self, req_msg: str, resp_msg: str, param: Parameter, err_msg: str = "", is_error: bool = False):
-        if self._current_phase == "MONITOR":
-            self._monitor_log_count += 1
-
-            if self._monitor_log_count < 100:
+    def _add_log(self, req_msg: str, resp_msg: str, param: Parameter, err_msg: str = "", is_monitor:bool = False, is_error: bool = False):
+        if is_monitor:
+            if self._monitor_log_count < 30:
                 return
-            self._monitor_log_count = 0
 
         now = datetime.now()
         time_str = now.strftime("%H:%M:%S.%f")[:-3]
         status = "ERROR" if is_error else "INFO"
         
         log_msg = (
-            f"[Main Param Worker][{time_str}] [{status}] "
+            f"[{self.win_name}][{time_str}] [{status}] "
             f"Path: {param.path} | Name: {param.name} | Index: {param.index} | "
             f"Req: {req_msg} | Resp: {resp_msg} | ErrMsg: {err_msg}"
         )
@@ -435,6 +509,8 @@ class ParameterWorker(QObject):
             except (TypeError, RuntimeError):
                 pass
 
+        self.monitor_timer.stop()
+
         # 2. 스레드 안전 종료
         if self._thread is not None and self._thread.isRunning():
             if self._param_thread:
@@ -445,6 +521,6 @@ class ParameterWorker(QObject):
             self._thread.quit()  # 스레드의 이벤트 루프 종료 요청
             self._thread.wait()  # 스레드가 완전히 종료될 때까지 대기
             
-            self._thread = None       
-            self._param_thread = None            
+            #self._thread = None       
+            #self._param_thread = None            
     

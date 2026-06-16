@@ -6,10 +6,10 @@ from c_ui.b_control_packet.param_container.param_folder_pres_ctrl_auto_sel_widge
 from c_ui.b_control_packet.param_container.param_folder_pres_ctrl_posi_restriction_widget import ParamFolderPresCtrlPosiRestrictionWidget
 from c_ui.b_control_packet.param_container.param_folder_pres_ctrl_ramp_widget import ParamFolderPresCtrlRampWidget
 
-class PresCtrlSettingWin(ParamSettingWin):
+class PresCtrlGenSettingWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Pressure Control >> Setting")
+        self.setWindowTitle("Pressure Control >> General Setting")
         self.resize(850, 450)
 
         columns_layout = QHBoxLayout()

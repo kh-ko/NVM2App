@@ -1,3 +1,4 @@
+from PySide6.QtWidgets import QSizePolicy
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QComboBox
 
@@ -7,6 +8,7 @@ class BaseComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.set_color(my_style.STYLE_LABEL_COLOR, my_style.STYLE_BORDER_COLOR)
 
     def set_color(self, label_color: str, border_color: str):
@@ -64,5 +66,8 @@ class BaseComboBox(QComboBox):
                 selection-color: {my_style.STYLE_ITEM_SEL_COLOR};
             }}
         """)
+
+    def wheelEvent(self, event):
+        event.ignore()
 
         

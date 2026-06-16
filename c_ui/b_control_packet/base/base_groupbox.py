@@ -20,6 +20,7 @@ class BaseGroupBox(QGroupBox):
         self.title_layout.setSpacing(0)
 
         self.lbl_label = MyLabel(text)
+        self.lbl_label.setWordWrap(False)
 
         self.title_layout.addWidget(self.lbl_label)
 

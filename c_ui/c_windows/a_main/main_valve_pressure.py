@@ -44,7 +44,7 @@ class MainValvePressure(MyCardWidget):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(5)
         
-        self.pres_input = ParamPresReadWriteVerticalSpinWidget(label_text = "Target", param_full_path="Pressure Control.Basic.Target Pressure", enable_wrap_border=True, is_only_enter_finished = True)        
+        self.pres_input = ParamPresReadWriteVerticalSpinWidget(label_text = "Target", param_full_path="Pressure Control.Basic.Target.Target Pressure", enable_wrap_border=True, is_only_enter_finished = True)        
         right_layout.addWidget(self.pres_input)
 
         self.btn_01 = BaseButton("")

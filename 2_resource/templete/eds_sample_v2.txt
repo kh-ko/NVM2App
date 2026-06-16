@@ -1,0 +1,98 @@
+$ NOVASEN-DNS Electronic Data Sheet
+$ Version 1.0
+
+$ File Description Section
+[File]
+        DescText = "NOVASEN EDS FILE";
+        CreateDate =
+        CreateTime =
+        ModDate =
+        ModTime =
+        Revision = 1.0;
+
+$ Device Description Section
+[Device]
+        VendCode =
+        VendName = "NOVASEN";
+        ProdType =
+        ProdTypeStr =
+        ProdCode =
+        MajRev =
+        MinRev =
+        ProdName =
+        Catalog = "0";
+
+$ I/O Characteristics Section
+[IO_Info]
+
+        Default = 0x0001;
+
+        PollInfo = 0x0001,1,1;
+		
+        Input1 =
+		
+        Output1 =
+	
+$ Parameter Section	
+
+[ParamClass]
+	MaxInst     = 37;
+	Descriptor  = 0x0001;
+	CfgAssembly = 0;
+	
+[Params]
+	Param1 = 0, 6, "20 33 24 00 30 08", 0x0022, 198, 1, "Setpoint type", "", "", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param2 = 0, 6, "20 33 24 01 30 05", 0x0022, 198, 1, "Pressure control mode", "", "", 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param3 = 0, 6, "20 33 24 01 30 06", 0x0020, %1, %2, "Pressure setpoint", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param4 = 0, 6, "20 33 24 02 30 05", 0x0022, 198, 1, "Position control mode", "", "", 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param5 = 0, 6, "20 33 24 02 30 06", 0x0020, %1, %2, "Position setpoint", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param6 = 0, 6, "20 08 24 01 30 03", 0x0032, 193, 1, "Valve closed", "", "", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param7 = 0, 6, "20 08 24 02 30 03", 0x0032, 193, 1, "Valve open", "", "", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param8 = 0, 6, "20 31 24 03 30 06", 0x0030, %1, %2, "Position", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param9 = 0, 6, "20 31 24 01 30 06", 0x0030, %1, %2, "Pressure", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param10 = 0, 6, "20 64 24 01 30 6C", 0x0030, %1, %2, "Pressure Sensor 1", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param11 = 0, 6, "20 64 24 01 30 6D", 0x0030, %1, %2, "Pressure Sensor 2", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param12 = 0, 6, "20 64 24 01 30 6E", 0x0030, %1, %2, "Sensor 1 offset value", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param13 = 0, 6, "20 64 24 01 30 6F", 0x0030, %1, %2, "Sensor 2 offset value", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param14 = 0, 6, "20 64 24 01 30 65", 0x0030, 200, 4, "Throttle cycle counter", "", "", 0, 99999999, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param15 = 0, 6, "20 64 24 01 30 6A", 0x0030, 200, 4, "Isolation cycle counter", "", "", 0, 99999999, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param16 = 0, 6, "20 64 24 01 30 76", 0x0030, 209, %1, "%2", "", "", 0, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param17 = 0, 6, "20 33 24 01 30 6A", 0x0030, 210, 2, "Learn status", "", "", 0, 0xFFFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param18 = 0, 6, "20 64 24 01 30 67", 0x0032, 198, 1, "Device status 2", "", "", 1, 14, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param19 = 0, 6, "20 30 24 01 30 0C", 0x0030, 209, 1, "Exception status", "", "", 0, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param20 = 0, 6, "20 30 24 01 30 0D", 0x0030, 209, 15, "Exception detail alarm", "", "", 0, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param21 = 0, 6, "20 30 24 01 30 0E", 0x0030, 209, 15, "Exception detail warning", "", "", 0, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param22 = 0, 6, "20 31 24 01 30 0E", 0x0020, 202, 4, "Gain (pressure)", "", "", -3.0E+38, 3.0E+38, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4;
+	Param23 = 0, 6, "20 31 24 03 30 0E", 0x0020, 202, 4, "Gain (position)", "", "", -3.0E+38, 3.0E+38, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4;
+	Param24 = 0, 6, "20 64 24 01 30 6B", 0x0032, 198, 1, "Access mode", "", "", 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param25 = 0, 6, "20 64 24 01 30 70", 0x0022, 193, 1, "Power up configuration", "", "", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param26 = 0, 6, "20 64 24 01 30 71", 0x0022, 193, 1, "Power fail configuration", "", "", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param27 = 0, 6, "20 31 24 01 30 65", 0x0022, 198, 1, "Sensor mode", "", "", 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param28 = 0, 6, "20 31 24 01 30 67", 0x0020, %1, %2, "Sensor ratio", "", "", 100, 10000, 1000, 0, 0, 0, 0, 0, 0, 0, 0, %3;
+	Param29 = 0, 6, "20 31 24 01 30 66", 0x0022, 193, 1, "Zero control", "", "", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param30 = 0, 6, "20 33 24 01 30 64", 0x0020, %1, %2, "Learn pressure limit", "", "", %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, %5;
+	Param31 = 0, 6, "20 33 24 01 30 67", 0x0022, 199, 2, "Controller Selector", "", "", 1, 4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param32 = 0, 6, "20 33 24 01 30 68", 0x0022, 199, 2, "Controller Control mode", "", "", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param33 = 0, 6, "20 33 24 01 30 69", 0x0020, 202, 4, "Controller gain factor / P gain", "", "", -3.0E+38, 3.0E+38, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2;
+	Param34 = 0, 6, "20 33 24 01 30 6B", 0x0020, 202, 4, "Controller Delta factor / I gain", "", "", -3.0E+38, 3.0E+38, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2;
+	Param35 = 0, 6, "20 33 24 01 30 6C", 0x0020, 202, 4, "Controller ramp time", "", "", -3.0E+38, 3.0E+38, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2;
+	Param36 = 0, 6, "20 33 24 01 30 65", 0x0020, 199, 2, "Valve speed (Pressure)", "", "", 1, 1000, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+	Param37 = 0, 6, "20 33 24 02 30 65", 0x0020, 199, 2, "Valve speed (Position)", "", "", 1, 1000, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0;	
+	
+[EnumPar]
+	Param1="Pressure Setpoint","Position Setpoint";
+	Param2="Close Valve","Open valve","Control Mode","Hold Valve Position","Safe State";
+	Param4="Close Valve","Open valve","Control Mode","Hold Valve Position","Safe State";
+	Param6="Valve is not closed","Valve is closed";
+	Param7="Valve is not open","Valve is open";
+	Param18="Synchronization","POSITION CONTROL","CLOSED","OPEN","PRESSURE CONTROL","HOLD","LEARN","","","","","power failure","safety mode","fatal error";
+	Param24="Local","Remote","Locked";	
+	Param25="Close","Open";
+	Param26="Close","Open";
+	Param27="No Sensor","1 Sensor Operation (sensor 1 Input)","2 Sensor(S2->LR,S1->HR)","1 Sensor Operation (sensor 2 Input)","2 Sensor(S1->HR,S2->LR)";
+	Param29="Disable Zero Command","Enable Zero Command";
+	Param31="Controller 1","Controller 2","Controller 3","Controller 4";
+	Param32="Adaptive","Fixed PID";
+	
+$ End of NOVASEN-DNS EDS File
+

@@ -148,7 +148,7 @@ class CompoundsRunWorker(QObject):
             ("Position Control.Basic.Target Position Used", 3),
             ("Pressure Control.Basic.Actual Pressure", 4),
             ("Pressure Control.Basic.Target Pressure Used", 5),
-            ("Position Control.Basic.Position Control Speed Used", 6),
+            ("Position Control.Basic.Position Control Speed Used (%)", 6),
             ("Pressure Control.Basic.Controller Selector Used", 7),
             ("System.Warning/Error.Warning Bitmap", 8),
             ("System.Warning/Error.Error Bitmap", 9),
@@ -176,6 +176,9 @@ class CompoundsRunWorker(QObject):
             app.aboutToQuit.connect(self._destroyed)
 
         self.destroyed.connect(self._destroyed)
+
+    def refresh(self):
+        self._thread._is_not_connected = True
 
     def start(self):
         if self._thread is not None and not self._thread.isRunning():
