@@ -74,13 +74,14 @@ class MainWin(QMainWindow):
         bottom_layout.setSpacing(0)
 
         section = MainValveStatus("System.Control Mode", "Position Control.Basic.Position Control Speed Used (%)", "Pressure Control.Basic.Controller Selector Used", "System.Warning/Error.Warning Bitmap", "System.Warning/Error.Error Bitmap")
+        section.sig_warn_err_clicked.connect(self.on_clicked_sys_warning_error)
         bottom_layout.addWidget(section, 27)
 
         self.ctrl_panel = MainValveControl(); 
         self.ctrl_panel.open_btn.clicked.connect(self.on_clicked_open_btn, Qt.QueuedConnection); 
         self.ctrl_panel.close_btn.clicked.connect(self.on_clicked_close_btn, Qt.QueuedConnection); 
         self.ctrl_panel.hold_btn.clicked.connect(self.on_clicked_hold_btn, Qt.QueuedConnection); 
-        self.ctrl_panel.learn_btn.clicked.connect(self.on_clicked_learn_btn, Qt.QueuedConnection)
+        self.ctrl_panel.learn_btn.clicked.connect(self.on_clicked_learn, Qt.QueuedConnection)
         bottom_layout.addWidget(self.ctrl_panel, 10)
             
         self.posi_panel = MainValvePosition()
@@ -381,9 +382,6 @@ class MainWin(QMainWindow):
     def on_clicked_hold_btn(self):
         self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.HOLD.value}"
         self.param_worker.write()
-
-    def on_clicked_learn_btn(self):
-        pass
 
     def on_posi_input_finished(self):
         write_value_str = self.posi_panel.posi_input.get_param_write_value()

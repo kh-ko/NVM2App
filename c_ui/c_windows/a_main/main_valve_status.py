@@ -1,3 +1,4 @@
+from PySide6.QtCore import Signal
 from typing import List, Tuple
 
 from b_core.c_manager.parameter_manager import ParamManager
@@ -8,6 +9,7 @@ from c_ui.b_control_packet.param.param_enum_ro_widget import ParamEnumReadOnlyWi
 from c_ui.b_control_packet.param.param_scale_ro_widget import ParamScaleReadOnlyWidget
 
 class MainValveStatus(MyPanelWidget):
+    sig_warn_err_clicked = Signal()
     def __init__(self, control_mode_param:str, posi_ctrl_speed_param:str, controller_select_param:str, warn_bitmap_param:str, err_bitmap_param:str,parent=None): # title의 기본값을 빈 문자열로 설정
         super().__init__(title="Status", parent = parent)
 
@@ -67,7 +69,7 @@ class MainValveStatus(MyPanelWidget):
         self.scroll_layout.addStretch()          
 
     def on_clicked_warn_err_button(self):
-        pass
+        self.sig_warn_err_clicked.emit()
 
     def handle_err_bitmap_changed(self):
         if not self.err_param.str_value:
