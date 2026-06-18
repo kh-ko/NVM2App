@@ -51,6 +51,10 @@ class OnlineOfflineEnum(DescriptionEnum):
     ONLINE  = (0, "Online")
     OFFLINE = (1, "Offline")    
 
+class StopStartEnum(DescriptionEnum):
+    STOP = (0, "Stop")
+    START = (1, "Start")
+
 class Base36Enum(DescriptionEnum):
     ZERO  = (0, "0")
     ONE   = (1, "1")

@@ -1,4 +1,5 @@
 
+
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMessageBox, QHBoxLayout
 from PySide6.QtCore import Qt, QTimer
 
@@ -43,6 +44,7 @@ from c_ui.c_windows.h_learn.learn_bank4_win import LearnBank4Win
 from c_ui.c_windows.i_pfo.pfo_win import PfoWin
 from c_ui.c_windows.j_iface.iface_pwr_io_win import IfacePwrIoWin
 from c_ui.c_windows.j_iface.iface_dnet_win import IfaceDnetWin
+from c_ui.c_windows.j_iface.iface_trace_win import IfaceTraceWin
 from c_ui.c_windows.p_help.help_nvm_update_win import HelpNvmUpdateWin
 
 class MainWin(QMainWindow):
@@ -131,8 +133,8 @@ class MainWin(QMainWindow):
         self.main_top_toolbar.reg_iface_dnet_slot(self.on_clicked_iface_dnet)
         self.main_top_toolbar.reg_iface_trace_slot(self.on_clicked_iface_trace)
         self.main_top_toolbar.reg_cluster_master_setting_slot(self.on_clicked_cluster_master_setting)
-        self.main_top_toolbar.reg_cluster_slave_setting_slot(self.on_clicked_cluster_slave_setting)
-        self.main_top_toolbar.reg_cluster_slave_monitor_slot(self.on_clicked_cluster_slave_monitor)
+        self.main_top_toolbar.reg_cluster_slave_control_slot(self.on_clicked_cluster_slave_control)
+        #self.main_top_toolbar.reg_cluster_slave_monitor_slot(self.on_clicked_cluster_slave_monitor)
         self.main_top_toolbar.reg_compound1_setting_slot(self.on_clicked_compound1_setting)
         self.main_top_toolbar.reg_compound2_setting_slot(self.on_clicked_compound2_setting)
         self.main_top_toolbar.reg_compound3_setting_slot(self.on_clicked_compound3_setting)
@@ -157,7 +159,7 @@ class MainWin(QMainWindow):
         self.compounds_worker.start()
 
         self.compounds_timer = QTimer(self)
-        self.compounds_timer.setInterval(100)  # 100ms = 0.1초
+        self.compounds_timer.setInterval(200)  # 100ms = 0.1초
         self.compounds_timer.timeout.connect(self.handle_compounds_data)
         self.compounds_timer.start()
 
@@ -304,19 +306,14 @@ class MainWin(QMainWindow):
         WinManager().show_param_window(win_class=IfaceDnetWin, parent=self, is_modal=False)
 
     def on_clicked_iface_trace(self):
-        #WinManager().show_param_window(win_class=IfaceTraceWin, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=IfaceTraceWin, parent=self, is_modal=False)
 
     def on_clicked_cluster_master_setting(self):
         #WinManager().show_param_window(win_class=ClusterMasterWin, parent=self, is_modal=False)
         pass
 
-    def on_clicked_cluster_slave_setting(self):
+    def on_clicked_cluster_slave_control(self):
         #WinManager().show_param_window(win_class=ClusterSlaveWin, parent=self, is_modal=False)
-        pass
-
-    def on_clicked_cluster_slave_monitor(self):
-        #WinManager().show_param_window(win_class=ClusterSlaveMonitorWin, parent=self, is_modal=False)
         pass
 
     def on_clicked_compound1_setting(self):

@@ -137,6 +137,11 @@ class BaseToolBar(QToolBar):
         action.triggered.connect(slot)
         self._actions[name] = action
 
+    def remove_action(self, name):
+        if name in self._actions:
+            self.removeAction(self._actions[name])
+            del self._actions[name]
+
     def set_action_enabled(self, name, enabled):
         # 딕셔너리에 해당 이름의 액션이 존재하는지 확인
         if name in self._actions:

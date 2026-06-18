@@ -1,3 +1,4 @@
+import time
 import serial
 from PySide6.QtCore import QCoreApplication, QObject, Signal, QIODevice, Property, QMutex, QRecursiveMutex, QMutexLocker
 
@@ -24,6 +25,8 @@ class ServicePort(QObject):
         super().__init__(parent=None)
 
         self._initialized = True
+        self._is_trace_mode = False
+        self.trace_buffer = []
         self.serial_port: serial.Serial | None = None
         self._connect_info : str = ""
         self._termination_chars = b"\r\n" # 기본값
@@ -51,7 +54,20 @@ class ServicePort(QObject):
         self._connect_info = info
         self.connect_info_changed.emit(info)
 
+    def set_trace_mode(self, mode: bool):
+        with QMutexLocker(self._mutex): 
+            self._is_trace_mode = mode
+            self.trace_buffer.clear()
+
+    def get_trace_buffer(self) -> list[str]:
+        with QMutexLocker(self._mutex): 
+            data = list(self.trace_buffer)
+            self.trace_buffer.clear()
+            return data
+
     def open(self,  port_name: str, baudrate: int, data_bits: int, parity: int, stop_bits: int, termination: int):
+        self.set_trace_mode(False)
+        
         with QMutexLocker(self._mutex): 
             self.port_name = port_name
             self.baudrate = baudrate
@@ -108,7 +124,26 @@ class ServicePort(QObject):
                 self.serial_port.write(full_command)
                 self.serial_port.flush()
 
-                response_bytes = self.serial_port.read_until(self._termination_chars)
+                if self._is_trace_mode:
+                    start_time = time.perf_counter()
+
+                    while (time.perf_counter() - start_time) < 0.2:
+                        response_bytes = self.serial_port.read_until(self._termination_chars)
+
+                        if not response_bytes:
+                            break
+                        elif response_bytes.startswith(b"p:"):
+                            break
+                        else:
+                            raw_payload = response_bytes[:-len(self._termination_chars)]
+                            response_bytes = None
+                            try:
+                                if len(self.trace_buffer) < 200:
+                                    self.trace_buffer.append(raw_payload.decode('utf-8'))
+                            except UnicodeDecodeError:
+                                pass
+                else:
+                    response_bytes = self.serial_port.read_until(self._termination_chars)
 
                 if not response_bytes:
                     return None, SvcPortErrType.READ_TIMEOUT_ERROR
