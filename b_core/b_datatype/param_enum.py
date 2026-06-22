@@ -113,6 +113,14 @@ class ControlModeEnum(DescriptionEnum):
     SAFETY              = (13, "Safety")
     ERROR               = (14, "Error")
 
+class ControlModeSetpointEnum(DescriptionEnum):
+    POSITION            = (2, "Position")
+    CLOSE               = (3, "Close")
+    OPEN                = (4, "Open")
+    PRESSURE            = (5, "Pressure")
+    HOLD                = (6, "Hold")
+    LEARN               = (7, "Learn") 
+
 class SysModelEnum(DescriptionEnum):
     APC                 = (1, "APC")
     MANUAL              = (2, "Manual")
@@ -734,4 +742,8 @@ class SlaveLossFunEnum(DescriptionEnum):
     CLOSE = (0, "Close")
     OPEN = (1, "Open")
     KEEP_POSITION = (2, "Keep Position")        
+
+class ClusterUnfreezeFreezeEnum(DescriptionEnum):
+    UNFREEZE = (0, "Unfreeze")
+    FREEZE   = (1, "Freeze") 
     

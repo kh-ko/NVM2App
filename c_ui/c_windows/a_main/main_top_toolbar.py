@@ -213,12 +213,12 @@ class MainTopToolBar(BaseToolBar):
         self.cluster_menu = QMenu(self.cluster_btn)
 
         self.action_cluster_master = QAction("Master Setting", self)
-        self.action_cluster_slave = QAction("Slave Control", self)
-        #self.action_cluster_slave_monitor = QAction("Slave Monitor", self)
+        self.action_cluster_monitor = QAction("Cluster Monitor", self)
+        self.action_cluster_setting = QAction("Cluster Setting", self)
 
         self.cluster_menu.addAction(self.action_cluster_master)
-        self.cluster_menu.addAction(self.action_cluster_slave)
-        #self.cluster_menu.addAction(self.action_cluster_slave_monitor)
+        self.cluster_menu.addAction(self.action_cluster_monitor)
+        self.cluster_menu.addAction(self.action_cluster_setting)
 
         self.cluster_btn.setMenu(self.cluster_menu)
         self.addWidget(self.cluster_btn)        
@@ -411,11 +411,11 @@ class MainTopToolBar(BaseToolBar):
     def reg_cluster_master_setting_slot(self, slot):
         self.action_cluster_master.triggered.connect(slot, Qt.QueuedConnection)  
 
-    def reg_cluster_slave_control_slot(self, slot):
-        self.action_cluster_slave.triggered.connect(slot, Qt.QueuedConnection)          
+    def reg_cluster_setting_slot(self, slot):
+        self.action_cluster_setting.triggered.connect(slot, Qt.QueuedConnection)          
 
-    #def reg_cluster_slave_monitor_slot(self, slot):
-    #    self.action_cluster_slave_monitor.triggered.connect(slot, Qt.QueuedConnection)          
+    def reg_cluster_monitor_slot(self, slot):
+        self.action_cluster_monitor.triggered.connect(slot, Qt.QueuedConnection)          
 
     def reg_compound1_setting_slot(self, slot):
         self.action_compound_compound1.triggered.connect(slot, Qt.QueuedConnection)          
