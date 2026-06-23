@@ -746,4 +746,27 @@ class SlaveLossFunEnum(DescriptionEnum):
 class ClusterUnfreezeFreezeEnum(DescriptionEnum):
     UNFREEZE = (0, "Unfreeze")
     FREEZE   = (1, "Freeze") 
+
+class ClusterHomingEndPosiEnum(DescriptionEnum):
+    CLOSE = (0, "Close")
+    OPEN  = (1, "Open") 
+
+class ClusterHomingStartConditionEnum(DescriptionEnum):
+    DEFAULT_NOT_SEALED = (0, "Default[not sealed]")
+    SELECTED_COMMAND   = (1, "Selected Command") 
+    OPEN_COMMAND       = (2, "Open Command") 
+    ANY_COMMAND        = (3, "Any Command") 
+
+class ClusterHomingModeEnum(DescriptionEnum):
+    SHORT    = (0, "Short")
+    EXTENDED = (1, "Extended")   
+
+class ClusterPowerFailOptEnum(DescriptionEnum):
+    CLOSE = (0, "Close")
+    OPEN  = (1, "Open") 
+
+class ClusterNetworkFailOptEnum(DescriptionEnum):
+    CLOSE         = (0, "Close")
+    OPEN          = (1, "Open")      
+    KEEP_POSITION = (2, "Keep Position") 
     

@@ -1,8 +1,9 @@
-from typing import List, Dict, Union, Type, Optional
+from typing import Tuple
+from typing import List, Dict, Union, Type
 from PySide6.QtCore import QObject, Signal
 
 from b_core.b_datatype.general_enum import ParamDisplayType, ParamDataType, ParamAccType, ParamParseErrType
-from b_core.b_datatype.param_enum import DescriptionEnum
+from b_core.b_datatype import param_enum as p_enum
 
 from b_core.c_manager.log_manager import LogManager
 
@@ -65,25 +66,34 @@ class Parameter(QObject):
     FLOAT_TYPES = (ParamDataType.FLOAT, ParamDataType.DOUBLE)
     STR_TYPES = (ParamDataType.STR,)
 
-    def __init__(self, path: str, name: str, id: str, index: int, display_type: ParamDisplayType, data_type: ParamDataType, acc: ParamAccType, is_only_local_acc:bool,is_nor_backup: bool, is_fu_backup: bool, unit: str, min_value: Union[int, float, None], max_value: Union[int, float, None], ref_list: Optional[Type[DescriptionEnum]], enable_condition, visible_condition, description: str, btn_str_value : str = "", is_need_reconnect:bool=False):
+    def __init__(self, param_json, param_display_type: ParamDisplayType):
         super().__init__()
-        self.path : str = path
-        self.name : str = name
-        self.id : str = id
-        self.index : int = index
-        self.display_type : ParamDisplayType = display_type
-        self.data_type : ParamDataType = data_type
-        self.acc : ParamAccType = acc
-        self.is_only_local_acc : bool = is_only_local_acc
-        self.is_nor_backup : bool = is_nor_backup
-        self.is_fu_backup : bool = is_fu_backup
-        self.unit : str = unit
-        self.min_value : Union[int, float, None] = min_value
-        self.max_value : Union[int, float, None] = max_value
-        self.ref_list : Optional[Type[DescriptionEnum]] = ref_list
-        self.description : str = description
-        self.btn_str_value : str = btn_str_value
-        self.is_need_reconnect : bool = is_need_reconnect
+
+        full_path         = param_json.get("path", "")
+        path, name        = full_path.rsplit(".", 1)
+        id                = param_json.get("id", "")
+        index             = param_json.get("idx", 0)
+        acc_str           = param_json.get("acc", "RO")
+        acc               = getattr(ParamAccType, acc_str, ParamAccType.RO)
+        local_acc         = param_json.get("local_acc", False)
+        nor_backup        = param_json.get("nor_backup", False)
+        fu_backup         = param_json.get("fu_backup", False)
+        desc              = param_json.get("desc", None)
+        enable_condition  = param_json.get("enable", None)
+        visible_condition = param_json.get("visible", None)
+        reconnect         = param_json.get("reconnect", False)
+
+        self.display_type      = param_display_type
+        self.path              = path
+        self.name              = name
+        self.id                = id
+        self.index             = index
+        self.acc               = acc
+        self.is_only_local_acc = local_acc
+        self.is_nor_backup     = nor_backup
+        self.is_fu_backup      = fu_backup
+        self.description       = desc
+        self.is_need_reconnect = reconnect
 
         if enable_condition is not None:
             self.enable_conditions = []
@@ -105,18 +115,140 @@ class Parameter(QObject):
         else:
             self.visible_conditions = None
 
+
+        self.data_type = ParamDataType.FLOAT
+        self.min_value : Union[int, float, None] = None
+        self.max_value : Union[int, float, None] = None
+        self.ref_list  = None # Type[p_enum.DescriptionEnum] or List[Tuple[str, Type[DescriptionEnum]]] 
         self._value : Union[int, float, str, None] = None
         self.str_value : str = ""
         self._is_not_support : bool = False
         self._is_err : bool = False
         self.write_str_value : str | None = None
+        
+        if self.display_type == ParamDisplayType.ENUM:
+            self._init_enum(param_json)
+        elif self.display_type == ParamDisplayType.BTN:
+            self._init_btn(param_json)
+        elif self.display_type == ParamDisplayType.BITMAP:
+            self._init_bitmap(param_json)
+        elif self.display_type == ParamDisplayType.ERR_NUM:
+            self._init_errnum(param_json)
+        elif self.display_type == ParamDisplayType.TEXT:
+            self._init_text(param_json)
+        elif self.display_type == ParamDisplayType.HEX:
+            self._init_hex(param_json)
+        elif self.display_type == ParamDisplayType.NUMBER:
+            self._init_number(param_json)
+        elif self.display_type == ParamDisplayType.REAL:
+            self._init_real(param_json)
+        elif self.display_type == ParamDisplayType.SCALE:
+            self._init_scale(param_json)
+        elif self.display_type == ParamDisplayType.POSI:
+            self._init_posi(param_json)
+        elif self.display_type == ParamDisplayType.IFACE_GAIN:
+            self._init_ifgain(param_json)
+        elif self.display_type == ParamDisplayType.SENS_PRES:
+            self._init_sens_pres(param_json)
+        elif self.display_type == ParamDisplayType.SENS1_PRES:
+            self._init_sens1_pres(param_json)
+        elif self.display_type == ParamDisplayType.SENS2_PRES:
+            self._init_sens2_pres(param_json)
+        elif self.display_type == ParamDisplayType.PRESS_SLOPE:
+            self._init_press_slope(param_json) 
 
-        if self.display_type == ParamDisplayType.ENUM and self.ref_list is not None:
-            enum_values = [item.value for item in self.ref_list]
-            if enum_values:
-                self.min_value = min(enum_values)
-                self.max_value = max(enum_values)
+    def _init_enum(self, param_json):
+        self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
+        enum_str = param_json.get("enum"); enum_class = getattr(p_enum, enum_str, None); self.ref_list = enum_class
 
+        if not self.description:
+            items = [f"{item.value}: {item.description}" for item in self.ref_list]
+            self.description = "<br>".join(items)
+
+    def _init_btn(self, param_json):
+        btn_value = param_json.get("value", ""); self.write_str_value = btn_value
+
+    def _init_bitmap(self, param_json):
+        self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
+        enum_str = param_json.get("enum"); enum_class = getattr(p_enum, enum_str, None); self.ref_list = enum_class
+
+        if not self.description:
+            items = [f"{item.value}: {item.description}" for item in self.ref_list]
+            self.description = "<br>".join(items)
+
+    def _init_text(self, param_json):
+        self.data_type = ParamDataType.STR; #self.min_value = 0; self.max_value = 255
+
+    def _init_hex(self, param_json):
+        self.data_type = ParamDataType.UINT32; self.min_value, self.max_value = self._get_min_max_val(param_json)
+
+    def _init_number(self, param_json):
+        self.data_type = ParamDataType.UINT32; self.min_value, self.max_value = self._get_min_max_val(param_json)
+
+    def _init_real(self, param_json):
+        self.data_type = ParamDataType.FLOAT; self.min_value, self.max_value = self._get_min_max_val(param_json)
+
+    def _init_scale(self, param_json):
+        self.data_type = ParamDataType.FLOAT; self.min_value, self.max_value = self._get_min_max_val(param_json)
+
+    def _init_posi(self, param_json):
+        self.data_type = ParamDataType.FLOAT; self.min_value, self.max_value = self._get_min_max_val(param_json)
+
+    def _init_ifgain(self, param_json):
+        self.data_type = ParamDataType.FLOAT; self.min_value, self.max_value = self._get_min_max_val(param_json)
+
+    def _init_sens_pres(self, param_json):
+        self.data_type = ParamDataType.FLOAT; self.min_value = -3.4028235e+38; self.max_value = 3.4028235e+38
+
+    def _init_sens1_pres(self, param_json):
+        self.data_type = ParamDataType.FLOAT; self.min_value = -3.4028235e+38; self.max_value = 3.4028235e+38
+
+    def _init_sens2_pres(self, param_json):
+        self.data_type = ParamDataType.FLOAT; self.min_value = -3.4028235e+38; self.max_value = 3.4028235e+38
+
+    def _init_press_slope(self, param_json):
+        self.data_type = ParamDataType.FLOAT; self.min_value = -3.4028235e+38; self.max_value = 3.4028235e+38
+
+    def _init_errnum(self, param_json):
+        self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
+        component_enum_str = param_json.get("component_enum",None)
+        component_enum_class = getattr(p_enum, component_enum_str, None)
+        mode_enum_str = param_json.get("mode_enum",None)
+        mode_enum_class = getattr(p_enum, mode_enum_str, None)
+        type_enum_str = param_json.get("type_enum",None)
+        type_enum_class = getattr(p_enum, type_enum_str, None)
+
+        self.ref_list : List[Tuple[str, Type[p_enum.DescriptionEnum]]] = []
+        self.ref_list.append(("Component", component_enum_class))
+        self.ref_list.append(("Mode", mode_enum_class))
+        self.ref_list.append(("Type", type_enum_class))
+
+        if not self.description:
+            items1 = [f"{item.value}: {item.description}" for item in component_enum_class]
+            items2 = [f"{item.value}: {item.description}" for item in mode_enum_class]
+            items3 = [f"{item.value}: {item.description}" for item in type_enum_class]
+            self.description = "<br>".join(items1 + items2 + items3)
+
+    def _get_min_max_val(self, param_json):
+        min_str = param_json.get("min", "0")
+        max_str = param_json.get("max", "0xFFFFFFFF")
+
+        if self.display_type == ParamDisplayType.HEX or self.display_type == ParamDisplayType.NUMBER:
+            if min_str.startswith("0x"):
+                min = int(min_str, 16)
+            else:
+                min = int(min_str)
+            
+            if max_str.startswith("0x"):
+                max = int(max_str, 16)
+            else:
+                max = int(max_str)
+        else:
+            min = float(min_str)
+            max = float(max_str)
+
+        return min, max
+    
     @property
     def value(self) -> Union[int, float, str, None]:
         return self._value
