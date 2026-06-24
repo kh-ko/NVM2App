@@ -14,7 +14,7 @@
     "pres_setpoint04": 0.7,
     "pres_setpoint05": 0.6,
     "pres_setpoint06": 0.5,
-    "posi_chart_enable_actual": false,
+    "posi_chart_enable_actual": true,
     "posi_chart_enable_target": true,
     "posi_chart_range_mode": 0,
     "posi_chart_range_custom_min": 0.0,

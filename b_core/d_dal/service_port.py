@@ -109,11 +109,11 @@ class ServicePort(QObject):
     def reconnect(self):
         self.open(self.port_name, self.baudrate, self.data_bits, self.parity, self.stop_bits, self.termination)
 
-    def request_string(self, command: str) -> tuple[str | None, SvcPortErrType | None]:
+    def request_string(self, command: str, nv1_check: str = None) -> tuple[str | None, SvcPortErrType | None]:
         cmd_bytes = command.encode('utf-8')
-        return self.request(cmd_bytes)
+        return self.request(cmd_bytes, nv1_check)
 
-    def request(self, command: bytes) -> tuple[str | None, SvcPortErrType | None]:
+    def request(self, command: bytes, nv1_check: str = None) -> tuple[str | None, SvcPortErrType | None]:
         with QMutexLocker(self._mutex):
             if self.serial_port is None or not self.serial_port.is_open:
                 return None, SvcPortErrType.OPEN_ERROR
@@ -131,10 +131,14 @@ class ServicePort(QObject):
                         response_bytes = self.serial_port.read_until(self._termination_chars)
 
                         if not response_bytes:
+                            break 
+                        elif nv1_check and response_bytes.startswith(nv1_check.encode('utf-8')):
                             break
-                        elif response_bytes.startswith(b"p:"):
+                        elif nv1_check and response_bytes.startswith(b"E:"):
                             break
-                        else:
+                        elif not nv1_check and response_bytes.startswith(b"p:"):
+                            break
+                        elif self._is_trace_mode:
                             raw_payload = response_bytes[:-len(self._termination_chars)]
                             response_bytes = None
                             try:

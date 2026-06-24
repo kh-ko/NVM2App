@@ -1,3 +1,4 @@
+STYLE_LABEL_HOVER_COLOR = "#ffffff"
 STYLE_LABEL_COLOR       = "#000000"
 STYLE_BORDER_COLOR      = "#dcdcdc"
 STYLE_SEL_BORDER_COLOR  = "#dcdcdc"

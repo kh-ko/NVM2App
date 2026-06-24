@@ -2,7 +2,7 @@ from typing import Tuple
 from typing import List, Dict, Union, Type
 from PySide6.QtCore import QObject, Signal
 
-from b_core.b_datatype.general_enum import ParamDisplayType, ParamDataType, ParamAccType, ParamParseErrType
+from b_core.b_datatype.general_enum import ParamDisplayType, ParamDataType, ParamAccType, ParamParseErrType, PARAM_DISPLAY_TYPE_MAP
 from b_core.b_datatype import param_enum as p_enum
 
 from b_core.c_manager.log_manager import LogManager
@@ -73,6 +73,7 @@ class Parameter(QObject):
         path, name        = full_path.rsplit(".", 1)
         id                = param_json.get("id", "")
         index             = param_json.get("idx", 0)
+        proto_type        = param_json.get("proto_type", None)
         acc_str           = param_json.get("acc", "RO")
         acc               = getattr(ParamAccType, acc_str, ParamAccType.RO)
         local_acc         = param_json.get("local_acc", False)
@@ -82,6 +83,11 @@ class Parameter(QObject):
         enable_condition  = param_json.get("enable", None)
         visible_condition = param_json.get("visible", None)
         reconnect         = param_json.get("reconnect", False)
+
+        if proto_type == "NV1":
+            self.is_nv1_proto  = True
+        else:
+            self.is_nv1_proto  = False
 
         self.display_type      = param_display_type
         self.path              = path
@@ -115,7 +121,7 @@ class Parameter(QObject):
         else:
             self.visible_conditions = None
 
-
+        
         self.data_type = ParamDataType.FLOAT
         self.min_value : Union[int, float, None] = None
         self.max_value : Union[int, float, None] = None
@@ -125,6 +131,10 @@ class Parameter(QObject):
         self._is_not_support : bool = False
         self._is_err : bool = False
         self.write_str_value : str | None = None
+        self.nv1_read_req : str | None = None
+        self.nv1_write_req : str | None = None
+        self.nv1_read_res : str | None = None
+        self.nv1_write_res : str | None = None
         
         if self.display_type == ParamDisplayType.ENUM:
             self._init_enum(param_json)
@@ -156,6 +166,8 @@ class Parameter(QObject):
             self._init_sens2_pres(param_json)
         elif self.display_type == ParamDisplayType.PRESS_SLOPE:
             self._init_press_slope(param_json) 
+        elif self.display_type == ParamDisplayType.NV1_GROUP:
+            self._init_nv1_group(param_json) 
 
     def _init_enum(self, param_json):
         self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
@@ -166,7 +178,7 @@ class Parameter(QObject):
             self.description = "<br>".join(items)
 
     def _init_btn(self, param_json):
-        btn_value = param_json.get("value", ""); self.write_str_value = btn_value
+        btn_value = param_json.get("value", ""); self.btn_str_value = btn_value
 
     def _init_bitmap(self, param_json):
         self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
@@ -229,9 +241,25 @@ class Parameter(QObject):
             items3 = [f"{item.value}: {item.description}" for item in type_enum_class]
             self.description = "<br>".join(items1 + items2 + items3)
 
+    def _init_nv1_group(self, param_json):
+        self.nv1_read_req = param_json.get("rreq","-").strip()
+        self.nv1_write_req = param_json.get("wreq","-").strip()
+        self.nv1_read_res = param_json.get("rres","-").strip()
+        self.nv1_write_res = param_json.get("wres","-").strip()
+
+        self.sub_items = []
+        sub_item_list = param_json.get("sub_items",[])
+        for sub_item in sub_item_list:
+            param_type_str = sub_item.get("type", "")
+            offset = sub_item.get("offset", 0)
+            length = sub_item.get("len", 0)
+            display_type = PARAM_DISPLAY_TYPE_MAP.get(param_type_str)
+            sub_param = Parameter(sub_item, display_type)
+            self.sub_items.append((offset, length, sub_param))
+
     def _get_min_max_val(self, param_json):
         min_str = param_json.get("min", "0")
-        max_str = param_json.get("max", "0xFFFFFFFF")
+        max_str = param_json.get("max", "0x7FFFFFFF")
 
         if self.display_type == ParamDisplayType.HEX or self.display_type == ParamDisplayType.NUMBER:
             if min_str.startswith("0x"):
@@ -334,6 +362,25 @@ class Parameter(QObject):
 
         return parse_err_type, False
 
+    def set_read_response_nv1_group_packet(self, resp_msg: str) -> tuple[ParamParseErrType | None, bool]:        
+        parse_err_type : ParamParseErrType = ParamParseErrType.NONE
+
+        parse_err_type, need_retry = self.nv1_protocol_check_error(True, self.nv1_read_res, resp_msg)
+
+        if parse_err_type != ParamParseErrType.NONE:
+            return parse_err_type, need_retry
+
+        
+        for offset, data_len, sub_param in self.sub_items:
+            if len(resp_msg) >= (offset+data_len):
+                new_val = resp_msg[offset:offset+data_len]
+                sub_param.set_force_value(new_val)
+            else:
+                print("WRONG_PARAM_LENGTH")
+                return ParamParseErrType.WRONG_PARAM_LENGTH, True
+
+        return parse_err_type, False        
+
     def set_write_response_packet(self, resp_msg: str) -> tuple[ParamParseErrType | None, bool]:        
         return self.check_error(False, resp_msg)
 
@@ -391,3 +438,28 @@ class Parameter(QObject):
         else:
             self.is_err = True # 알 수 없는 에러일 때
             return ParamParseErrType.UNKNOWN_ERROR_CODE, True
+
+    def nv1_protocol_check_error(self, is_read : bool, check_res_msg: str, resp_msg: str) -> tuple[ParamParseErrType | None, bool]: 
+        if not is_read and self.acc != ParamAccType.WO:
+            return ParamParseErrType.NONE, False
+        
+        if not resp_msg:
+            self.is_err = True
+            return ParamParseErrType.COMMUNICATION_ERR, True
+
+        if len(resp_msg) < len(check_res_msg):
+            self.is_err = True
+            return ParamParseErrType.WRONG_FORMAT, True
+
+        if resp_msg.startswith(check_res_msg) == False and resp_msg.startswith("E:") == False:
+            self.is_err = True
+            return ParamParseErrType.WRONG_PREFIX, True
+
+        if resp_msg.startswith("E:"):
+            self.is_err = True # 알 수 없는 에러일 때
+            self.is_not_support = True
+            return ParamParseErrType.UNKNOWN_ERROR_CODE, False
+        else:
+            self.is_err = False 
+            self.is_not_support = False 
+            return ParamParseErrType.NONE, False

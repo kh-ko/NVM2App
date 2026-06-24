@@ -1,3 +1,4 @@
+from b_core.b_datatype.general_enum import ParamDisplayType
 from PySide6.QtCore import QTimer
 from datetime import datetime
 
@@ -19,7 +20,11 @@ class ParameterThread(QObject):
     # sample code
     @Slot(str, object)
     def process_read_request(self, packet: str, param: Parameter):
-        response, err_type = ServicePort().request_string(packet)
+        nv1_check = None
+        if param.is_nv1_proto:
+            nv1_check = param.nv1_read_res
+
+        response, err_type = ServicePort().request_string(packet, nv1_check)
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(100)
             
@@ -36,7 +41,11 @@ class ParameterThread(QObject):
 
     @Slot(str, object)
     def process_monitor_request(self, packet: str, param: Parameter):
-        response, err_type = ServicePort().request_string(packet)
+        nv1_check = None
+        if param.is_nv1_proto:
+            nv1_check = param.nv1_read_res
+
+        response, err_type = ServicePort().request_string(packet, nv1_check)
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(100)
             
@@ -163,6 +172,9 @@ class ParameterWorker(QObject):
         if param is not None:
             self.monitor_param_list.append(param)
 
+    def clear_monitor_param(self):
+        self.monitor_param_list.clear()
+
     def refresh(self):  
         if ServicePort().connect_info:
             is_connected = True
@@ -213,7 +225,10 @@ class ParameterWorker(QObject):
             self._monitor_index = 0        
 
         self._monitor_param = self.monitor_param_list[self._monitor_index]
-        packet = f"p:0B{self._monitor_param.id}{self._monitor_param.index:02X}"
+        if self._monitor_param.is_nv1_proto:
+            packet = self._monitor_param.nv1_read_req
+        else:
+            packet = f"p:0B{self._monitor_param.id}{self._monitor_param.index:02X}"
         self.sig_monitor_request.emit(packet, self._monitor_param)
 
     def write(self):
@@ -400,7 +415,10 @@ class ParameterWorker(QObject):
 
         self._add_log(req_msg=req_msg, resp_msg=resp_msg, param=param,is_monitor=True)
 
-        param_err_type, need_retry = param.set_read_response_packet(resp_msg)
+        if param.display_type == ParamDisplayType.NV1_GROUP:
+            param_err_type, need_retry = param.set_read_response_nv1_group_packet(resp_msg)
+        else:
+            param_err_type, need_retry = param.set_read_response_packet(resp_msg)
 
         if err_type != SvcPortErrType.NONE:
             self._add_log(req_msg=req_msg, resp_msg=resp_msg, param=param, err_msg=err_type.name, is_monitor=True, is_error=True)

@@ -316,11 +316,7 @@ class MainWin(QMainWindow):
 
     def on_clicked_cluster_setting(self):
         #WinManager().show_param_window(win_class=ClusterSlaveWin, parent=self, is_modal=False)
-        pass
-
-    def on_clicked_cluster_monitor(self):
-        #WinManager().show_param_window(win_class=ClusterSlaveWin, parent=self, is_modal=False)
-        pass    
+        pass   
 
     def on_clicked_compound1_setting(self):
         #WinManager().show_param_window(win_class=Compound1Win, parent=self, is_modal=False)

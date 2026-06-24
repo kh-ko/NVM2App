@@ -16,6 +16,7 @@ class ParamAccType(Enum):
     WO = auto()
     
 class ParamDisplayType(Enum):
+    NV1_GROUP = auto()
     ENUM      = auto()
     TEXT      = auto()
     NUMBER    = auto()
@@ -33,6 +34,26 @@ class ParamDisplayType(Enum):
     SENS2_PRES = auto()
     PRESS_SLOPE = auto()
     IFACE_GAIN = auto()
+
+PARAM_DISPLAY_TYPE_MAP = {
+    "nv1_group": ParamDisplayType.NV1_GROUP,
+    "enum": ParamDisplayType.ENUM,
+    "btn": ParamDisplayType.BTN,
+    "bitmap": ParamDisplayType.BITMAP,
+    "errnum": ParamDisplayType.ERR_NUM,
+    "text": ParamDisplayType.TEXT,
+    "hex": ParamDisplayType.HEX,
+    "num": ParamDisplayType.NUMBER,
+    "real": ParamDisplayType.REAL,
+    "scale": ParamDisplayType.SCALE,
+    "posi": ParamDisplayType.POSI,
+    "ifgain": ParamDisplayType.IFACE_GAIN,
+    "pres": ParamDisplayType.SENS_PRES,
+    "s1pres": ParamDisplayType.SENS1_PRES,
+    "s2pres": ParamDisplayType.SENS2_PRES,
+    "presslope": ParamDisplayType.PRESS_SLOPE,
+    "compound": ParamDisplayType.HEX,
+}    
 
 class ParamDataType(Enum):
     INT8   = auto()

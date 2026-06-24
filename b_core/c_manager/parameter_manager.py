@@ -8,9 +8,8 @@ from PySide6.QtCore import QFile, QIODevice
 
 from b_core.a_define import file_folder_path as path_def
 from b_core.b_datatype import param_enum as p_enum
-from b_core.b_datatype.general_enum import LogType, ParamDataType, ParamAccType, ParamDisplayType
+from b_core.b_datatype.general_enum import LogType, ParamDataType, ParamAccType, ParamDisplayType, PARAM_DISPLAY_TYPE_MAP
 from b_core.c_manager.log_manager import LogManager
-from b_core.b_datatype.parameter_errnum import ParameterErrNum 
 from b_core.b_datatype.parameter import Parameter
 
 
@@ -35,13 +34,6 @@ class ParamManager:
         self._init_manager()     
 
     def _init_manager(self):
-        f_min = -3.4028235e+38
-        f_max = 3.4028235e+38
-        n_min = -2147483648
-        n_max = 2147483647
-        un_min = 0
-        un_max = 4294967295
-
         self._param_map: Dict[tuple, Parameter] = {}  # (path, name) 검색용
         self._parameters: List[Parameter] = []         # 전체 리스트 보관용
 
@@ -55,41 +47,8 @@ class ParamManager:
         for param in param_list:
             param_type = param.get("type", "")
 
-            if param_type == "nv1_group":
-                #self._add_param_nv1_group(param)
-                pass
-            elif param_type == "enum":
-                self._add_param(param, ParamDisplayType.ENUM)
-            elif param_type == "btn":
-                self._add_param(param, ParamDisplayType.BTN)
-            elif param_type == "bitmap":
-                self._add_param(param, ParamDisplayType.BITMAP)
-            elif param_type == "errnum":
-                self._add_param(param, ParamDisplayType.ERR_NUM)
-            elif param_type == "text":
-                self._add_param(param, ParamDisplayType.TEXT)
-            elif param_type == "hex":
-                self._add_param(param, ParamDisplayType.HEX)
-            elif param_type == "num":
-                self._add_param(param, ParamDisplayType.NUMBER)
-            elif param_type == "real":
-                self._add_param(param, ParamDisplayType.REAL)
-            elif param_type == "scale":
-                self._add_param(param, ParamDisplayType.SCALE)
-            elif param_type == "posi":
-                self._add_param(param, ParamDisplayType.POSI)
-            elif param_type == "ifgain":
-                self._add_param(param, ParamDisplayType.IFACE_GAIN)
-            elif param_type == "pres":
-                self._add_param(param, ParamDisplayType.SENS_PRES)
-            elif param_type == "s1pres":
-                self._add_param(param, ParamDisplayType.SENS1_PRES)
-            elif param_type == "s2pres":
-                self._add_param(param, ParamDisplayType.SENS2_PRES)
-            elif param_type == "presslope":
-                self._add_param(param, ParamDisplayType.PRESS_SLOPE) 
-            elif param_type == "compound":
-                self._add_param(param, ParamDisplayType.HEX) 
+            display_type = PARAM_DISPLAY_TYPE_MAP.get(param_type)
+            self._add_param(param, display_type)
 
     def _add_param(self, param_json, param_display_type: ParamDisplayType):
         param = Parameter(param_json, param_display_type)
