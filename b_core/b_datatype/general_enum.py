@@ -34,6 +34,7 @@ class ParamDisplayType(Enum):
     SENS2_PRES = auto()
     PRESS_SLOPE = auto()
     IFACE_GAIN = auto()
+    ENUM_36   = auto()
 
 PARAM_DISPLAY_TYPE_MAP = {
     "nv1_group": ParamDisplayType.NV1_GROUP,
@@ -53,6 +54,7 @@ PARAM_DISPLAY_TYPE_MAP = {
     "s2pres": ParamDisplayType.SENS2_PRES,
     "presslope": ParamDisplayType.PRESS_SLOPE,
     "compound": ParamDisplayType.HEX,
+    "enum36": ParamDisplayType.ENUM_36,
 }    
 
 class ParamDataType(Enum):
@@ -65,6 +67,7 @@ class ParamDataType(Enum):
     FLOAT  = auto()
     DOUBLE = auto()
     STR    = auto()
+    BASE_36= auto()
 
 class SvcPortErrType(Enum):
     NONE                = auto()

@@ -3,5 +3,12 @@
     <file>a_assets/fonts/D2Coding.ttf</file>
     <file>a_assets/fonts/MaterialIcons-Regular.ttf</file>
     <file>a_assets/icons/nova_icon.ico</file>
+    <file>a_assets/images/rs232_port.png</file>
+    <file>a_assets/images/usb_port.png</file>
+    <file>a_assets/images/fu_guide_1.png</file>
+    <file>a_assets/images/fu_guide_2.png</file>
+    <file>a_assets/images/fu_guide_3.png</file>
+    <file>a_assets/images/fu_guide_4.png</file>
+    <file>a_assets/images/fu_guide_5.png</file>
 </qresource>
 </RCC>

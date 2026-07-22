@@ -29,6 +29,9 @@ class MyValueLabelCheck(QWidget):
         self.layout.addWidget(self.lbl_icon, 0)
         self.layout.addWidget(self.lbl_text, 1)
 
+    def set_text(self, text :str):
+        self.lbl_text.set_text(text)
+
     def set_value(self, value:bool):
         self.ori_value = value
 

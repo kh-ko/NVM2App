@@ -4,7 +4,7 @@
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=[('ftd2xx.dll', '.')],
     datas=[],
     hiddenimports=[],
     hookspath=[],
@@ -35,5 +35,4 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['a_assets\\icons\\nova_icon.ico'],
 )

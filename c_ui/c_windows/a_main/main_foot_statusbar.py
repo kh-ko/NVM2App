@@ -14,8 +14,11 @@ class MainFootStatusBar(QStatusBar):
         
         # 1. 라벨 3개 생성
         self.lbl_connection_info = MyLabelDescription("Disconnected")
+        self.lbl_connection_info.setWordWrap(False)
         self.lbl_serial_number = MyLabelDescription("S/N: -")
+        self.lbl_serial_number.setWordWrap(False)
         self.lbl_scan_rate = MyLabelDescription("scan-rate: -")
+        self.lbl_scan_rate.setWordWrap(False)
         # scan-rate 라벨의 폭을 고정합니다. (텍스트 길이에 맞춰 120~130 정도가 적당합니다)
         self.lbl_scan_rate.setFixedWidth(120) 
 

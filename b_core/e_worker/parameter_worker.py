@@ -1,21 +1,51 @@
-from b_core.b_datatype.general_enum import ParamDisplayType
-from PySide6.QtCore import QTimer
-from datetime import datetime
-
-from b_core.c_manager.parameter_manager import ParamManager
 from typing import Optional
-from PySide6.QtWidgets import QMessageBox
-from PySide6.QtCore import QThread, Signal, QObject, QCoreApplication, Slot, Qt
+from datetime import datetime
+from PySide6.QtCore import QThread, Signal, QObject, QCoreApplication, Slot, Qt, QTimer 
+from PySide6.QtWidgets import QProgressBar, QVBoxLayout, QMessageBox, QDialog
 
+from b_core.b_datatype.general_enum import ParamDisplayType
 from b_core.b_datatype import param_enum as p_enum
 from b_core.b_datatype.parameter import Parameter
 from b_core.b_datatype.general_enum import ParamAccType, SvcPortErrType, ParamParseErrType
+from b_core.c_manager.parameter_manager import ParamManager
 from b_core.d_dal.service_port import ServicePort
+
+from c_ui.b_control_packet.controls.my_label import MyLabel
+
+class RebootWaitDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Wait Reboot")
+        self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setFixedSize(520, 250)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        # 1. 상단 안내 메시지
+        self.lbl_guide_text = MyLabel("Please wait while the valve reboots.", self)
+        self.lbl_guide_text.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.lbl_guide_text.setWordWrap(True)
+        layout.addWidget(self.lbl_guide_text)
+
+        # 2. 안내 이미지
+        #원형 프로그래스 링 사용해야함 ...
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setRange(0, 0)         
+        self.progress_bar.setTextVisible(False)  
+        self.progress_bar.setFixedHeight(12)     
+        layout.addWidget(self.progress_bar)
+        layout.addStretch()
 
 class ParameterThread(QObject):
     sig_read_result = Signal(str, str, object, SvcPortErrType)
     sig_write_result = Signal(str, str, object, SvcPortErrType)
     sig_monitor_result = Signal(str, str, object, SvcPortErrType)
+    sig_single_read_result = Signal(str, str, object, SvcPortErrType)
+    sig_single_name_value_write_result = Signal(str, str, str, str, SvcPortErrType)
+    sig_reboot_check_result = Signal(str, str, object, SvcPortErrType)
 
     # sample code
     @Slot(str, object)
@@ -49,12 +79,45 @@ class ParameterThread(QObject):
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(100)
             
-        self.sig_monitor_result.emit(packet, response, param, err_type)        
+        self.sig_monitor_result.emit(packet, response, param, err_type)       
+
+    @Slot(str, object)
+    def process_single_read_request(self, packet: str, param: Parameter):
+        response, err_type = ServicePort().request_string(packet, None)        
+
+        if err_type != SvcPortErrType.NONE:
+            QThread.msleep(100)
+
+        self.sig_single_read_result.emit(packet, response, param, err_type) 
+
+    @Slot(str, str)
+    def process_single_name_value_write_request(self, name: str, value: str):
+        response, err_type = ServicePort().request_string(value, None)        
+
+        if err_type != SvcPortErrType.NONE:
+            QThread.msleep(100)
+
+        self.sig_single_name_value_write_result.emit(value, response, name, value, err_type) 
+
+    @Slot(str, object)
+    def process_reboot_check_request(self, packet: str, param: Parameter):
+        response, err_type = ServicePort().request_string(packet, None)        
+
+        if err_type != SvcPortErrType.NONE:
+            QThread.msleep(100)
+
+        self.sig_reboot_check_result.emit(packet, response, param, err_type) 
 
 class ParameterWorker(QObject):
     sig_read_request = Signal(str, object)
     sig_write_request = Signal(str, object)
     sig_monitor_request = Signal(str, object)
+    sig_single_read_request = Signal(str, object)
+    sig_single_read_result = Signal(str, str, object, SvcPortErrType)
+    sig_single_name_value_write_request = Signal(str, str)
+    sig_single_name_value_write_result = Signal(str, str,str, str, SvcPortErrType)
+    sig_reboot_check_request = Signal(str, object)
+    sig_reboot_check_result = Signal()
 
     sig_progress_changed = Signal(int)
 
@@ -83,10 +146,24 @@ class ParameterWorker(QObject):
     def __init__(self, win_name:str="Param Worker", monitor_tick=100, parent=None):
         super().__init__(parent)
 
+        self.reboot_port_name = ""
+        self.reboot_baudrate = 0
+        self.reboot_data_bits = 0
+        self.reboot_parity = 0
+        self.reboot_stop_bits = 0
+        self.reboot_termination = 0
+        self.reboot_sn_param = None
+        self.reboot_wait_dlg = None
+
         self.monitor_timer = QTimer(self)
         self.monitor_timer.setSingleShot(True)
         self.monitor_timer.timeout.connect(self._on_timeout_monitor)
         self.monitor_time_tick = monitor_tick
+
+        self.reboot_timer = QTimer(self)
+        self.reboot_timer.setSingleShot(True)
+        self.reboot_timer.timeout.connect(self._on_timeout_reboot)
+        self.reboot_time_tick = 1000
 
         self.win_name = win_name
         self._is_cleaned = False
@@ -99,12 +176,18 @@ class ParameterWorker(QObject):
         self._param_thread.moveToThread(self._thread)
 
         self.sig_read_request.connect(self._param_thread.process_read_request)
+        self.sig_single_read_request.connect(self._param_thread.process_single_read_request)
+        self.sig_single_name_value_write_request.connect(self._param_thread.process_single_name_value_write_request)
         self.sig_write_request.connect(self._param_thread.process_write_request)
         self.sig_monitor_request.connect(self._param_thread.process_monitor_request)
+        self.sig_reboot_check_request.connect(self._param_thread.process_reboot_check_request)
         
         self._param_thread.sig_read_result.connect(self.handle_read_result)
+        self._param_thread.sig_single_read_result.connect(self.handle_single_read_result)
+        self._param_thread.sig_single_name_value_write_result.connect(self.handle_single_name_value_write_result)
         self._param_thread.sig_write_result.connect(self.handle_write_result)
         self._param_thread.sig_monitor_result.connect(self.handle_monitor_result)
+        self._param_thread.sig_reboot_check_result.connect(self.handle_reboot_check_result)
 
         self._is_working = False
         self._progress = 0 # 0 ~ 100 (단위 %)
@@ -172,6 +255,18 @@ class ParameterWorker(QObject):
         if param is not None:
             self.monitor_param_list.append(param)
 
+    def clear_read_param(self, start_index: Optional[int] = None):
+        if start_index is None:
+            self.read_param_list.clear()
+        else:
+            del self.read_param_list[start_index:]
+
+    def clear_write_param(self, start_index: Optional[int] = None):
+        if start_index is None:
+            self.write_param_list.clear()
+        else:
+            del self.write_param_list[start_index:]
+
     def clear_monitor_param(self):
         self.monitor_param_list.clear()
 
@@ -193,6 +288,9 @@ class ParameterWorker(QObject):
         self._current_index = 0
         self.progress = 0
 
+        if len(self.init_param_list) < 1 and len(self.read_param_list) < 1 and len(self.write_param_list) < 1 and len(self.monitor_param_list) < 1:
+            return
+
         if not is_connected:
             self._show_warning_msgbox("Connection Error", "Communication is not connected. Please check the connection status.")
             return
@@ -208,9 +306,40 @@ class ParameterWorker(QObject):
         
         self._request_read_next()
             
+    def reboot(self):
+        self.reboot_wait_dlg = RebootWaitDialog(self.parent())
+        self.reboot_wait_dlg.show()
+
+        if ServicePort().connect_info:
+            self.reboot_port_name   = ServicePort().port_name 
+            self.reboot_baudrate    = ServicePort().baudrate
+            self.reboot_data_bits   = ServicePort().data_bits
+            self.reboot_parity      = ServicePort().parity
+            self.reboot_stop_bits   = ServicePort().stop_bits
+            self.reboot_termination = ServicePort().termination
+            ServicePort().close()
+            self.reboot_sn_param = ParamManager().get_by_full_path("System.Identification.Serial Number")
+            self.reboot_sn_param.set_force_value("")
+            self.reboot_timer.start(self.reboot_time_tick)
+
     def read(self):
         # 추후 구현
         pass
+
+    def single_read_request(self, param):
+        packet = f"p:0B{param.id}{param.index:02X}"
+        self.sig_single_read_request.emit(packet, param)
+
+    @Slot(str, str, object, SvcPortErrType)
+    def handle_single_read_result(self, req_msg:str, resp_msg: str, param: Parameter, err_type:SvcPortErrType):
+        self.sig_single_read_result.emit(req_msg, resp_msg, param, err_type)
+
+    def single_name_value_write_request(self, name, value):
+        self.sig_single_name_value_write_request.emit(name, value)
+
+    @Slot(str, str, str, str, SvcPortErrType)
+    def handle_single_name_value_write_result(self, req_msg:str, resp_msg: str, name:str, value:str, err_type:SvcPortErrType):
+        self.sig_single_name_value_write_result.emit(req_msg, resp_msg, name, value, err_type)
 
     def _on_timeout_monitor(self):
         if len(self.monitor_param_list) < 1:
@@ -230,6 +359,13 @@ class ParameterWorker(QObject):
         else:
             packet = f"p:0B{self._monitor_param.id}{self._monitor_param.index:02X}"
         self.sig_monitor_request.emit(packet, self._monitor_param)
+
+    def _on_timeout_reboot(self):
+        if ServicePort().connect_info == "" or ServicePort().connect_info == None:
+            ServicePort().open(self.reboot_port_name, self.reboot_baudrate, self.reboot_data_bits, self.reboot_parity, self.reboot_stop_bits, self.reboot_termination)
+
+        packet = f"p:0B{self.reboot_sn_param.id}{self.reboot_sn_param.index:02X}"
+        self.sig_reboot_check_request.emit(packet, self.reboot_sn_param)
 
     def write(self):
         if ServicePort().connect_info:
@@ -255,7 +391,10 @@ class ParameterWorker(QObject):
                 if param.is_only_local_acc:
                     is_only_local_acc = True
 
-                packet = f"p:01{param.id}{param.index:02X}{param.write_str_value}"
+                if param.is_nv1_proto:
+                    packet = f"{param.write_str_value}"
+                else:
+                    packet = f"p:01{param.id}{param.index:02X}{param.write_str_value}"
                 param.write_str_value = None
                 self.write_param_proc_list.append((param, packet))
         
@@ -286,7 +425,7 @@ class ParameterWorker(QObject):
         self._monitor_index = 0
         self._request_write_next()        
 
-    def _request_read_next(self):        
+    def _request_read_next(self):      
         if self._current_phase == "STOP":
             return
 
@@ -302,7 +441,11 @@ class ParameterWorker(QObject):
         if self._current_phase == "READ_WRITE_PARAM":
             if self._current_index < len(self.write_param_list):
                 param = self.write_param_list[self._current_index]
-                self._send_read_request(param)
+
+                if param.acc == ParamAccType.WO:
+                    self._request_read_next_skip()
+                else:
+                    self._send_read_request(param)
                 return
             else:                
                 self._current_phase = "READ"
@@ -358,7 +501,10 @@ class ParameterWorker(QObject):
 
 
     def _send_read_request(self, param: Parameter):
-        packet = f"p:0B{param.id}{param.index:02X}"
+        if param.is_nv1_proto:
+            packet = param.nv1_read_req
+        else:
+            packet = f"p:0B{param.id}{param.index:02X}"
         self._current_param = param
         self.sig_read_request.emit(packet, param)
 
@@ -387,7 +533,10 @@ class ParameterWorker(QObject):
 
         self._add_log(req_msg, resp_msg, param)
 
-        param_err_type, need_retry = param.set_read_response_packet(resp_msg)
+        if param.display_type == ParamDisplayType.NV1_GROUP:
+            param_err_type, need_retry = param.set_read_response_nv1_group_packet(resp_msg)
+        else:
+            param_err_type, need_retry = param.set_read_response_packet(resp_msg)
 
         if err_type != SvcPortErrType.NONE:
             self._add_log(req_msg, resp_msg, param, err_type.name, True)
@@ -397,6 +546,7 @@ class ParameterWorker(QObject):
         if param_err_type != ParamParseErrType.NONE:
             self._add_log(req_msg, resp_msg, param, param_err_type.name, True)
             if need_retry:
+                print(f"retry : [_request_read_next]:{param_err_type}")
                 self._request_read_next()
                 return
 
@@ -435,6 +585,25 @@ class ParameterWorker(QObject):
         self.monitor_timer.start(self.monitor_time_tick)       
 
     @Slot(str, str, object, SvcPortErrType)
+    def handle_reboot_check_result(self, req_msg:str, resp_msg: str, param: Parameter, err_type:SvcPortErrType):
+        if self.reboot_sn_param != param:
+            return
+
+        self._add_log(req_msg=req_msg, resp_msg=resp_msg, param=param,is_monitor=True)
+
+        self.reboot_sn_param.set_read_response_packet(resp_msg)
+
+        if self.reboot_sn_param.value:
+            self.refresh()
+            if self.reboot_wait_dlg is not None:
+                self.reboot_wait_dlg.close()
+                self.reboot_wait_dlg = None
+
+            self.sig_reboot_check_result.emit()
+        else:
+            self.reboot_timer.start(self.reboot_time_tick)     
+
+    @Slot(str, str, object, SvcPortErrType)
     def handle_write_result(self, req_msg:str, resp_msg: str, param: Parameter, err_type:SvcPortErrType):
         if self._current_param != param or self._current_phase == "STOP":
             return
@@ -455,7 +624,8 @@ class ParameterWorker(QObject):
                 self.progress = int((self._processed_count / self._total_target_count) * 100)
 
         if param.is_need_reconnect:
-            ServicePort().reconnect()
+            self.reboot()
+            return
             
         self._current_index += 1
         self._request_write_next()     

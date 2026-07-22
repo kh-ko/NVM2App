@@ -29,12 +29,12 @@ class MyCardWidget(QWidget):
         
         # 1. 상단 타이틀
         if is_big_title:
-            lbl_title = MyLabelTitle(title)
+            self.lbl_title = MyLabelTitle(title)
         else:
-            lbl_title = MyLabelDescription(title)
+            self.lbl_title = MyLabelDescription(title)
 
-        lbl_title.setWordWrap(False)
-        self.title_layout.addWidget(lbl_title)
+        self.lbl_title.setWordWrap(False)
+        self.title_layout.addWidget(self.lbl_title)
         self.title_layout.addStretch()
         self.main_layout.addLayout(self.title_layout)
 

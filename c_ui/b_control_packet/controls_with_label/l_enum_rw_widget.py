@@ -21,6 +21,9 @@ class LEnumReadWriteWidget(LBaseReadWriteWidget):
     def commit(self):
         self.original_value = self.value_widget.get_value()
         self.dirty_label.setVisible(False)
+
+    def set_enum_class(self, enum_class : Type[DescriptionEnum]):
+        self.value_widget.set_enum_class(enum_class)
     
     def set_value(self, value : int):
         self.value_widget.set_value(value)

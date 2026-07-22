@@ -1,410 +1,266 @@
-from PySide6.QtWidgets import QSizePolicy
-from b_core.c_manager.local_setting_manager import LocalSettingManager
-from c_ui.a_converter.float_converter_manager import FloatConverterManager
-from c_ui.b_control_packet.base import my_style
-from c_ui.b_control_packet.controls.my_labelcolorbox import MyLabelColorBox
-from c_ui.b_control_packet.controls.my_label import MyLabel
-from PySide6.QtWidgets import QHBoxLayout
-from c_ui.b_control_packet.param.param_enum_ro_widget import ParamEnumReadOnlyWidget
-from c_ui.b_control_packet.param.param_text_ro_widget import ParamTextReadOnlyWidget
-from b_core.b_datatype.general_enum import ParamDisplayType
+
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QHeaderView, QAbstractItemView
+from PySide6.QtCore import QObject
 import re
 
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QScrollArea
+from PySide6.QtWidgets import QSizePolicy
+from PySide6.QtWidgets import QHBoxLayout
 from PySide6.QtWidgets import QVBoxLayout, QWidget
+
+from b_core.b_datatype.general_enum import ParamDisplayType
+from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.c_manager.parameter_manager import ParamManager
 
-from c_ui.b_control_packet.base.base_groupbox import BaseGroupBox
+from c_ui.a_converter.float_converter_manager import FloatConverterManager
+from c_ui.b_control_packet.base import my_style
 from c_ui.b_control_packet.base.base_label import BaseLabel
 from c_ui.b_control_packet.base.base_table import BaseTableWidget
-from c_ui.b_control_packet.param.param_checkdummy_rw_widget import ParamCheckDummyReadWriteWidget
+from c_ui.b_control_packet.base.base_labelcolorbox import BaseLabelColorBox
 from c_ui.b_control_packet.param_container.param_folder_widget import ParamFolderWidget
 
-class ParamClusterMonitorItemWidget(QWidget):
-    def __init__(self, addr, sub_params, parent=None):
+class ParamClusterMonitorItem(QObject):
+    def __init__(self, table, addr, sub_params, parent=None):
         super().__init__(parent)
 
+        self.enabled = False
+        self.table = table
+        self.addr = addr
         self.converter = FloatConverterManager()
         self.local_setting = LocalSettingManager()
-        self.lines = QVBoxLayout(self)
-        self.err_components = []
-        self.lines.setContentsMargins(0,0,0,5)
-        self.lines.setSpacing(5)
+        self.err_warn_param_list = []
 
-        self.value_line = QHBoxLayout()
-        self.value_line.setContentsMargins(0,0,0,0)
-        self.value_line.setSpacing(0)
-        
-        self.addr = MyLabel(f"{addr}")
-        self.addr.setWordWrap(False)
-        self.addr.setMinimumWidth(0) 
-        self.addr.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self.act_posi = MyLabel("-")
-        self.act_posi.setWordWrap(False)
-        self.act_posi.setMinimumWidth(0) 
-        self.act_posi.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self.pos_offset = MyLabel("-")
-        self.pos_offset.setWordWrap(False)
-        self.pos_offset.setMinimumWidth(0) 
-        self.pos_offset.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self.pos_ctrl_speed = MyLabel("-")
-        self.pos_ctrl_speed.setWordWrap(False)
-        self.pos_ctrl_speed.setMinimumWidth(0) 
-        self.pos_ctrl_speed.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self.freeze = MyLabel("-")
-        self.freeze.setWordWrap(False)
-        self.freeze.setMinimumWidth(0) 
-        self.freeze.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self.access_mode = MyLabel("-")
-        self.access_mode.setWordWrap(False)
-        self.access_mode.setMinimumWidth(0) 
-        self.access_mode.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self.control_mode = MyLabel("-")
-        self.control_mode.setWordWrap(False)
-        self.control_mode.setMinimumWidth(0) 
-        self.control_mode.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self.compressed_air_value = MyLabel("-")
-        self.compressed_air_value.setWordWrap(False)
-        self.compressed_air_value.setMinimumWidth(0) 
-        self.compressed_air_value.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.comp_addr = BaseLabel("-")
+        self.comp_addr.setIndent(8) 
+        self.table.setCellWidget(self.addr, 0, self.comp_addr)
 
-        self.value_line.addWidget(self.addr, 5)
-        self.value_line.addWidget(self.act_posi, 10)
-        self.value_line.addWidget(self.pos_offset, 10)
-        self.value_line.addWidget(self.pos_ctrl_speed, 10)
-        self.value_line.addWidget(self.freeze, 10)
-        self.value_line.addWidget(self.access_mode, 10)
-        self.value_line.addWidget(self.control_mode, 10)
-        self.value_line.addWidget(self.compressed_air_value, 10)
+        self.comp_act_posi = BaseLabel("-")
+        self.comp_act_posi.setIndent(8) 
+        self.table.setCellWidget(self.addr, 1, self.comp_act_posi)
 
-        self.lines.addLayout(self.value_line)
+        self.comp_pos_offset = BaseLabel("-")
+        self.comp_pos_offset.setIndent(8) 
+        self.table.setCellWidget(self.addr, 2, self.comp_pos_offset)
 
-        self.error_line = QHBoxLayout()
-        self.error_line.setContentsMargins(0,0,0,0)
-        self.error_line.setSpacing(5)
+        self.comp_pos_ctrl_speed = BaseLabel("-")
+        self.comp_pos_ctrl_speed.setIndent(8) 
+        self.table.setCellWidget(self.addr, 3, self.comp_pos_ctrl_speed)
 
-        self.normal = MyLabelColorBox(text="Nor", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.normal.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_ACCENT_COLOR)
-        self.service_request = MyLabelColorBox(text="Service", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.service_request.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_WARN_COLOR)
-        self.err_components.append(self.service_request)
-        self.pfo_not_fully_charged = MyLabelColorBox(text="PFO Charged", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.pfo_not_fully_charged.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_WARN_COLOR)
-        self.err_components.append(self.pfo_not_fully_charged)
-        self.sensor_factor_warning = MyLabelColorBox(text="Sensor Factor", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.sensor_factor_warning.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_WARN_COLOR)
-        self.err_components.append(self.sensor_factor_warning)
-        self.rom_error = MyLabelColorBox(text="ROM", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.rom_error.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_WARN_COLOR)
-        self.err_components.append(self.rom_error)
-        self.parameter_error = MyLabelColorBox(text="Param", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.parameter_error.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_ERR_COLOR)
-        self.err_components.append(self.parameter_error)
-        self.compressed_air_failure = MyLabelColorBox(text="Compressed Air", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.compressed_air_failure.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_ERR_COLOR)
-        self.err_components.append(self.compressed_air_failure)
-        self.offline_mode = MyLabelColorBox(text="Offline", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.offline_mode.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_ERR_COLOR)
-        self.err_components.append(self.offline_mode)
-        self.no_interface_found = MyLabelColorBox(text="Interface", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.no_interface_found.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_ERR_COLOR)
-        self.err_components.append(self.no_interface_found)
-        self.no_adc_signal = MyLabelColorBox(text="ADC", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.no_adc_signal.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_ERR_COLOR)
-        self.err_components.append(self.no_adc_signal)
-        self.no_adc_signal_on_logic = MyLabelColorBox(text="ADC on Logic", type = my_style.STYLE_LABEL_DESCRIPTION)
-        self.no_adc_signal_on_logic.set_color(label_color=my_style.STYLE_LABEL_COLOR, bg_color = my_style.STYLE_ERR_COLOR)
-        self.err_components.append(self.no_adc_signal_on_logic)
+        self.comp_freeze = BaseLabel("-")
+        self.comp_freeze.setIndent(8) 
+        self.table.setCellWidget(self.addr, 4, self.comp_freeze)
 
-        self.error_line.addWidget(self.normal)
-        self.error_line.addWidget(self.service_request)
-        self.error_line.addWidget(self.pfo_not_fully_charged)
-        self.error_line.addWidget(self.sensor_factor_warning)
-        self.error_line.addWidget(self.rom_error)
-        self.error_line.addWidget(self.parameter_error)
-        self.error_line.addWidget(self.compressed_air_failure)
-        self.error_line.addWidget(self.offline_mode)
-        self.error_line.addWidget(self.no_interface_found)
-        self.error_line.addWidget(self.no_adc_signal)
-        self.error_line.addWidget(self.no_adc_signal_on_logic)
-        self.error_line.addStretch()
+        self.comp_access_mode = BaseLabel("-")
+        self.comp_access_mode.setIndent(8) 
+        self.table.setCellWidget(self.addr, 5, self.comp_access_mode)
 
-        self.lines.addLayout(self.error_line)
+        self.comp_control_mode = BaseLabel("-")
+        self.comp_control_mode.setIndent(8) 
+        self.table.setCellWidget(self.addr, 6, self.comp_control_mode)
+
+        self.comp_compressed_air_value = BaseLabel("-")
+        self.comp_compressed_air_value.setIndent(8) 
+        self.table.setCellWidget(self.addr, 7, self.comp_compressed_air_value)
+
+        self.comp_err_warn = BaseLabelColorBox("Err/Warn")
+        self.comp_err_warn.setIndent(8) 
+        self.comp_err_warn.set_color(label_color=my_style.STYLE_ERR_BADGE_LABEL_COLOR, bg_color=my_style.STYLE_ERR_BADGE_BG_COLOR)
+        self.table.setCellWidget(self.addr, 8, self.comp_err_warn)
+
 
         for offset, data_len, param in sub_params:
             if param.name == "Actual Position":
                 param.sig_value_changed.connect(self.handle_actual_position_changed)
                 self.act_posi_param = param
-                self.handle_actual_position_changed()
             elif param.name == "Position Offset Used":
                 param.sig_value_changed.connect(self.handle_position_offset_changed)
                 self.pos_offset_param = param
-                self.handle_position_offset_changed()
             elif param.name == "Position Control Speed Used (%)":
                 param.sig_value_changed.connect(self.handle_position_control_speed_changed)
                 self.pos_ctrl_speed_param = param
-                self.handle_position_control_speed_changed()
             elif param.name == "Freeze":
                 param.sig_value_changed.connect(self.handle_freeze_changed)
                 self.freeze_param = param
-                self.handle_freeze_changed()
             elif param.name == "Access Mode Used":
                 param.sig_value_changed.connect(self.handle_access_mode_changed)
                 self.access_mode_param = param
-                self.handle_access_mode_changed()
             elif param.name == "Control Mode Used":
                 param.sig_value_changed.connect(self.handle_control_mode_changed)
                 self.control_mode_param = param
-                self.handle_control_mode_changed()
             elif param.name == "Compressed Air Value(mbar)":
                 param.sig_value_changed.connect(self.handle_compressed_air_value_changed)
                 self.compressed_air_value_param = param
-                self.handle_compressed_air_value_changed()
             elif param.name == "Service Request":
-                param.sig_value_changed.connect(self.handle_service_request_changed)
-                self.service_request_param = param
-                self.handle_service_request_changed()
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "Parameter Error":
-                param.sig_value_changed.connect(self.handle_parameter_error_changed)
-                self.parameter_error_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "PFO Not Fully Charged":
-                param.sig_value_changed.connect(self.handle_pfo_not_fully_charged_changed)
-                self.pfo_not_fully_charged_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "Compressed Air Failure":
-                param.sig_value_changed.connect(self.handle_compressed_air_failure_changed)
-                self.compressed_air_failure_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "Sensor Factor Warning":
-                param.sig_value_changed.connect(self.handle_sensor_factor_warning_changed)
-                self.sensor_factor_warning_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "Offline Mode":
-                param.sig_value_changed.connect(self.handle_offline_mode_changed)
-                self.offline_mode_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "ROM Error":
-                param.sig_value_changed.connect(self.handle_rom_error_changed)
-                self.rom_error_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "No Interface Found":
-                param.sig_value_changed.connect(self.handle_no_interface_found_changed)
-                self.no_interface_found_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "No ADC Signal":
-                param.sig_value_changed.connect(self.handle_no_adc_signal_changed)
-                self.no_adc_signal_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
             elif param.name == "No ADC Siganl On Logic":
-                param.sig_value_changed.connect(self.handle_no_adc_signal_on_logic_changed)
-                self.no_adc_signal_on_logic_param = param
+                param.sig_value_changed.connect(self.handle_changed_err_warn)
+                self.err_warn_param_list.append(param)
+
+    def set_enabled(self, value):
+        self.enabled = value
+        if value:
+            self.comp_addr.set_text(f"{self.addr}")
+            self.handle_actual_position_changed()
+            self.handle_position_offset_changed()
+            self.handle_position_control_speed_changed()
+            self.handle_freeze_changed()
+            self.handle_access_mode_changed()
+            self.handle_control_mode_changed()
+            self.handle_compressed_air_value_changed()
+            self.handle_changed_err_warn()
+        else:
+            self.comp_addr.set_text("-")
+            self.comp_act_posi.set_text("-")
+            self.comp_pos_offset.set_text("-")
+            self.comp_pos_ctrl_speed.set_text("-")
+            self.comp_freeze.set_text("-")
+            self.comp_access_mode.set_text("-")
+            self.comp_control_mode.set_text("-")
+            self.comp_compressed_air_value.set_text("-")
+            self.comp_err_warn.set_color(label_color="transparent", bg_color="transparent")
 
     def handle_actual_position_changed(self):
         if self.act_posi_param.value is None:
-            self.act_posi.set_text("Unknown")
+            self.comp_act_posi.set_text("-")
         else:
             value = self.act_posi_param.value / 1000
             value_str = self.converter.to_str_with_decimal_places(value, self.local_setting.posi_decimal_places)
-            self.act_posi.set_text(value_str)
+            self.comp_act_posi.set_text(value_str)
 
     def handle_position_offset_changed(self):
         if self.pos_offset_param.value is None:
-            self.pos_offset.set_text("Unknown")
+            self.comp_pos_offset.set_text("-")
         else:
             value = self.pos_offset_param.value / 1000
             value_str = self.converter.to_str_with_decimal_places(value, self.local_setting.posi_decimal_places)
-            self.pos_offset.set_text(value_str)
+            self.comp_pos_offset.set_text(value_str)
 
     def handle_position_control_speed_changed(self):
         if self.pos_ctrl_speed_param.value is None:
-            self.pos_ctrl_speed.set_text("Unknown")
+            self.comp_pos_ctrl_speed.set_text("-")
         else:
             value = self.pos_ctrl_speed_param.value / 10
             value_str = self.converter.to_str_with_decimal_places(value, 1)
-            self.pos_ctrl_speed.set_text(f"{value_str} %")
+            self.comp_pos_ctrl_speed.set_text(f"{value_str} %")
 
     def handle_freeze_changed(self):
-        value_str = self.freeze_param.ref_list.get_desc(self.freeze_param.value)
-        self.freeze.set_text(value_str)    
+        if self.freeze_param.value is None:
+            self.comp_freeze.set_text("-")
+        else:
+            value_str = self.freeze_param.ref_list.get_desc(self.freeze_param.value)
+            self.comp_freeze.set_text(value_str)    
 
     def handle_access_mode_changed(self):
         value_str = self.access_mode_param.ref_list.get_desc(self.access_mode_param.value)
-        self.access_mode.set_text(value_str)   
+        self.comp_access_mode.set_text(value_str)   
 
     def handle_control_mode_changed(self):
         value_str = self.control_mode_param.ref_list.get_desc(self.control_mode_param.value)
-        self.control_mode.set_text(value_str) 
+        
+        self.comp_control_mode.set_text(value_str) 
 
     def handle_compressed_air_value_changed(self):
         if self.compressed_air_value_param.value is None:
-            self.compressed_air_value.set_text("Unknown")
+            self.comp_compressed_air_value.set_text("-")
         else:
             value_str = self.converter.to_str(self.compressed_air_value_param.value)
-            self.compressed_air_value.set_text(f"{value_str} mbar")
+            self.comp_compressed_air_value.set_text(f"{value_str} mbar")
 
-    def handle_service_request_changed(self):
-        if self.service_request_param.value is None or self.service_request_param.value == 0:
-            self.service_request.setVisible(False)
-        else:
-            self.service_request.setVisible(True)
-
-        self.check_normal()
-            
-    def handle_parameter_error_changed(self):
-        if self.parameter_error_param.value is None or self.parameter_error_param.value == 0:
-            self.parameter_error.setVisible(False)
-        else:
-            self.parameter_error.setVisible(True)    
-
-        self.check_normal()
-
-    def handle_pfo_not_fully_charged_changed(self):
-        if self.pfo_not_fully_charged_param.value is None or self.pfo_not_fully_charged_param.value == 0:
-            self.pfo_not_fully_charged.setVisible(False)
-        else:
-            self.pfo_not_fully_charged.setVisible(True)
-
-        self.check_normal()
-
-    def handle_compressed_air_failure_changed(self):
-        if self.compressed_air_failure_param.value is None or self.compressed_air_failure_param.value == 0:
-            self.compressed_air_failure.setVisible(False)
-        else:
-            self.compressed_air_failure.setVisible(True)
-
-        self.check_normal()
-
-    def handle_sensor_factor_warning_changed(self):
-        if self.sensor_factor_warning_param.value is None or self.sensor_factor_warning_param.value == 0:
-            self.sensor_factor_warning.setVisible(False)
-        else:
-            self.sensor_factor_warning.setVisible(True)
-
-        self.check_normal()
-
-    def handle_offline_mode_changed(self):
-        if self.offline_mode_param.value is None or self.offline_mode_param.value == 0:
-            self.offline_mode.setVisible(False)
-        else:
-            self.offline_mode.setVisible(True)
-
-        self.check_normal()
-
-    def handle_rom_error_changed(self):
-        if self.rom_error_param.value is None or self.rom_error_param.value == 0:
-            self.rom_error.setVisible(False)
-        else:
-            self.rom_error.setVisible(True)
-
-        self.check_normal()
-
-    def handle_no_interface_found_changed(self):
-        if self.no_interface_found_param.value is None or self.no_interface_found_param.value == 0:
-            self.no_interface_found.setVisible(False)
-        else:
-            self.no_interface_found.setVisible(True)
-
-        self.check_normal()
-
-    def handle_no_adc_signal_changed(self):
-        if self.no_adc_signal_param.value is None or self.no_adc_signal_param.value == 0:
-            self.no_adc_signal.setVisible(False)
-        else:
-            self.no_adc_signal.setVisible(True)
-
-        self.check_normal()
-
-    def handle_no_adc_signal_on_logic_changed(self):
-        if self.no_adc_signal_on_logic_param.value is None or self.no_adc_signal_on_logic_param.value == 0:
-            self.no_adc_signal_on_logic.setVisible(False)
-        else:
-            self.no_adc_signal_on_logic.setVisible(True)
-
-        self.check_normal()
-
-    def check_normal(self):
-        for component in self.err_components:
-            if component.isVisible():
-                self.normal.setVisible(False)
+    def handle_changed_err_warn(self):
+        for param in self.err_warn_param_list:
+            if param.value is not None and param.value == 1:
+                self.comp_err_warn.set_color(label_color=my_style.STYLE_ERR_BADGE_LABEL_COLOR, bg_color=my_style.STYLE_ERR_BADGE_BG_COLOR)
                 return
-        self.normal.setVisible(True)
-        
+        self.comp_err_warn.set_color(label_color="transparent", bg_color="transparent")
 
 class ParamFolderClusterMonitorWidget(ParamFolderWidget):
+    sig_selected_addr = Signal(int)
+
     def __init__(self, parent=None):
         super().__init__(folder_name="Cluster Monitor", param_path=None, label_width = 210, parent=parent)
-        self.cluster_item_widgets = []
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
-        self.value_line = QHBoxLayout()
-        self.value_line.setContentsMargins(0,0,0,0)
-        self.value_line.setSpacing(0)
-        
-        addr = MyLabelColorBox(text="Addr")
-        addr.set_color(label_color=my_style.STYLE_LABEL_HOVER_COLOR, bg_color = my_style.STYLE_HOVER_COLOR)
-        addr.setWordWrap(False)
-        addr.setMinimumWidth(0) 
-        addr.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.status_item_list = []
+        self.status_table = BaseTableWidget()
+        self.status_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.status_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.status_table.setColumnCount(9)
+        self.status_table.setHorizontalHeaderLabels(["Addr", "Act Posi", "Posi Offset", "Posi Speed", "Freeze", "Acc Mode", "Ctrl Mode", "Air[mbar]", "Err/Warn"])
+        self.status_table.setRowCount(30)
 
-        act_posi = MyLabelColorBox("Act Posi")
-        act_posi.set_color(label_color=my_style.STYLE_LABEL_HOVER_COLOR, bg_color = my_style.STYLE_HOVER_COLOR)
-        act_posi.setWordWrap(False)
-        act_posi.setMinimumWidth(0) 
-        act_posi.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        
-        pos_offset = MyLabelColorBox("Posi Offset")
-        pos_offset.set_color(label_color=my_style.STYLE_LABEL_HOVER_COLOR, bg_color = my_style.STYLE_HOVER_COLOR)
-        pos_offset.setWordWrap(False)
-        pos_offset.setMinimumWidth(0) 
-        pos_offset.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        
-        pos_ctrl_speed = MyLabelColorBox("Posi Speed")
-        pos_ctrl_speed.set_color(label_color=my_style.STYLE_LABEL_HOVER_COLOR, bg_color = my_style.STYLE_HOVER_COLOR)
-        pos_ctrl_speed.setWordWrap(False)
-        pos_ctrl_speed.setMinimumWidth(0) 
-        pos_ctrl_speed.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        
-        freeze = MyLabelColorBox("Freeze")
-        freeze.set_color(label_color=my_style.STYLE_LABEL_HOVER_COLOR, bg_color = my_style.STYLE_HOVER_COLOR)
-        freeze.setWordWrap(False)
-        freeze.setMinimumWidth(0) 
-        freeze.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        
-        access_mode = MyLabelColorBox("Acc Mode")
-        access_mode.set_color(label_color=my_style.STYLE_LABEL_HOVER_COLOR, bg_color = my_style.STYLE_HOVER_COLOR)
-        access_mode.setWordWrap(False)
-        access_mode.setMinimumWidth(0) 
-        access_mode.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        
-        control_mode = MyLabelColorBox("Ctrl Mode")
-        control_mode.set_color(label_color=my_style.STYLE_LABEL_HOVER_COLOR, bg_color = my_style.STYLE_HOVER_COLOR)
-        control_mode.setWordWrap(False)
-        control_mode.setMinimumWidth(0) 
-        control_mode.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        
-        compressed_air_value = MyLabelColorBox("Air (mbar)")
-        compressed_air_value.set_color(label_color=my_style.STYLE_LABEL_HOVER_COLOR, bg_color = my_style.STYLE_HOVER_COLOR)
-        compressed_air_value.setWordWrap(False)
-        compressed_air_value.setMinimumWidth(0) 
-        compressed_air_value.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-
-        self.value_line.addWidget(addr, 5)
-        self.value_line.addWidget(act_posi, 10)
-        self.value_line.addWidget(pos_offset, 10)
-        self.value_line.addWidget(pos_ctrl_speed, 10)
-        self.value_line.addWidget(freeze, 10)
-        self.value_line.addWidget(access_mode, 10)
-        self.value_line.addWidget(control_mode, 10)
-        self.value_line.addWidget(compressed_air_value, 10)
-
-        self.content_layout.addLayout(self.value_line)
-        
-        for num in range(0, 2): 
+        for num in range(0, 30):
             status_param = ParamManager().get_by_full_path(f"Cluster.Device {num}.Status")
+            status_item = ParamClusterMonitorItem(self.status_table, num, status_param.sub_items, self)
+            self.status_item_list.append(status_item)
 
-            item_widget = ParamClusterMonitorItemWidget(num, status_param.sub_items)
-            self.add_widget(item_widget)
-            self.cluster_item_widgets.append(item_widget)
+        header = self.status_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        for col in range(1, 9):
+            header.setSectionResizeMode(col, QHeaderView.Stretch)
+        self.status_table.resizeRowsToContents()
+        self.status_table.setShowGrid(False)
+
+        self.add_widget(self.status_table)
+
+        # 부모 클래스(MyCardWidget) 생성 시 하단에 자동으로 추가되는 stretch(스페이서)를 제거합니다.
+        layout = self.main_layout
+        if layout.count() > 0:
+            last_item = layout.itemAt(layout.count() - 1)
+            if last_item.spacerItem():
+                layout.removeItem(last_item)
+
+        # 콘텐츠 영역 위젯과 테이블 위젯의 세로 크기 정책을 Expanding으로 변경하여 부모 영역을 가득 채우도록 합니다.
+        self.content_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.status_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.status_table.selectionModel().selectionChanged.connect(self.on_selection_changed)
+
+    def on_selection_changed(self, selected, deselected):
+        indexes = self.status_table.selectionModel().selectedRows()
+        if indexes:
+            selected_row = indexes[0].row()
+            self.sig_selected_addr.emit(selected_row)
+        else:
+            self.sig_selected_addr.emit(-1)
 
     def set_cluster_num(self, num):
-        for item_widget in self.cluster_item_widgets:
-            item_widget.setVisible(False)
+        for item in self.status_item_list:
+            item.set_enabled(False)
 
         if num is None:
+            self.on_selection_changed(None, None)
             return
 
         for num in range(0, num):
-            self.cluster_item_widgets[num].setVisible(True)
+            self.status_item_list[num].set_enabled(True)
+
+        self.on_selection_changed(None, None)
 
         

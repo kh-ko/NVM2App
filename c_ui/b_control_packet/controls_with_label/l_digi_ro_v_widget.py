@@ -40,6 +40,8 @@ class LDigiReadOnlyVerticalWidget(LBaseVerticalReadOnlyWidget):
                 digit = (value // temp_base_value) % 10
                 label.set_value(digit)
                 temp_base_value = int(temp_base_value / 10)
+                
+        self.sig_value_changed.emit()
 
     def set_support(self, support : bool):
         for label in self.item_list:

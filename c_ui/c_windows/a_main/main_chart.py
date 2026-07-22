@@ -22,7 +22,7 @@ class MainChart(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         
-        self.max_points = 200000
+        self.max_points = 60000
         self.ptr = 0
         self.timestamps = np.zeros(self.max_points)
         self.act_posis = np.zeros(self.max_points)
@@ -206,12 +206,6 @@ class MainChart(QWidget):
         now_ms = QDateTime.currentMSecsSinceEpoch()
         self.current_x_max = now_ms + self.jump_step_ms
         self.current_x_min = self.current_x_max - self.time_span_ms
-        
-        self.timestamps = []
-        self.act_posis = []
-        self.target_posis = []
-        self.act_press = []
-        self.target_press = []
         
         self.posi_setting_panel.sig_changed_settings.connect(self.on_posi_setting_changed)
         self.pres_setting_panel.sig_changed_settings.connect(self.on_pres_setting_changed)

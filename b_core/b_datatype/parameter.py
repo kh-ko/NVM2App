@@ -65,6 +65,7 @@ class Parameter(QObject):
     INT_TYPES = (ParamDataType.INT8, ParamDataType.INT16, ParamDataType.INT32, ParamDataType.UINT8, ParamDataType.UINT16, ParamDataType.UINT32)
     FLOAT_TYPES = (ParamDataType.FLOAT, ParamDataType.DOUBLE)
     STR_TYPES = (ParamDataType.STR,)
+    BASE36_TYPES = (ParamDataType.BASE_36,)
 
     def __init__(self, param_json, param_display_type: ParamDisplayType):
         super().__init__()
@@ -73,6 +74,11 @@ class Parameter(QObject):
         path, name        = full_path.rsplit(".", 1)
         id                = param_json.get("id", "")
         index             = param_json.get("idx", 0)
+        len               = param_json.get("len", 0)
+        rreq              = param_json.get("rreq", "")
+        rres              = param_json.get("rres", "")
+        wreq              = param_json.get("wreq", "")
+        wres              = param_json.get("wres", "")
         proto_type        = param_json.get("proto_type", None)
         acc_str           = param_json.get("acc", "RO")
         acc               = getattr(ParamAccType, acc_str, ParamAccType.RO)
@@ -94,6 +100,7 @@ class Parameter(QObject):
         self.name              = name
         self.id                = id
         self.index             = index
+        self.len               = len
         self.acc               = acc
         self.is_only_local_acc = local_acc
         self.is_nor_backup     = nor_backup
@@ -131,10 +138,10 @@ class Parameter(QObject):
         self._is_not_support : bool = False
         self._is_err : bool = False
         self.write_str_value : str | None = None
-        self.nv1_read_req : str | None = None
-        self.nv1_write_req : str | None = None
-        self.nv1_read_res : str | None = None
-        self.nv1_write_res : str | None = None
+        self.nv1_read_req : str | None  = rreq
+        self.nv1_write_req : str | None = wreq
+        self.nv1_read_res : str | None  = rres
+        self.nv1_write_res : str | None = wres
         
         if self.display_type == ParamDisplayType.ENUM:
             self._init_enum(param_json)
@@ -168,6 +175,10 @@ class Parameter(QObject):
             self._init_press_slope(param_json) 
         elif self.display_type == ParamDisplayType.NV1_GROUP:
             self._init_nv1_group(param_json) 
+        elif self.display_type == ParamDisplayType.ENUM_36:
+            self._init_enum(param_json)
+            self.display_type = ParamDisplayType.ENUM
+            self.data_type = ParamDataType.BASE_36
 
     def _init_enum(self, param_json):
         self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
@@ -325,6 +336,9 @@ class Parameter(QObject):
             elif self.data_type in self.STR_TYPES:
                 self.str_value = new_val
                 self.value = new_val
+            elif self.data_type in self.BASE36_TYPES:
+                self.str_value = new_val
+                self.value = int(new_val, 36)
                 
             self.is_err = False
         except ValueError:
@@ -351,6 +365,10 @@ class Parameter(QObject):
                 elif self.data_type in self.STR_TYPES:
                     self.str_value = new_val
                     self.value = new_val
+                elif self.data_type in self.BASE36_TYPES:
+                    self.str_value = new_val
+                    self.value = int(new_val, 36)
+                    
             except ValueError:
                 return ParamParseErrType.DATA_TYPE_ERROR, True
         else:
@@ -382,6 +400,9 @@ class Parameter(QObject):
         return parse_err_type, False        
 
     def set_write_response_packet(self, resp_msg: str) -> tuple[ParamParseErrType | None, bool]:        
+        if self.is_nv1_proto:
+            return ParamParseErrType.NONE, False
+            
         return self.check_error(False, resp_msg)
 
     def check_error(self, is_read : bool, resp_msg: str) -> tuple[ParamParseErrType | None, bool]: 
@@ -445,21 +466,41 @@ class Parameter(QObject):
         
         if not resp_msg:
             self.is_err = True
+            self.nv1_protocol_set_error(True, None)
             return ParamParseErrType.COMMUNICATION_ERR, True
 
         if len(resp_msg) < len(check_res_msg):
             self.is_err = True
+            self.nv1_protocol_set_error(True, None)
             return ParamParseErrType.WRONG_FORMAT, True
 
-        if resp_msg.startswith(check_res_msg) == False and resp_msg.startswith("E:") == False:
+        if resp_msg.startswith("G:") and resp_msg.startswith("E:", 4):
+            self.is_err = True # 알 수 없는 에러일 때
+            self.is_not_support = True
+            self.nv1_protocol_set_error(True, True)
+            return ParamParseErrType.UNKNOWN_ERROR_CODE, False
+        elif resp_msg.startswith(check_res_msg) == False and resp_msg.startswith("E:") == False:
             self.is_err = True
+            self.nv1_protocol_set_error(True, None)
             return ParamParseErrType.WRONG_PREFIX, True
 
         if resp_msg.startswith("E:"):
             self.is_err = True # 알 수 없는 에러일 때
             self.is_not_support = True
+            self.nv1_protocol_set_error(True, True)
             return ParamParseErrType.UNKNOWN_ERROR_CODE, False
         else:
-            self.is_err = False 
-            self.is_not_support = False 
+            self.nv1_protocol_set_error(False, False)
             return ParamParseErrType.NONE, False
+
+    def nv1_protocol_set_error(self, is_err, is_not_support):
+        if is_err is not None:
+            self.is_err = is_err 
+        if is_not_support is not None:
+            self.is_not_support = is_not_support 
+
+        for _, _, sub_param in self.sub_items:
+            if is_err is not None:
+                sub_param.is_err = is_err
+            if is_not_support is not None:
+                sub_param.is_not_support = is_not_support

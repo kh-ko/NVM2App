@@ -9,6 +9,7 @@ class LNumberReadOnlyWidget(LBaseReadOnlyWidget):
 
     def set_value(self, value : int):
         self.value_widget.set_value(value)
+        self.sig_value_changed.emit()
 
         
 

@@ -30,12 +30,12 @@ class ServicePort(QObject):
         self.serial_port: serial.Serial | None = None
         self._connect_info : str = ""
         self._termination_chars = b"\r\n" # 기본값
-        self._port_name = ""
-        self._baudrate = 0
-        self._data_bits = 0
-        self._parity = 0
-        self._stop_bits = 0
-        self._termination = 0
+        self.port_name = ""
+        self.baudrate = 0
+        self.data_bits = 0
+        self.parity = 0
+        self.stop_bits = 0
+        self.termination = 0
         self._mutex = QRecursiveMutex()
 
         app = QCoreApplication.instance()
@@ -86,7 +86,7 @@ class ServicePort(QObject):
                 p_val = parity_map.get(parity, serial.PARITY_NONE)
                 s_val = stop_map.get(stop_bits, serial.STOPBITS_ONE)
 
-                self.serial_port = serial.Serial(port=port_name, baudrate=baudrate, bytesize=data_bits, parity=p_val, stopbits=s_val, timeout=0.1)
+                self.serial_port = serial.Serial(port=port_name, baudrate=baudrate, bytesize=data_bits, parity=p_val, stopbits=s_val, timeout=0.5)
                 
                 self._termination_chars = term_map_bytes.get(termination, b"\r\n")
 
@@ -105,6 +105,12 @@ class ServicePort(QObject):
     def close(self):
         with QMutexLocker(self._mutex):
             self._close_internal()      
+            self.port_name = ""
+            self.baudrate = 0
+            self.data_bits = 0
+            self.parity = 0
+            self.stop_bits = 0
+            self.termination = 0
 
     def reconnect(self):
         self.open(self.port_name, self.baudrate, self.data_bits, self.parity, self.stop_bits, self.termination)
@@ -127,7 +133,7 @@ class ServicePort(QObject):
                 if self._is_trace_mode:
                     start_time = time.perf_counter()
 
-                    while (time.perf_counter() - start_time) < 0.2:
+                    while (time.perf_counter() - start_time) < 1:
                         response_bytes = self.serial_port.read_until(self._termination_chars)
 
                         if not response_bytes:

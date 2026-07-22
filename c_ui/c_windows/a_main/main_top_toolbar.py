@@ -90,7 +90,7 @@ class MainTopToolBar(BaseToolBar):
 
         self.action_valve_basic       = QAction("Basic State"         , self)
         self.action_valve_cycle       = QAction("Cycle Counter"       , self)
-        self.action_valve_setting     = QAction("Setting"             , self)
+        self.action_valve_setting     = QAction("Settings"             , self)
 
         self.valve_menu.addAction(self.action_valve_basic      )
         self.valve_menu.addAction(self.action_valve_cycle      )
@@ -107,7 +107,7 @@ class MainTopToolBar(BaseToolBar):
         self.sens_menu = QMenu(self.sens_btn)
 
         self.action_sens_zero    = QAction("Zero"    , self)
-        self.action_sens_setting = QAction("Setting" , self)
+        self.action_sens_setting = QAction("Settings" , self)
 
         self.sens_menu.addAction(self.action_sens_zero    )
         self.sens_menu.addAction(self.action_sens_setting )
@@ -122,7 +122,7 @@ class MainTopToolBar(BaseToolBar):
 
         self.posi_ctrl_menu = QMenu(self.posi_ctrl_btn)
 
-        self.action_posi_ctrl_setting = QAction("Setting", self)
+        self.action_posi_ctrl_setting = QAction("Settings", self)
 
         self.posi_ctrl_menu.addAction(self.action_posi_ctrl_setting)
 
@@ -137,8 +137,8 @@ class MainTopToolBar(BaseToolBar):
 
         self.pres_ctrl_menu = QMenu(self.pres_ctrl_btn)
 
-        self.action_pres_ctrl_gen_setting = QAction("General Setting", self)
-        self.action_pres_ctrl_controller_setting = QAction("Controller Setting", self)
+        self.action_pres_ctrl_gen_setting = QAction("General Settings", self)
+        self.action_pres_ctrl_controller_setting = QAction("Controller Settings", self)
 
         self.pres_ctrl_menu.addAction(self.action_pres_ctrl_gen_setting)
         self.pres_ctrl_menu.addAction(self.action_pres_ctrl_controller_setting)
@@ -155,11 +155,11 @@ class MainTopToolBar(BaseToolBar):
         self.learn_menu = QMenu(self.learn_btn)
 
         self.action_learn = QAction("Learn Excute", self)
-        self.action_learn_bank1_setting = QAction("Learn Bank 1 Setting", self)
-        self.action_learn_bank2_setting = QAction("Learn Bank 2 Setting", self)
-        self.action_learn_bank3_setting = QAction("Learn Bank 3 Setting", self)
-        self.action_learn_bank4_setting = QAction("Learn Bank 4 Setting", self)
-        self.action_learn_list_setting  = QAction("Learn List Setting", self)
+        self.action_learn_bank1_setting = QAction("Learn Bank 1 Settings", self)
+        self.action_learn_bank2_setting = QAction("Learn Bank 2 Settings", self)
+        self.action_learn_bank3_setting = QAction("Learn Bank 3 Settings", self)
+        self.action_learn_bank4_setting = QAction("Learn Bank 4 Settings", self)
+        self.action_learn_list_setting  = QAction("Learn List Settings", self)
 
         self.learn_menu.addAction(self.action_learn)
         self.learn_menu.addAction(self.action_learn_bank1_setting)
@@ -179,7 +179,7 @@ class MainTopToolBar(BaseToolBar):
 
         self.pfo_menu = QMenu(self.pfo_btn)
 
-        self.action_pfo_setting = QAction("Setting", self)
+        self.action_pfo_setting = QAction("Settings", self)
 
         self.pfo_menu.addAction(self.action_pfo_setting)
 
@@ -194,8 +194,8 @@ class MainTopToolBar(BaseToolBar):
 
         self.iface_menu = QMenu(self.iface_btn)
 
-        self.action_iface_pwr_io = QAction("Power Connector IO Setting", self)
-        self.action_iface_dnet   = QAction("DeviceNet Setting", self)
+        self.action_iface_pwr_io = QAction("Power Connector IO Settings", self)
+        self.action_iface_dnet   = QAction("DeviceNet Settings", self)
         self.action_iface_trace  = QAction("Trace", self)
 
         self.iface_menu.addAction(self.action_iface_pwr_io)
@@ -212,13 +212,11 @@ class MainTopToolBar(BaseToolBar):
 
         self.cluster_menu = QMenu(self.cluster_btn)
 
-        self.action_cluster_master = QAction("Master Setting", self)
+        self.action_cluster_master = QAction("Master Settings", self)
         self.action_cluster_monitor = QAction("Cluster Monitor", self)
-        self.action_cluster_setting = QAction("Cluster Setting", self)
 
         self.cluster_menu.addAction(self.action_cluster_master)
         self.cluster_menu.addAction(self.action_cluster_monitor)
-        self.cluster_menu.addAction(self.action_cluster_setting)
 
         self.cluster_btn.setMenu(self.cluster_menu)
         self.addWidget(self.cluster_btn)        
@@ -231,10 +229,10 @@ class MainTopToolBar(BaseToolBar):
 
         self.compound_menu = QMenu(self.compound_btn)
 
-        self.action_compound_compound1 = QAction("Compound 1 Setting", self)
-        self.action_compound_compound2 = QAction("Compound 2 Setting", self)
-        self.action_compound_compound3 = QAction("Compound 3 Setting", self)
-        self.action_compound_compound4 = QAction("Compound 4 Setting", self)
+        self.action_compound_compound1 = QAction("Compound 1 Settings", self)
+        self.action_compound_compound2 = QAction("Compound 2 Settings", self)
+        self.action_compound_compound3 = QAction("Compound 3 Settings", self)
+        self.action_compound_compound4 = QAction("Compound 4 Settings", self)
 
         self.compound_menu.addAction(self.action_compound_compound1)
         self.compound_menu.addAction(self.action_compound_compound2)
@@ -254,7 +252,7 @@ class MainTopToolBar(BaseToolBar):
 
         self.action_advenced_backup    = QAction("Backup", self)
         self.action_advenced_restore   = QAction("Restore", self)
-        self.action_advenced_lagacy    = QAction("Lagacy Parameter Setting", self)
+        self.action_advenced_lagacy    = QAction("Lagacy Parameter Settings", self)
 
         self.advenced_menu.addAction(self.action_advenced_backup)
         self.advenced_menu.addAction(self.action_advenced_restore)
@@ -410,9 +408,6 @@ class MainTopToolBar(BaseToolBar):
 
     def reg_cluster_master_setting_slot(self, slot):
         self.action_cluster_master.triggered.connect(slot, Qt.QueuedConnection)  
-
-    def reg_cluster_setting_slot(self, slot):
-        self.action_cluster_setting.triggered.connect(slot, Qt.QueuedConnection)          
 
     def reg_cluster_monitor_slot(self, slot):
         self.action_cluster_monitor.triggered.connect(slot, Qt.QueuedConnection)          

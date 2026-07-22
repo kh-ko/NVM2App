@@ -10,6 +10,7 @@ class LTextReadOnlyWidget(LBaseReadOnlyWidget):
 
     def set_value(self, value : str):
         self.value_widget.set_value(value)
+        self.sig_value_changed.emit()
 
         
 

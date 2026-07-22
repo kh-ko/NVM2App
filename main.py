@@ -1,6 +1,7 @@
 import sys
 import os
 import ctypes
+import dll_setup
 
 # 1. 외부 라이브러리 및 자동 생성된 자원 임포트
 import qdarktheme

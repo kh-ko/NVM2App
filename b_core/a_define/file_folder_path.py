@@ -13,6 +13,15 @@ ASSET_ICON_FONT_FILE = f"{ASSET_FONTS}/MaterialIcons-Regular.ttf"
 ASSET_ICON = f"{ASSET_BASE}/icons"
 ASSET_APP_ICON_FILE = f"{ASSET_ICON}/nova_icon.ico"
 
+ASSET_IMG = f"{ASSET_BASE}/images"
+ASSET_FU_GUIDE_1_IMG_FILE = f"{ASSET_IMG}/fu_guide_1.png"
+ASSET_FU_GUIDE_2_IMG_FILE = f"{ASSET_IMG}/fu_guide_2.png"
+ASSET_FU_GUIDE_3_IMG_FILE = f"{ASSET_IMG}/fu_guide_3.png"
+ASSET_FU_GUIDE_4_IMG_FILE = f"{ASSET_IMG}/fu_guide_4.png"
+ASSET_FU_GUIDE_5_IMG_FILE = f"{ASSET_IMG}/fu_guide_5.png"
+ASSET_RS232_IMG_FILE = f"{ASSET_IMG}/rs232_port.png"
+ASSET_USB_IMG_FILE = f"{ASSET_IMG}/usb_port.png"
+
 
 
 # 배포파일에 폴더 형태로 추가되는 리소스파일 경로
@@ -33,6 +42,14 @@ RSRC_CONFIG_PATH = os.path.join(RSRC_BASE, "config")
 RSRC_CONNECTIONS_JSON_FILE = os.path.join(RSRC_CONFIG_PATH, "connections.json")
 RSRC_LOCAL_SETTING_JSON_FILE = os.path.join(RSRC_CONFIG_PATH, "local_setting.json")
 RSRC_FTP_SETTING_FILE = os.path.join(RSRC_CONFIG_PATH, "ftp_connection.json")
+
+RSRC_TEMP_PATH = os.path.join(RSRC_BASE, "temp")
+RSRC_APP_CPU1_NEW_FILE    = os.path.join(RSRC_TEMP_PATH, "fcpuan.dlla")
+RSRC_APP_CPU2_NEW_FILE    = os.path.join(RSRC_TEMP_PATH, "fcpubn.dlla")
+RSRC_APP_CPU1_FILE        = os.path.join(RSRC_TEMP_PATH, "fcpua.dlla")
+RSRC_APP_CPU2_FILE        = os.path.join(RSRC_TEMP_PATH, "fcpub.dlla")
+RSRC_KERNEL_CPU1_FILE     = os.path.join(RSRC_TEMP_PATH, "fknlcp1.dlla")
+RSRC_KERNEL_CPU2_FILE     = os.path.join(RSRC_TEMP_PATH, "fknlcp2.dlla")
 
 RSRC_PARAM_SCHEMA_PATH = os.path.join(RSRC_BASE, "param_schema")
 RSRC_PARAM_SCHEMA_JSON_FILE = os.path.join(RSRC_PARAM_SCHEMA_PATH, "param.json")

@@ -1,3 +1,5 @@
+import time
+
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMessageBox, QHBoxLayout
 from PySide6.QtCore import Qt, QTimer
 
@@ -43,8 +45,16 @@ from c_ui.c_windows.i_pfo.pfo_win import PfoWin
 from c_ui.c_windows.j_iface.iface_pwr_io_win import IfacePwrIoWin
 from c_ui.c_windows.j_iface.iface_dnet_win import IfaceDnetWin
 from c_ui.c_windows.j_iface.iface_trace_win import IfaceTraceWin
+from c_ui.c_windows.l_compound.compound_4_win import Compound04Win
+from c_ui.c_windows.l_compound.compound_3_win import Compound03Win
+from c_ui.c_windows.l_compound.compound_2_win import Compound02Win
+from c_ui.c_windows.l_compound.compound_1_win import Compound01Win
 from c_ui.c_windows.k_cluster.cluster_master_win import ClusterMasterWin
 from c_ui.c_windows.k_cluster.cluster_monitor_win import ClusterMonitorWin
+from c_ui.c_windows.o_factory.factory_firmware_update_win import FactoryFirmwareUpdateWin
+from c_ui.c_windows.m_advenced.advenced_lagacy_win import AdvencedLegacyWin
+from c_ui.c_windows.m_advenced.advenced_backup_win import AdvencedBackupWin
+from c_ui.c_windows.m_advenced.advenced_restore_win import AdvencedRestoreWin
 from c_ui.c_windows.p_help.help_nvm_update_win import HelpNvmUpdateWin
 
 class MainWin(QMainWindow):
@@ -134,7 +144,6 @@ class MainWin(QMainWindow):
         self.main_top_toolbar.reg_iface_trace_slot(self.on_clicked_iface_trace)
         self.main_top_toolbar.reg_cluster_master_setting_slot(self.on_clicked_cluster_master_setting)
         self.main_top_toolbar.reg_cluster_monitor_slot(self.on_clicked_cluster_monitor)
-        self.main_top_toolbar.reg_cluster_setting_slot(self.on_clicked_cluster_setting)        
         self.main_top_toolbar.reg_compound1_setting_slot(self.on_clicked_compound1_setting)
         self.main_top_toolbar.reg_compound2_setting_slot(self.on_clicked_compound2_setting)
         self.main_top_toolbar.reg_compound3_setting_slot(self.on_clicked_compound3_setting)
@@ -161,6 +170,7 @@ class MainWin(QMainWindow):
         self.compounds_timer = QTimer(self)
         self.compounds_timer.setInterval(200)  # 100ms = 0.1초
         self.compounds_timer.timeout.connect(self.handle_compounds_data)
+
         self.compounds_timer.start()
 
         self.param_worker = ParameterWorker(parent=self, win_name="Main Win")   
@@ -171,6 +181,7 @@ class MainWin(QMainWindow):
         self.param_worker.add_init_param("System.Identification.Configuration.Revision 1")
         self.param_worker.add_init_param("System.Identification.Configuration.Revision 2")
         self.param_worker.add_init_param("System.Identification.Configuration.Revision 3")
+        self.param_worker.add_init_param("System.Identification.Firmware.Firmware Version")
         self.param_worker.add_init_param("Sensor.Sensor 1.Basic.Available")  
         self.param_worker.add_init_param("Sensor.Sensor 1.Basic.Enable")
         self.param_worker.add_init_param("Sensor.Sensor 1.Range.Data Unit")
@@ -185,12 +196,12 @@ class MainWin(QMainWindow):
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Upper Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Lower Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Voltage Per Decade [V]")
-        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Pressure Unit")
-        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure Min")
-        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Pressure.Value Pressure Sensor Full Scale")
-        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Position Unit")
-        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Value Open Position")
-        self.param_worker.add_init_param("RS232/RS485 User interface.Scaling.Position.Value Closest Position")
+        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Pressure.Pressure Unit")
+        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Pressure.Value Pressure Min")
+        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Pressure.Value Pressure Sensor Full Scale")
+        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Position.Position Unit")
+        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Position.Value Open Position")
+        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Position.Value Closest Position")
 
         self.pre_ctrl_mode = p_enum.ControlModeEnum.INIT.value
 
@@ -314,36 +325,26 @@ class MainWin(QMainWindow):
     def on_clicked_cluster_monitor(self):
         WinManager().show_param_window(win_class=ClusterMonitorWin, parent=self, is_modal=False) 
 
-    def on_clicked_cluster_setting(self):
-        #WinManager().show_param_window(win_class=ClusterSlaveWin, parent=self, is_modal=False)
-        pass   
-
     def on_clicked_compound1_setting(self):
-        #WinManager().show_param_window(win_class=Compound1Win, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=Compound01Win, parent=self, is_modal=False)
 
     def on_clicked_compound2_setting(self):
-        #WinManager().show_param_window(win_class=Compound2Win, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=Compound02Win, parent=self, is_modal=False)
 
     def on_clicked_compound3_setting(self):
-        #WinManager().show_param_window(win_class=Compound3Win, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=Compound03Win, parent=self, is_modal=False)
 
     def on_clicked_compound4_setting(self):
-        #WinManager().show_param_window(win_class=Compound4Win, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=Compound04Win, parent=self, is_modal=False)
 
     def on_clicked_advenced_backup(self):
-        #WinManager().show_param_window(win_class=AdvencedBackupWin, parent=self, is_modal=False)
-        pass
-
+        WinManager().show_param_window(win_class=AdvencedBackupWin, parent=self, is_modal=False)
+        
     def on_clicked_advenced_restore(self):
-        #WinManager().show_param_window(win_class=AdvencedRestoreWin, parent=self, is_modal=False)
-        pass
+        WinManager().show_param_window(win_class=AdvencedRestoreWin, parent=self, is_modal=False)
 
     def on_clicked_advenced_lagacy(self):
-        #WinManager().show_param_window(win_class=AdvencedLagacyWin, parent=self, is_modal=False)
+        WinManager().show_param_window(win_class=AdvencedLegacyWin, parent=self, is_modal=False)
         pass
 
     def on_clicked_analysis_sensor(self):
@@ -359,8 +360,27 @@ class MainWin(QMainWindow):
         pass
 
     def on_clicked_factory_firmware_update(self):
-        #WinManager().show_param_window(win_class=FactoryFirmwareUpdateWin, parent=self, is_modal=False)
-        pass
+        msg_box = QMessageBox(self)  
+        msg_box.setWindowTitle("Select Backup Option")
+        msg_box.setText("Please select whether to perform a backup.")
+        
+        if ServicePort().connect_info:
+            btn_backup = msg_box.addButton("Backup", QMessageBox.AcceptRole)
+            btn_skip = msg_box.addButton("Skip", QMessageBox.AcceptRole)
+            msg_box.exec()
+        
+            clicked = msg_box.clickedButton()
+            if clicked == btn_backup:
+                win = WinManager().show_param_window(win_class=AdvencedBackupWin, parent=self, is_modal=False) 
+                win.set_firmware_update_backup(True)
+                win.destroyed.connect(self.on_finished_backup_for_firmware_update)
+                return
+        win = WinManager().show_param_window(win_class=FactoryFirmwareUpdateWin, parent=self, is_modal=False)
+        win.sig_finished_firmware_update.connect(self.on_clicked_connection_connect)
+
+    def on_finished_backup_for_firmware_update(self):
+        win = WinManager().show_param_window(win_class=FactoryFirmwareUpdateWin, parent=self, is_modal=False)
+        win.sig_finished_firmware_update.connect(self.on_clicked_connection_connect)
 
     def on_clicked_help_update(self):
         WinManager().show_param_window(win_class=HelpNvmUpdateWin, parent=self, is_modal=False)
@@ -442,7 +462,6 @@ class MainWin(QMainWindow):
                 self.main_foot_statusbar.set_scan_rate(-1)
         else:
             self.main_foot_statusbar.set_scan_rate(-1)
-
 
     def handle_access_mode_changed(self):
         if self.acc_mode_param.value is None:

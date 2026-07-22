@@ -19,6 +19,7 @@ class CompoundsWorkerThread(QThread):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.pre_ms = 0
         self._loop_log_count : int = 0
         self._is_running : bool = False
         self._is_not_connected : bool = True
@@ -91,7 +92,21 @@ class CompoundsWorkerThread(QThread):
                 self.msleep(100)
                 continue
 
+            start_time = time.perf_counter()
+
             response, err_type = self.svc_port.request(self.compound_read_bytes)
+
+            elapsed_time_ms = (time.perf_counter() - start_time) * 1000
+
+            current_ms = int(time.time() * 1000)
+            if current_ms - self.pre_ms > 200 and elapsed_time_ms > 200:
+                print(f"[CompoundsWorkerThread] All Time Error : {current_ms - self.pre_ms}, {elapsed_time_ms}")
+            elif current_ms - self.pre_ms > 200:
+                print(f"[CompoundsWorkerThread] Loop Time Error : {current_ms - self.pre_ms}")
+            elif elapsed_time_ms > 200:
+                print(f"[CompoundsWorkerThread] Request Time Error : {elapsed_time_ms}")
+
+            self.pre_ms = current_ms
             
             if err_type == SvcPortErrType.NONE and response.startswith("p:0029"):
                 try:
@@ -102,9 +117,9 @@ class CompoundsWorkerThread(QThread):
 
                     payload = response[16:]
                     values = payload.split(';')
-                    
+
                     if len(values) >= 12:
-                        current_ms = int(time.time() * 1000)
+                        #current_ms = int(time.time() * 1000)
                         
                         parsed_data = CompoundData(
                             current_ms,
@@ -129,8 +144,10 @@ class CompoundsWorkerThread(QThread):
                         self.sig_log.emit(True, self.compound_read_bytes.decode('utf-8'), response, "Response is short")
                         
                 except Exception as e:
+                    print(f"[CompoundsWorkerThread]Exception {response}, {str(e)}")
                     self.sig_log.emit(True, self.compound_read_bytes.decode('utf-8'), response, f"Error: {str(e)}")
             else:
+                print(f"[CompoundsWorkerThread]Error {response}, {err_type}")
                 self.msleep(1000)
 
     def stop(self):

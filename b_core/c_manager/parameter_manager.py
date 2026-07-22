@@ -55,6 +55,9 @@ class ParamManager:
         self._parameters.append(param)
         self._param_map[(param.path, param.name)] = param
 
+    def get_param_list(self):
+        return self._parameters
+        
     def get_by_full_path(self, full_path: str) -> Optional[Parameter]:
         path, name = full_path.rsplit(".", 1)
         ret_param = self._param_map.get((path, name))

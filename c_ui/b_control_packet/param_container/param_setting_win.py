@@ -44,7 +44,7 @@ class ParamSettingWin(QMainWindow):
         self.param_worker = ParameterWorker(self)  
         self.param_manager = ParamManager()
         self.parameter_folder_widgets = []
-    
+
     def add_param_folder(self, folder_path : str, param_path=None, label_width= 150):
         folder_widget = ParamFolderWidget(folder_name=folder_path, param_path=param_path,label_width = label_width)
         self.content_layout.addWidget(folder_widget)
@@ -53,7 +53,7 @@ class ParamSettingWin(QMainWindow):
     def add_param_folder_widget(self, folder_widget):
         self.content_layout.addWidget(folder_widget)
         self.parameter_folder_widgets.append(folder_widget)        
-        
+
     def init_toolbar(self):
         is_contain_rw_param = False
         is_contain_wo_param = False
@@ -97,7 +97,7 @@ class ParamSettingWin(QMainWindow):
         self.param_worker.sig_progress_changed.connect(self.handle_progress_changed)
         self.content_widget.setEnabled(False)
         self.param_worker.refresh()
-
+        
     def on_clicked_refresh(self):
         for widget in self.parameter_folder_widgets:
                 for param_component in widget.param_components:
@@ -105,7 +105,7 @@ class ParamSettingWin(QMainWindow):
                         param_component.restore()
 
         self.param_worker.refresh()
-    
+
     def on_clicked_save_file(self):
         data_to_save = []
 
@@ -144,8 +144,6 @@ class ParamSettingWin(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred while saving the file:\n{e}")
 
-
-
     def on_clicked_load_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Load Parameter File", "", "JSON Files (*.json);;All Files (*)")
 
@@ -182,7 +180,7 @@ class ParamSettingWin(QMainWindow):
 
                 if found:
                     break # 바깥쪽 루프도 중단하고 다음 item으로 넘어감
-        
+
         QMessageBox.information(self, "Success", "Parameter data loaded successfully.")
 
     def on_clicked_apply(self):
@@ -190,7 +188,7 @@ class ParamSettingWin(QMainWindow):
             for param_component in widget.param_components:
                 if param_component.param.acc != ParamAccType.RO and param_component.is_dirty():
                     param_component.param.write_str_value = param_component.get_param_write_value()
-        
+
         self.param_worker.write()
 
     def on_btn_widget_clicked(self, param : Parameter):

@@ -15,9 +15,10 @@ class ParamSettingStatusBar(QStatusBar):
         # 1. 라벨 3개 생성
         self.lbl_connection_info = MyLabelDescription("Disconnected")
         self.lbl_serial_number = MyLabelDescription("S/N: -")
-        self.lbl_scan_rate = MyLabelDescription("scan-rate: -")
+        self.lbl_log           = MyLabelDescription("")
+        #self.lbl_scan_rate = MyLabelDescription("scan-rate: -")
         # scan-rate 라벨의 폭을 고정합니다. (텍스트 길이에 맞춰 120~130 정도가 적당합니다)
-        self.lbl_scan_rate.setFixedWidth(120) 
+        #self.lbl_scan_rate.setFixedWidth(120) 
 
         # 2. 프로그레스바 생성 및 기본 설정
         self.progress_bar = QProgressBar()
@@ -39,7 +40,7 @@ class ParamSettingStatusBar(QStatusBar):
         # addWidget: 왼쪽부터 차례대로 배치됩니다.
         self.addWidget(self.lbl_connection_info)
         self.addWidget(self.lbl_serial_number)
-        self.addWidget(self.lbl_scan_rate)
+        self.addWidget(self.lbl_log, 1)
 
         # addPermanentWidget: 오른쪽 끝에 배치됩니다. (프로그레스바 등에 적합)
         self.addPermanentWidget(self.progress_bar)
@@ -51,6 +52,7 @@ class ParamSettingStatusBar(QStatusBar):
             self.sn_param.sig_value_changed.connect(self.handle_sn_changed)
 
         self.__design()
+        self.handle_sn_changed()
 
     def __design(self):
         self.setStyleSheet("""
@@ -91,11 +93,11 @@ class ParamSettingStatusBar(QStatusBar):
     def handle_sn_changed(self):
         self.lbl_serial_number.setText(f"S/N: {self.sn_param.str_value}")
 
-    def set_scan_rate(self, ms: int):
-        if ms < 0:
-            self.lbl_scan_rate.setText(f"scan-rate: -")
-        else:
-            self.lbl_scan_rate.setText(f"scan-rate: {ms}ms")
+    #def set_scan_rate(self, ms: int):
+    #    if ms < 0:
+    #        self.lbl_scan_rate.setText(f"scan-rate: -")
+    #    else:
+    #        self.lbl_scan_rate.setText(f"scan-rate: {ms}ms")
 
     def set_progress(self, value: int):
         if value > 0 and value < 100:

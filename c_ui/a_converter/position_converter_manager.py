@@ -39,9 +39,9 @@ class PosiConverterManager(QObject):
         self.posi_max  = 100.0
         self.posi_decimal_places = 2
 
-        self.posi_unit_param = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Position.Position Unit"         )
-        self.posi_min_param  = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Position.Value Closest Position")
-        self.posi_max_param  = ParamManager().get_by_full_path("RS232/RS485 User interface.Scaling.Position.Value Open Position"   )     
+        self.posi_unit_param = ParamManager().get_by_full_path("Interface RS232/RS485.Scaling.Position.Position Unit"         )
+        self.posi_min_param  = ParamManager().get_by_full_path("Interface RS232/RS485.Scaling.Position.Value Closest Position")
+        self.posi_max_param  = ParamManager().get_by_full_path("Interface RS232/RS485.Scaling.Position.Value Open Position"   )     
         
         self.posi_unit_param.sig_value_changed.connect(self.handle_posi_range_changed)
         self.posi_min_param.sig_value_changed.connect(self.handle_posi_range_changed)

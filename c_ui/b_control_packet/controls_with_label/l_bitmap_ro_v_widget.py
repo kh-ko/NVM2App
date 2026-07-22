@@ -10,8 +10,6 @@ from c_ui.b_control_packet.controls_with_label.l_base_v_ro_widget import LBaseVe
 from c_ui.b_control_packet.controls.my_value_label_check import MyValueLabelCheck
 
 class LBitmapReadOnlyVerticalWidget(LBaseVerticalReadOnlyWidget):    
-    sig_value_changed = Signal()
-
     def __init__(self, enum_class : Type[DescriptionEnum], label_text="", parent=None):
         super().__init__(label_text=label_text, enable_wrap_border=True, parent=parent) 
         self.set_color(my_style.STYLE_BORDER_COLOR, my_style.STYLE_BORDER_COLOR)
@@ -34,6 +32,8 @@ class LBitmapReadOnlyVerticalWidget(LBaseVerticalReadOnlyWidget):
         for label, item_value in self.item_list:
             is_set = (bitmap & (1 << item_value)) != 0
             label.set_value(is_set)
+
+        self.sig_value_changed.emit()
 
     def set_support(self, support : bool):
         for label, item_value in self.item_list:

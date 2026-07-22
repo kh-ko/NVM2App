@@ -35,6 +35,10 @@ class LFloatReadWriteWidget(LBaseReadWriteWidget):
     def set_value(self, value : float):
         self.value_widget.set_value(value)
 
+    def set_force_ori_value(self, value : float):
+        self.original_value = value
+        self._on_input_changed()
+
     def get_value(self) -> float:
         return self.value_widget.get_value()
 

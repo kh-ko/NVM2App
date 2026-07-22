@@ -17,6 +17,14 @@ class MyValueInputEnum(BaseComboBox):
 
         self.set_value(None)
 
+    def set_enum_class(self, enum_class : Type[DescriptionEnum]):
+        self.clear()
+
+        for item in enum_class:
+            self.addItem(item.description, item.value)
+
+        self.set_value(None)
+
     def set_value(self, value:int):
         try:
             self.setCurrentIndex(self.findData(value, role = Qt.UserRole, flags = Qt.MatchExactly))

@@ -1,3 +1,5 @@
+from c_ui.b_control_packet.controls.my_consolelist import MyConsoleList
+from b_core.b_datatype.general_enum import LogType
 import os
 import shutil
 from datetime import datetime
@@ -11,39 +13,6 @@ from b_core.d_dal.service_port import ServicePort
 
 from c_ui.b_control_packet.param_container.param_setting_win import ParamSettingWin
 from c_ui.b_control_packet.controls.my_lamptoolbutton import MyLampToolButton
-
-class TraceModel(QAbstractListModel):
-    def __init__(self, max_rows=1000, parent=None):
-        super().__init__(parent)
-        self._logs = []
-        self._max_rows = max_rows
-
-    def rowCount(self, parent=None):
-        return len(self._logs)
-
-    def data(self, index, role=Qt.DisplayRole):
-        if index.isValid() and role == Qt.DisplayRole:
-            return self._logs[index.row()]
-        return None
-
-    def add_log(self, log_str):
-        if len(self._logs) >= self._max_rows:
-            chunk_size = self._max_rows // 10  
-            self.beginRemoveRows(self.index(0).parent(), 0, chunk_size - 1)
-            del self._logs[:chunk_size]
-            self.endRemoveRows()
-
-        self.beginInsertRows(self.index(0).parent(), self.rowCount(), self.rowCount())
-        self._logs.append(log_str)
-        self.endInsertRows()
-
-    def clear(self):
-        self.beginResetModel()
-        self._logs = []
-        self.endResetModel()
-
-    def get_all_text(self):
-        return "\n".join(self._logs)
         
 class IfaceTraceWin(ParamSettingWin):
     def __init__(self, parent=None):
@@ -57,10 +26,7 @@ class IfaceTraceWin(ParamSettingWin):
         self.mode = "STOP"
         self.is_pause = False
 
-        self.trace_model = TraceModel(max_rows=1000)
-        self.log_list_widget = QListView(self)
-        self.log_list_widget.setModel(self.trace_model)
-        self.log_list_widget.setWordWrap(True)
+        self.log_list_widget = MyConsoleList(parent=self)
         self.content_layout.addWidget(self.log_list_widget)
 
         self.init_toolbar()        
@@ -122,11 +88,11 @@ class IfaceTraceWin(ParamSettingWin):
                         os.remove(self.temp_record_path)
 
     def on_clicked_copy_to_clipboard(self):
-        content = self.trace_model.get_all_text()
+        content = self.log_list_widget.get_all_text()
         QApplication.clipboard().setText(content)
 
     def on_clicked_clear(self):
-        self.trace_model.clear()
+        self.log_list_widget.clear()
 
     def on_clicked_start(self):
         if self.mode == "TRACING":
@@ -171,7 +137,7 @@ class IfaceTraceWin(ParamSettingWin):
 
         if traces:
             for t in traces:
-                self.trace_model.add_log(t)
+                self.log_list_widget.add_log(LogType.INFO, t)
 
                 if self.is_record_file and self.temp_record_file:
                     self.temp_record_file.write(t + "\n")

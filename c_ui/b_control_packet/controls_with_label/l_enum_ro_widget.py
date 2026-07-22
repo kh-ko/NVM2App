@@ -8,11 +8,17 @@ class LEnumReadOnlyWidget(LBaseReadOnlyWidget):
     def __init__(self, enum_class : Type[DescriptionEnum],label_text="", label_width=150, parent=None):
         super().__init__(label_text = label_text, label_width=label_width, parent=parent)
 
+        self._value : int | None = None
         self.value_widget = MyValueLabelEnum(enum_class = enum_class)
         self.add_widget(self.value_widget)
 
     def set_value(self, value : int):
         self.value_widget.set_value(value)
+        self._value = value
+        self.sig_value_changed.emit()
+
+    def get_value(self) -> int | None:
+        return self._value
 
         
 
