@@ -5,7 +5,7 @@ from c_ui.b_control_packet.param_container.param_folder_posi_ctrl_basic_widget i
 class PosiCtrlSettingWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Position Control >> Setting")
+        self.setWindowTitle("Position Control >> Settings")
         
         self.add_param_folder_widget(ParamFolderPosiCtrlBasicWidget())
         self.add_param_folder_widget(ParamFolderPosiCtrlRampWidget())

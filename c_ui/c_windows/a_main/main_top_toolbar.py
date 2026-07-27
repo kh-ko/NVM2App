@@ -106,8 +106,8 @@ class MainTopToolBar(BaseToolBar):
 
         self.sens_menu = QMenu(self.sens_btn)
 
-        self.action_sens_zero    = QAction("Zero"    , self)
-        self.action_sens_setting = QAction("Settings" , self)
+        self.action_sens_zero    = QAction("Zero Adjust", self)
+        self.action_sens_setting = QAction("Settings"   , self)
 
         self.sens_menu.addAction(self.action_sens_zero    )
         self.sens_menu.addAction(self.action_sens_setting )
@@ -154,7 +154,7 @@ class MainTopToolBar(BaseToolBar):
 
         self.learn_menu = QMenu(self.learn_btn)
 
-        self.action_learn = QAction("Learn Excute", self)
+        self.action_learn = QAction("Learn Execute", self)
         self.action_learn_bank1_setting = QAction("Learn Bank 1 Settings", self)
         self.action_learn_bank2_setting = QAction("Learn Bank 2 Settings", self)
         self.action_learn_bank3_setting = QAction("Learn Bank 3 Settings", self)
@@ -173,7 +173,7 @@ class MainTopToolBar(BaseToolBar):
 
         # PFO
         self.pfo_btn = QToolButton(self)
-        self.pfo_btn.setText("PFO")
+        self.pfo_btn.setText("Power Fail Options")
         self.pfo_btn.setProperty("menuBtn", "true") # 커스텀 CSS(마우스 오버 등) 적용
         self.pfo_btn.setPopupMode(QToolButton.InstantPopup) # 클릭 시 즉시 메뉴 펼침
 
@@ -252,7 +252,7 @@ class MainTopToolBar(BaseToolBar):
 
         self.action_advenced_backup    = QAction("Backup", self)
         self.action_advenced_restore   = QAction("Restore", self)
-        self.action_advenced_lagacy    = QAction("Lagacy Parameter Settings", self)
+        self.action_advenced_lagacy    = QAction("Legacy Parameter Settings", self)
 
         self.advenced_menu.addAction(self.action_advenced_backup)
         self.advenced_menu.addAction(self.action_advenced_restore)

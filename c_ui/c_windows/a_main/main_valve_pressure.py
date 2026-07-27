@@ -20,7 +20,7 @@ from c_ui.b_control_packet.controls_with_label.l_enum_rw_v_widget import LEnumRe
 class MainValvePressure(MyCardWidget):
     sig_btn_clicked = Signal(str)
     def __init__(self, parent=None): # title의 기본값을 빈 문자열로 설정
-        super().__init__(title = "Control", is_big_title=True, parent=parent)
+        super().__init__(title = "Pressure", is_big_title=True, parent=parent)
 
         self.converter = PresConverterManager()  
         self.local_manager = LocalSettingManager()

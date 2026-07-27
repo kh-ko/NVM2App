@@ -9,7 +9,7 @@ from c_ui.b_control_packet.param_container.param_folder_pres_ctrl_ramp_widget im
 class PresCtrlGenSettingWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Pressure Control >> General Setting")
+        self.setWindowTitle("Pressure Control >> General Settings")
         self.resize(850, 450)
 
         columns_layout = QHBoxLayout()

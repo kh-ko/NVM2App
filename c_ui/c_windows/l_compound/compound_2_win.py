@@ -5,7 +5,7 @@ from c_ui.b_control_packet.param_container.param_folder_compound_widget import P
 class Compound02Win(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Compound >> Compound 2")
+        self.setWindowTitle("Compound >> Compound 2 Settings")
         
         self.add_param_folder_widget(ParamFolderCompoundWidget(2))
 

@@ -12,7 +12,7 @@ class IfacePwrIoWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.resize(800, 450)
-        self.setWindowTitle("Interface >> Power Connector IO")
+        self.setWindowTitle("Interface >> Power Connector IO Settings")
 
         self.add_param_folder_widget(ParamFolderPwrIoWidget())
 

@@ -21,7 +21,7 @@ from c_ui.b_control_packet.param_container.param_folder_pfo_widget import ParamF
 class AdvencedLegacyWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Advenced >> Legacy Parameter")
+        self.setWindowTitle("Advenced Setup >> Legacy Parameter Settings")
         
         self.add_param_folder_widget(ParamFolderLegacyHwTorqueWidget())
         self.add_param_folder_widget(ParamFolderLegacyHwEncoderWidget())

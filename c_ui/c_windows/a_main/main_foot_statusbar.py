@@ -1,3 +1,4 @@
+from c_ui.b_control_packet.base import my_style
 from PySide6.QtWidgets import QStatusBar, QProgressBar, QSizePolicy
 
 from b_core.c_manager.parameter_manager import ParamManager
@@ -54,20 +55,28 @@ class MainFootStatusBar(QStatusBar):
             self.sn_param.sig_value_changed.connect(self.handle_sn_changed)
 
         self.__design()
+        self.set_connection_info(None)
 
     def __design(self):
-        self.setStyleSheet("""
-            QStatusBar { 
+        self.setStyleSheet(f"""
+            QStatusBar {{ 
                 border: none; 
                 /* 스타일시트 내부 패딩도 좌우 여백 확보 */
                 padding-left: 10px; 
                 padding-right: 10px; 
-            }
-            QStatusBar::item { 
+            }}
+            QStatusBar[is_connected="true"] {{
+                background-color: {my_style.STYLE_CONNECT_BG_COLOR}; /* 연한 녹색 */
+            }}
+            /* 미연결 상태(disconnected)일 때 배경색 */
+            QStatusBar[is_connected="false"] {{
+                background-color: {my_style.STYLE_DISCONNECT_BG_COLOR}; /* 연한 빨간색 */
+            }}
+            QStatusBar::item {{
                 border: none; 
                 padding: 0px; 
                 margin: 0px; 
-            }
+            }}
         """)
 
         self.progress_bar.setStyleSheet("""
@@ -85,10 +94,17 @@ class MainFootStatusBar(QStatusBar):
             }
         """)
 
+    def set_status_state(self, is_connect: bool):
+        self.setProperty("is_connected", is_connect)
+        self.style().unpolish(self)
+        self.style().polish(self)
+
     def set_connection_info(self, message: str):
         if not message:
+            self.set_status_state(False)
             self.lbl_connection_info.setText("Disconnected")
         else:
+            self.set_status_state(True)
             self.lbl_connection_info.setText(f"{message}")
 
     def handle_sn_changed(self):

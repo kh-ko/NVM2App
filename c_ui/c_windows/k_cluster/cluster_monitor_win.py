@@ -18,7 +18,7 @@ class ClusterMonitorWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.resize(900, 650)
-        self.setWindowTitle("Cluster >> Monitor")
+        self.setWindowTitle("Cluster >> Cluster Monitor")
 
         old_central = self.takeCentralWidget()
         if old_central:

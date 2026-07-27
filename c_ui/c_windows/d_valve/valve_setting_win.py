@@ -7,7 +7,7 @@ from c_ui.b_control_packet.param_container.param_folder_valve_adap_widget import
 class ValveSettingWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Valve >> Setting")
+        self.setWindowTitle("Valve >> Settings")
         
         self.add_param_folder_widget(ParamFolderValveAirCmpWidget())
         self.add_param_folder_widget(ParamFolderValveHomingWidget())

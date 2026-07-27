@@ -13,7 +13,7 @@ from c_ui.b_control_packet.controls.my_consolelist import MyConsoleList
 class AdvencedRestoreWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Advenced >> Restore")
+        self.setWindowTitle("Advenced Setup >> Restore")
 
         self.restore_contents = []
 

@@ -22,7 +22,7 @@ class SensorSettingWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.resize(800, 450)
-        self.setWindowTitle("Sensor >> Setting")
+        self.setWindowTitle("Sensor >> Settings")
 
         columns_layout = QHBoxLayout()
         columns_layout.setSpacing(5)

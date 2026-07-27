@@ -6,7 +6,7 @@ from c_ui.b_control_packet.param_container.param_folder_pres_ctrl_controller_wid
 class PresCtrlControllerSettingWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Pressure Control >> Controller Setting")
+        self.setWindowTitle("Pressure Control >> Controller Settings")
         self.resize(850, 450)
 
         self.flow_layout = MyFlowLayout()

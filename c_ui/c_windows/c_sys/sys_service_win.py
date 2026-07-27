@@ -7,7 +7,7 @@ from c_ui.b_control_packet.param_container.param_folder_sys_svc_widget import Pa
 class SysServiceWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("System >> Servcie")
+        self.setWindowTitle("System >> Service")
         
         self.add_param_folder_widget(ParamFolderSysSvcWidget())
 

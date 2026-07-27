@@ -62,7 +62,11 @@ class ParamFolderPresCtrlRampWidget(ParamFolderWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         header.setSectionResizeMode(2, QHeaderView.Stretch)
-        self.seg_table.resizeRowsToContents()
+
+        v_header = self.seg_table.verticalHeader()
+        v_header.setSectionResizeMode(QHeaderView.Stretch)
+
+        #self.seg_table.resizeRowsToContents()
         self.seg_table.setShowGrid(False)
         self.seg_table.setFixedHeight(300)
 

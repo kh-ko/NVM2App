@@ -261,9 +261,9 @@ class MainChart(QWidget):
         
         self.pres_chart_range_mode = self.local_setting_manager.pres_chart_range_mode
 
-        if self.posi_chart_range_mode == 0:  # Auto
-            min_val, max_val = self._cal_posi_value_range()
-            self.plot_widget.setYRange(min_val, max_val, padding=0)
+        if self.pres_chart_range_mode == 0:  # Auto
+            min_val, max_val = self._cal_pres_value_range()
+            self.view_pres.setYRange(min_val, max_val, padding=0)
         if self.pres_chart_range_mode == 1:  # Full
             min_val = 0.0
             max_val = self.pres_converter.get_dp_max_pres()
@@ -273,7 +273,6 @@ class MainChart(QWidget):
             
             self.view_pres.setYRange(min_val, max_val, padding=0)
         elif self.pres_chart_range_mode == 2: # Custom
-            min_val, max_val = self._cal_pres_value_range()
             self.view_pres.setYRange(self.local_setting_manager.pres_chart_range_custom_min, self.local_setting_manager.pres_chart_range_custom_max, padding=0)
 
     def _update_xaxis_bounds(self):
@@ -341,6 +340,8 @@ class MainChart(QWidget):
         self.curve_target_posi.setData(valid_ts, self.target_posis[:self.ptr])
         self.curve_act_pres.setData(valid_ts, self.act_press[:self.ptr])
         self.curve_target_pres.setData(valid_ts, self.target_press[:self.ptr])
+
+        self.view_pres.update()
             
         if self.posi_chart_range_mode == 0: # Auto
             min_posi, max_posi = self._cal_posi_value_range()
@@ -350,11 +351,22 @@ class MainChart(QWidget):
             min_pres, max_pres = self._cal_pres_value_range()
             self.view_pres.setYRange(min_pres, max_pres, padding=0)
 
-    def _cal_posi_value_range(self) -> tuple[float, float]:
-        slice_idx = int(self.ptr * 2 / 3)
+    def _get_visible_slice_idx(self, ratio_from_end: float = 2/3) -> int:
+        if self.ptr < 1:
+            return 0
 
+        view_start_idx = np.searchsorted(self.timestamps[:self.ptr], self.current_x_min)
+        view_count = self.ptr - view_start_idx
+        if view_count <= 0:
+            return int(self.ptr * (1 - ratio_from_end))
+
+        return view_start_idx + int(view_count * (1 - ratio_from_end))
+
+    def _cal_posi_value_range(self) -> tuple[float, float]:
         if self.ptr < 1:
             return 0.0, 100.0
+
+        slice_idx = self._get_visible_slice_idx(2/3)
 
         if self.curve_act_posi.isVisible() and self.curve_target_posi.isVisible():
             recent_ap = self.act_posis[slice_idx:self.ptr]
@@ -377,10 +389,10 @@ class MainChart(QWidget):
         return min_posi - margin_posi, max_posi + margin_posi
 
     def _cal_pres_value_range(self) -> tuple[float, float]:
-        slice_idx = int(self.ptr * 2 / 3)
-
         if self.ptr < 1:
             return 0.0, 100.0
+            
+        slice_idx = self._get_visible_slice_idx(2/3)
 
         if self.curve_act_pres.isVisible() and self.curve_target_pres.isVisible():
             recent_apr = self.act_press[slice_idx:self.ptr]

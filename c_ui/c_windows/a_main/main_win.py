@@ -436,8 +436,7 @@ class MainWin(QMainWindow):
     def handle_changed_connection_info(self, info: str):
         if info:
             self.compounds_worker.refresh()
-            if self.pre_ctrl_mode != p_enum.ControlModeEnum.INIT.value:
-                self.param_worker.refresh()
+            self.param_worker.refresh()
         else:
             pass
 

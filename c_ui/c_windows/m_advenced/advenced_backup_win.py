@@ -20,7 +20,7 @@ from c_ui.b_control_packet.param_container.param_setting_win import ParamSetting
 class AdvencedBackupWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Advenced >> Backup")
+        self.setWindowTitle("Advenced Setup>> Backup")
         self.backup_params = []
         self.backup_contents = []
         self.is_firmware_update_backup = False

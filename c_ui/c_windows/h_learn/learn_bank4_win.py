@@ -5,7 +5,7 @@ from c_ui.b_control_packet.param_container.param_folder_learn_bank_data_widget i
 class LearnBank4Win(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Learn >> Bank 4")
+        self.setWindowTitle("Learn >> Learn Bank 4 Settings")
         
         self.add_param_folder_widget(ParamFolderLearnBankWidget(bank_num = 4))
         self.add_param_folder_widget(ParamFolderLearnBankDataWidget(bank_num = 4))

@@ -24,6 +24,8 @@ class LBaseVerticalWidget(BaseGroupBox):
         self.title_layout.addWidget(self.dirty_label,1)   
         self.title_layout.addStretch()
 
+        self.enable_conditions = []
+
     def add_widget(self, widget):
         self.layout.addWidget(widget)
 
@@ -33,5 +35,18 @@ class LBaseVerticalWidget(BaseGroupBox):
     def set_support(self, support : bool):
         if self.value_widget is not None:
             self.value_widget.set_support(support)
+
+    def reg_enable_condition(self, ref_widget, conditions):
+        self.enable_conditions.append((ref_widget, conditions))
+        ref_widget.sig_value_changed.connect(self.on_enable_condition_changed)
+        self.on_enable_condition_changed()
+
+    def on_enable_condition_changed(self):
+        for ref_widget, conditions in self.enable_conditions:
+            if ref_widget.get_value() not in conditions:
+                self.setEnabled(False)
+                self.restore()
+                return
+        self.setEnabled(True)
 
     

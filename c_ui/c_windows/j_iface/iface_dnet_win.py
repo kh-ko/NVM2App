@@ -29,7 +29,7 @@ class IfaceDnetWin(ParamSettingWin):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.resize(900, 450)
-        self.setWindowTitle("Interface >> DeviceNet")
+        self.setWindowTitle("Interface >> DeviceNet Settings")
 
         self.add_param_folder_widget(ParamFolderIfaceDnetBasicWidget())
         self.add_param_folder_widget(ParamFolderIfaceDnetConnLossWidget())
@@ -80,17 +80,17 @@ class IfaceDnetWin(ParamSettingWin):
         try:
             with open(path_def.RSRC_TEMPLATE_EDS_FILE, 'r', encoding='utf-8') as f:
                 eds_template = f.read()
-                vendor_id_param      = ParamManager().get_by_full_path("DeviceNet User Interface.Identity Object.Instance.Vendor ID"                   )
-                device_type_param    = ParamManager().get_by_full_path("DeviceNet User Interface.Identity Object.Instance.Device Type"                 )
-                product_code_param   = ParamManager().get_by_full_path("DeviceNet User Interface.Identity Object.Instance.Product Code"                )
-                product_name_param   = ParamManager().get_by_full_path("DeviceNet User Interface.Identity Object.Instance.Product Name"                )
-                revision_param       = ParamManager().get_by_full_path("DeviceNet User Interface.Identity Object.Instance.Revision"                    )
-                profile_param        = ParamManager().get_by_full_path("DeviceNet User Interface.Connection Object.Profile.Profile"                    )
-                data_type_param      = ParamManager().get_by_full_path("DeviceNet User Interface.Connection Object.Profile.Data type"                  )
-                output_name_param    = ParamManager().get_by_full_path("DeviceNet User Interface.Connection Object.Output.Output Name"                 )
-                input_name_param     = ParamManager().get_by_full_path("DeviceNet User Interface.Connection Object.Input.Input Name"                   )
-                output_sel_old_param = ParamManager().get_by_full_path("DeviceNet User Interface.Connection Object.Output.Output Selector Bitmap (old)")
-                input_sel_old_param  = ParamManager().get_by_full_path("DeviceNet User Interface.Connection Object.Input.Input Selector Bitmap (old)"  )
+                vendor_id_param      = ParamManager().get_by_full_path("Interface DeviceNet.Identity Object.Instance.Vendor ID"                   )
+                device_type_param    = ParamManager().get_by_full_path("Interface DeviceNet.Identity Object.Instance.Device Type"                 )
+                product_code_param   = ParamManager().get_by_full_path("Interface DeviceNet.Identity Object.Instance.Product Code"                )
+                product_name_param   = ParamManager().get_by_full_path("Interface DeviceNet.Identity Object.Instance.Product Name"                )
+                revision_param       = ParamManager().get_by_full_path("Interface DeviceNet.Identity Object.Instance.Revision"                    )
+                profile_param        = ParamManager().get_by_full_path("Interface DeviceNet.Connection Object.Profile.Profile"                    )
+                data_type_param      = ParamManager().get_by_full_path("Interface DeviceNet.Connection Object.Profile.Data type"                  )
+                output_name_param    = ParamManager().get_by_full_path("Interface DeviceNet.Connection Object.Output.Output Name"                 )
+                input_name_param     = ParamManager().get_by_full_path("Interface DeviceNet.Connection Object.Input.Input Name"                   )
+                output_sel_old_param = ParamManager().get_by_full_path("Interface DeviceNet.Connection Object.Output.Output Selector Bitmap (old)")
+                input_sel_old_param  = ParamManager().get_by_full_path("Interface DeviceNet.Connection Object.Input.Input Selector Bitmap (old)"  )
 
                 is_int16_data_type = data_type_param.value == DeviceNetDataTypeEnum.INT16.value
                 slave_count = self.number_of_valves_param.value
