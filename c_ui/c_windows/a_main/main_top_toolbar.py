@@ -194,9 +194,10 @@ class MainTopToolBar(BaseToolBar):
 
         self.iface_menu = QMenu(self.iface_btn)
 
-        self.action_iface_pwr_io = QAction("Power Connector IO Settings", self)
-        self.action_iface_dnet   = QAction("DeviceNet Settings", self)
-        self.action_iface_trace  = QAction("Trace", self)
+        self.action_iface_pwr_io   = QAction("Power Connector IO Settings", self)
+        self.action_iface_dnet     = QAction("DeviceNet Settings", self)
+        self.action_iface_ethercat = QAction("EtherCAT Settings", self)
+        self.action_iface_trace    = QAction("Trace", self)
 
         self.iface_menu.addAction(self.action_iface_pwr_io)
         self.iface_menu.addAction(self.action_iface_trace)
@@ -318,6 +319,8 @@ class MainTopToolBar(BaseToolBar):
 
         if value == SysUserInterfaceEnum.DEVICENET.value or value == SysUserInterfaceEnum.DEVICENET_LEGACY_MKS.value or value == SysUserInterfaceEnum.DEVICENET_APSYSTEM.value or value == SysUserInterfaceEnum.DEVICENET_NORCAL.value:
             self.iface_menu.addAction(self.action_iface_dnet)
+        elif value == SysUserInterfaceEnum.ETHERCAT.value:
+            self.iface_menu.addAction(self.action_iface_ethercat)
 
         self.iface_menu.addAction(self.action_iface_trace)
 
@@ -402,6 +405,9 @@ class MainTopToolBar(BaseToolBar):
 
     def reg_iface_dnet_slot(self, slot):
         self.action_iface_dnet.triggered.connect(slot, Qt.QueuedConnection) 
+
+    def reg_iface_ethercat_slot(self, slot):
+        self.action_iface_ethercat.triggered.connect(slot, Qt.QueuedConnection) 
 
     def reg_iface_trace_slot(self, slot):
         self.action_iface_trace.triggered.connect(slot, Qt.QueuedConnection) 

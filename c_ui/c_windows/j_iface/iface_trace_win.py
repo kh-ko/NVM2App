@@ -1,3 +1,4 @@
+from PySide6.QtCore import Signal
 from c_ui.b_control_packet.controls.my_consolelist import MyConsoleList
 from b_core.b_datatype.general_enum import LogType
 import os
@@ -15,6 +16,9 @@ from c_ui.b_control_packet.param_container.param_setting_win import ParamSetting
 from c_ui.b_control_packet.controls.my_lamptoolbutton import MyLampToolButton
         
 class IfaceTraceWin(ParamSettingWin):
+    sig_clicked_trace_start = Signal()
+    sig_clicked_trace_stop = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Interface >> Trace")
@@ -101,12 +105,10 @@ class IfaceTraceWin(ParamSettingWin):
             self.is_pause = False
             return
 
-        self.trace_param.write_str_value = "1"
-        self.param_worker.write()
+        self.sig_clicked_trace_start.emit()
 
     def on_clicked_stop(self):
-        self.trace_param.write_str_value = "0"
-        self.param_worker.write()
+        self.sig_clicked_trace_stop.emit()
 
     def on_clicked_pause(self):
         if self.mode != "TRACING":
@@ -120,13 +122,13 @@ class IfaceTraceWin(ParamSettingWin):
         if self.trace_param.value == StopStartEnum.STOP.value: 
             self.start_btn.set_accent(False)
             self.pause_btn.set_accent(False)
-            self.service_port.set_trace_mode(False)
+            #self.service_port.set_trace_mode(False)
             self.mode = "STOP"
             self.is_pause = False
         elif self.trace_param.value == StopStartEnum.START.value:  
             self.start_btn.set_accent(True)
             self.pause_btn.set_accent(False)
-            self.service_port.set_trace_mode(True)
+            #self.service_port.set_trace_mode(True)
             self.mode = "TRACING"
 
     def handle_trace_data(self):        
@@ -148,7 +150,7 @@ class IfaceTraceWin(ParamSettingWin):
 
     def closeEvent(self, event: QCloseEvent):
         super().closeEvent(event)
-        #self.on_clicked_stop()
+        self.on_clicked_stop()
         if self.is_record_file and self.temp_record_file:
             self.temp_record_file.close()
             if hasattr(self, 'temp_record_path') and os.path.exists(self.temp_record_path):

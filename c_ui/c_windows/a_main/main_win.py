@@ -1,3 +1,5 @@
+from c_ui.c_windows.j_iface.iface_ethercat_win import IfaceEtherCATWin
+from b_core.b_datatype.param_enum import StopStartEnum
 import time
 
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QMessageBox, QHBoxLayout
@@ -141,6 +143,7 @@ class MainWin(QMainWindow):
         self.main_top_toolbar.reg_pfo_setting_slot(self.on_clicked_pfo_setting)
         self.main_top_toolbar.reg_iface_pwr_io_slot(self.on_clicked_iface_pwr_io)
         self.main_top_toolbar.reg_iface_dnet_slot(self.on_clicked_iface_dnet)
+        self.main_top_toolbar.reg_iface_ethercat_slot(self.on_clicked_iface_ethercat)
         self.main_top_toolbar.reg_iface_trace_slot(self.on_clicked_iface_trace)
         self.main_top_toolbar.reg_cluster_master_setting_slot(self.on_clicked_cluster_master_setting)
         self.main_top_toolbar.reg_cluster_monitor_slot(self.on_clicked_cluster_monitor)
@@ -196,12 +199,12 @@ class MainWin(QMainWindow):
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Upper Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Lower Limit Data Value")
         self.param_worker.add_init_param("Sensor.Sensor 2.Range.Voltage Per Decade [V]")
-        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Pressure.Pressure Unit")
-        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Pressure.Value Pressure Min")
-        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Pressure.Value Pressure Sensor Full Scale")
-        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Position.Position Unit")
-        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Position.Value Open Position")
-        self.param_worker.add_init_param("Interface RS232/RS485.Scaling.Position.Value Closest Position")
+        self.param_worker.add_init_param("Interface.Scaling.Pressure.Pressure Unit")
+        self.param_worker.add_init_param("Interface.Scaling.Pressure.Value Pressure Min")
+        self.param_worker.add_init_param("Interface.Scaling.Pressure.Value Pressure Sensor Full Scale")
+        self.param_worker.add_init_param("Interface.Scaling.Position.Position Unit")
+        self.param_worker.add_init_param("Interface.Scaling.Position.Value Open Position")
+        self.param_worker.add_init_param("Interface.Scaling.Position.Value Closest Position")
 
         self.pre_ctrl_mode = p_enum.ControlModeEnum.INIT.value
 
@@ -227,6 +230,10 @@ class MainWin(QMainWindow):
 
         self.posi_target_param = self.param_worker.add_write_param("Position Control.Basic.Target.Target Position")    
         self.pres_target_param = self.param_worker.add_write_param("Pressure Control.Basic.Target.Target Pressure")
+
+        self.trace_param = self.param_worker.add_write_param("User interface.Trace")
+        self.trace_param.sig_value_changed.connect(self.handle_trace_param_changed)        
+        self.handle_trace_param_changed()        
 
     def on_clicked_local_btn(self):
         self.acc_mode_param.write_str_value = f"{p_enum.AccModeEnum.LOCAL.value}"
@@ -316,8 +323,14 @@ class MainWin(QMainWindow):
     def on_clicked_iface_dnet(self):
         WinManager().show_param_window(win_class=IfaceDnetWin, parent=self, is_modal=False)
 
+    def on_clicked_iface_ethercat(self):
+        WinManager().show_param_window(win_class=IfaceEtherCATWin, parent=self, is_modal=False)
+
     def on_clicked_iface_trace(self):
-        WinManager().show_param_window(win_class=IfaceTraceWin, parent=self, is_modal=False)
+        win = WinManager().show_param_window(win_class=IfaceTraceWin, parent=self, is_modal=False)
+        win.sig_clicked_trace_start.connect(self.on_clicked_trace_start)
+        win.sig_clicked_trace_stop.connect(self.on_clicked_trace_stop)
+        return win
 
     def on_clicked_cluster_master_setting(self):
         WinManager().show_param_window(win_class=ClusterMasterWin, parent=self, is_modal=False)
@@ -389,6 +402,14 @@ class MainWin(QMainWindow):
     def on_clicked_help_about(self):
         #WinManager().show_param_window(win_class=HelpAboutWin, parent=self, is_modal=False)
         pass
+
+    def on_clicked_trace_start(self):
+        self.trace_param.write_str_value = "1"
+        self.param_worker.write()
+
+    def on_clicked_trace_stop(self):
+        self.trace_param.write_str_value = "0"
+        self.param_worker.write()
 
     def on_clicked_open_btn(self):
         self.ctrl_mode_param.write_str_value = f"{p_enum.ControlModeEnum.OPEN.value}"
@@ -496,3 +517,11 @@ class MainWin(QMainWindow):
             return
         
         self.main_top_toolbar.set_iface(self.user_iface_param.value)
+
+    def handle_trace_param_changed(self):
+        if self.trace_param.value == StopStartEnum.START.value:  
+            ServicePort().set_trace_mode(True)
+        else:
+            ServicePort().set_trace_mode(False)
+
+        

@@ -738,6 +738,22 @@ class DeviceNetLossFunEnum(DescriptionEnum):
     CLOSE = (1, "Close")
     KEEP_POSITION = (2, "Keep Position")    
 
+class EtherCATStateEnum(DescriptionEnum):
+    ERROR        = (0, "Error")
+    INIT         = (1, "Init")
+    PRE_OP       = (2, "Pre-Op")
+    BOOTSTRAP    = (3, "Bootstrap")
+    SAFE_OP      = (4, "Safe-Op")
+    OP           = (8, "OP")
+
+class EtherCATXmlVerEnum(DescriptionEnum):
+    VER_1        = (0, "V1")
+    VER_2        = (1, "V2")    
+
+class EtherCATDataTypeEnum(DescriptionEnum):
+    INT     = (0, "INT32")
+    FLOAT   = (1, "FLOAT32")
+
 class SlaveLossFunEnum(DescriptionEnum):
     CLOSE = (0, "Close")
     OPEN = (1, "Open")

@@ -54,7 +54,7 @@ class AdvencedBackupWin(ParamSettingWin):
         for param in params:
             if param.is_fu_backup:
                 if param.path.startswith("Interface"):
-                    if param.path.startswith("Interface RS232/RS485.Scaling"):
+                    if param.path.startswith("Interface.Scaling"):
                         self.backup_params.append(param)
                     elif (user_iface_param.value == SysUserInterfaceEnum.DEVICENET.value or user_iface_param.value == SysUserInterfaceEnum.DEVICENET_LEGACY_MKS.value or user_iface_param.value == SysUserInterfaceEnum.DEVICENET_APSYSTEM.value or user_iface_param.value == SysUserInterfaceEnum.DEVICENET_NORCAL.value) and param.path.startswith("Interface DeviceNet"):
                         self.backup_params.append(param)

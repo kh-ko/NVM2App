@@ -8,7 +8,7 @@ class BaseComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         self.set_color(my_style.STYLE_LABEL_COLOR, my_style.STYLE_BORDER_COLOR)
 
     def set_color(self, label_color: str, border_color: str):

@@ -180,10 +180,10 @@ class IfaceDnetWin(ParamSettingWin):
                 with open(file_path, 'w', encoding='utf-8') as f_out:
                     f_out.write(eds_content)
             
-                QMessageBox.information(self, "Success", "EDS 파일이 성공적으로 생성되었습니다.")
+                QMessageBox.information(self, "Success", "EDS file has been created successfully.")
         except Exception as e:
             print(f"[IfaceDnetWin] EDS 파일 생성 중 오류 발생: {e}") 
-            QMessageBox.critical(self, "Error", f"EDS 파일 생성에 실패하였습니다.\n에러내용: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to create EDS file.\nError details: {e}")
 
     def parse_names(self, p_names_obj):
         total_length = 0
