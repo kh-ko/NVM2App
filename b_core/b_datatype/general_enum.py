@@ -157,16 +157,16 @@ class ConnectionDataBitsEnum(DescriptionEnum):
     DATABITS_8      = (8, "8")          
 
 class ConnectionParityEnum(DescriptionEnum):
-    NoParity        = (0, "NoParity"   )
-    EvenParity      = (2, "EvenParity" )
-    OddParity       = (3, "OddParity"  )
-    SpaceParity     = (4, "SpaceParity")
-    MarkParity      = (5, "MarkParity" )
+    NO_PARITY       = (0, "NoParity"   )
+    EVEN_PARITY     = (2, "EvenParity" )
+    ODD_PARITY      = (3, "OddParity"  )
+    SPACE_PARITY    = (4, "SpaceParity")
+    MARK_PARITY     = (5, "MarkParity" )
 
 class ConnectionStopBitsEnum(DescriptionEnum):
-    OneStop         = (1, "OneStop"       )
-    TwoStop         = (2, "TwoStop"       )
-    OneAndHalfStop  = (3, "OneAndHalfStop")
+    ONE_STOP          = (1, "OneStop"       )
+    TWO_STOP          = (2, "TwoStop"       )
+    ONE_AND_HALF_STOP = (3, "OneAndHalfStop")
 
 class ConnectionTerminationEnum(DescriptionEnum):
     CR_LF           = (0, "CR_LF")
@@ -180,9 +180,11 @@ class DecimalPlacesEnum(DescriptionEnum):
     DECIAML_PLACES_3 = (3, "3")
     DECIAML_PLACES_4 = (4, "4")
     DECIAML_PLACES_5 = (5, "5")
-    DECIAML_PLACES_6 = (6, "6")    
+    DECIAML_PLACES_6 = (6, "6")
 
 class PositionUnitEnum(DescriptionEnum):
     POSI_UNIT_PERCENT = (0, "Percent(%)")     
 
-    
+class EtherCATRangeSettingOptEnum(DescriptionEnum):
+    BASIC         = (0, "Basic")  
+    ADVENCED      = (1, "Advanced")

@@ -18,7 +18,10 @@ class ParamFolderIfaceEtherCATAllDataTypeWidget(ParamFolderWidget):
         self.datatype_components = range_folder_widget.datatype_components
 
         for comp in self.datatype_components:
-            comp.sig_value_changed.connect(self.handle_changed_datatype)
+            comp.param.sig_value_changed.connect(self.handle_changed_datatype)
+
+    def reload_datatype(self):
+        self.handle_changed_datatype()
 
     def on_changed_all_datatype(self, value = None):
         if value is not None:
@@ -30,28 +33,20 @@ class ParamFolderIfaceEtherCATAllDataTypeWidget(ParamFolderWidget):
             comp.blockSignals(False)
 
     def handle_changed_datatype(self):
-        print("[all data type]handle_changed_datatype()")
-
-        is_dirty = False
-        pre_value = self.datatype_components[0].get_value()
-
-        self.all_datatype_comp.set_value(None)
-        self.all_datatype_comp.commit()
+        is_unknown = False
+        first_value = self.datatype_components[0].param.value
 
         for comp in self.datatype_components:
-            curr_value = comp.get_value()
-            if pre_value != curr_value:
-                return
-            else:
-                if curr_value != comp.param.value:
-                    is_dirty = True
-                    print(f"curr_value = {curr_value}, param value = {comp.param.value}")
-                pre_value = curr_value
+            if first_value != comp.param.value:
+                is_unknown = True
+                break
+                
+        if is_unknown:
+            self.all_datatype_comp.set_value(None)
+        else:
+            self.all_datatype_comp.set_value(first_value)
 
-        self.all_datatype_comp.set_value(pre_value)
-
-        if is_dirty == False:
-            self.all_datatype_comp.commit()
+        self.all_datatype_comp.commit()
         
         
 

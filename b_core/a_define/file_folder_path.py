@@ -56,3 +56,6 @@ RSRC_PARAM_SCHEMA_JSON_FILE = os.path.join(RSRC_PARAM_SCHEMA_PATH, "param.json")
 
 RSRC_TEMPLATE_PATH = os.path.join(RSRC_BASE, "templete")
 RSRC_TEMPLATE_EDS_FILE = os.path.join(RSRC_TEMPLATE_PATH, "eds_sample_v2.txt")
+
+RSRC_TEMPLATE_PATH = os.path.join(RSRC_BASE, "templete")
+RSRC_TEMPLATE_ETHERCAT_XML_FILE = os.path.join(RSRC_TEMPLATE_PATH, "ethercat_sample.XML")
