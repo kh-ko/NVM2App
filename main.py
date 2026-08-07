@@ -10,14 +10,18 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon, QFontDatabase, QFont
 
 # 2. 프로젝트 내부 모듈 (정의된 경로 및 메인 윈도우)
+from b_core.a_define import app_info
 from b_core.a_define import file_folder_path as path_def
-from c_ui.c_windows.a_main.main_win import MainWin
+from b_core.c_manager.app_log_manager import AppLogManager
+from c_ui.c_window_ver2.a_main.main_win import MainWin
 
 
 def setup_fonts(app):
     """
     애플리케이션 전역에서 사용할 외부 폰트들을 로드하고 초기 설정을 수행합니다.
     """
+    log = AppLogManager().get_logger("App", is_global=True)
+
     # 1. 일반 텍스트용 D2Coding 폰트 설정
     font_id = QFontDatabase.addApplicationFont(path_def.ASSET_COMMON_FONT_FILE)
     if font_id != -1:
@@ -26,14 +30,14 @@ def setup_fonts(app):
             # 기본 폰트 패밀리 지정 (폰트 크기: 12px)
             custom_font = QFont(font_families[0])
             custom_font.setPixelSize(14)
-            app.setFont(custom_font)        
+            app.setFont(custom_font)
     else:
-        print(f"[경고] 기본 폰트 로드 실패: {path_def.ASSET_COMMON_FONT_FILE}")
+        log.error(f"기본 폰트 로드 실패: {path_def.ASSET_COMMON_FONT_FILE}")
 
     # 2. 아이콘 표시용 Material Icons 폰트 등록
     # UI 요소에서 아이콘 텍스트를 렌더링할 때 필요합니다.
     if QFontDatabase.addApplicationFont(path_def.ASSET_ICON_FONT_FILE) == -1:
-        print(f"[경고] 아이콘 폰트 로드 실패: {path_def.ASSET_ICON_FONT_FILE}")
+        log.error(f"아이콘 폰트 로드 실패: {path_def.ASSET_ICON_FONT_FILE}")
 
 def main():
     """
@@ -42,13 +46,19 @@ def main():
     # [Step 1] Windows 작업 표시줄 전용 아이콘 설정
     # 애플리케이션 ID를 명시적으로 설정하여 파이썬 기본 아이콘과 분리합니다.
     try:
-        myappid = 'company.nvm2app.1.0.0'
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_info.APP_USER_MODEL_ID)
     except Exception:
         pass
 
-    # [Step 2] QApplication 인스턴스 생성
+    # [Step 2] QApplication 인스턴스 생성 및 앱 메타데이터 설정
     app = QApplication(sys.argv)
+    app.setApplicationName(app_info.APP_NAME)
+    app.setApplicationVersion(app_info.APP_VERSION)
+    app.setOrganizationName(app_info.APP_AUTHOR)
+
+    # stderr 후킹 후 시작 로그 — 로그 파일만 봐도 실행 버전을 알 수 있게 한다
+    AppLogManager().install_stderr_hook()
+    AppLogManager().get_logger("App", is_global=True).info(f"===== {app_info.APP_DISPLAY_TITLE} started =====")
 
     # [Step 3] 전역 테마 설정 (qDarkTheme)
     # 애플리케이션 전체에 일관된 밝은 테마(Light Mode)를 적용합니다.

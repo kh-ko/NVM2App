@@ -2,14 +2,6 @@ from enum import Enum, auto
 
 from b_core.b_datatype.param_enum import DescriptionEnum
 
-class LogType(Enum):
-    INFO = auto()
-    ERROR = auto()
-    WARNING = auto()
-    MONITOR = auto()
-    TX = auto()
-    RX = auto()
-
 class ParamAccType(Enum):
     RO = auto()
     RW = auto()

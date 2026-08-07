@@ -1,5 +1,0 @@
-from c_ui.b_control_packet.param_container.param_folder_widget import ParamFolderWidget
-
-class ParamFolderLegacyRs232Rs485Widget(ParamFolderWidget):
-    def __init__(self, parent=None):
-        super().__init__(folder_name="User Interface.RS232/RS485", param_path="Legacy Parameters.Interface RS232/RS485", label_width = 320, parent=parent)

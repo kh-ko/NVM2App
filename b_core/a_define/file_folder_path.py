@@ -26,22 +26,26 @@ ASSET_USB_IMG_FILE = f"{ASSET_IMG}/usb_port.png"
 
 # 배포파일에 폴더 형태로 추가되는 리소스파일 경로
 if getattr(sys, 'frozen', False):
-    # exe 파일로 실행될 때의 디렉토리
+    # exe 파일로 실행될 때: exe 가 있는 디렉토리 (exe 옆에 2_resource 배포)
     EXE_BASE = os.path.dirname(sys.executable)
 else:
-    # 파이썬 스크립트로 실행될 때의 최상위 디렉토리
-    # (주의: 현재 이 경로 관리 파일이 최상단 폴더에 있다고 가정합니다. 
-    # 만약 a_global 같은 하위 폴더에 있다면 os.path.join(..., "..", "..") 등으로 루트를 맞춰주세요)
-    EXE_BASE = os.path.abspath(os.path.dirname(sys.argv[0]))
-    # ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")) # 하위 폴더일 경우 예시
+    # 파이썬 스크립트로 실행될 때: 이 파일(b_core/a_define/) 기준 2단계 상위 = 프로젝트 루트.
+    # sys.argv[0] 기반은 실행 방식(IDE 러너, 다른 CWD, python -m 등)에 따라 틀어지므로
+    # 파일 자신의 위치를 기준으로 계산한다.
+    EXE_BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# 로컬 베이스 폴더
+# 로그 폴더 
+LOG_PATH = os.path.join(EXE_BASE, "3_log")
+
+# 로컬 리소스 베이스 폴더
 RSRC_BASE = os.path.join(EXE_BASE, "2_resource")
 
 RSRC_CONFIG_PATH = os.path.join(RSRC_BASE, "config")
 RSRC_CONNECTIONS_JSON_FILE = os.path.join(RSRC_CONFIG_PATH, "connections.json")
 RSRC_LOCAL_SETTING_JSON_FILE = os.path.join(RSRC_CONFIG_PATH, "local_setting.json")
 RSRC_FTP_SETTING_FILE = os.path.join(RSRC_CONFIG_PATH, "ftp_connection.json")
+
+
 
 RSRC_TEMP_PATH = os.path.join(RSRC_BASE, "temp")
 RSRC_APP_CPU1_NEW_FILE    = os.path.join(RSRC_TEMP_PATH, "fcpuan.dlla")
@@ -54,8 +58,6 @@ RSRC_KERNEL_CPU2_FILE     = os.path.join(RSRC_TEMP_PATH, "fknlcp2.dlla")
 RSRC_PARAM_SCHEMA_PATH = os.path.join(RSRC_BASE, "param_schema")
 RSRC_PARAM_SCHEMA_JSON_FILE = os.path.join(RSRC_PARAM_SCHEMA_PATH, "param.json")
 
-RSRC_TEMPLATE_PATH = os.path.join(RSRC_BASE, "templete")
+RSRC_TEMPLATE_PATH = os.path.join(RSRC_BASE, "template")
 RSRC_TEMPLATE_EDS_FILE = os.path.join(RSRC_TEMPLATE_PATH, "eds_sample_v2.txt")
-
-RSRC_TEMPLATE_PATH = os.path.join(RSRC_BASE, "templete")
 RSRC_TEMPLATE_ETHERCAT_XML_FILE = os.path.join(RSRC_TEMPLATE_PATH, "ethercat_sample.XML")

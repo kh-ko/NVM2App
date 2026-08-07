@@ -23,9 +23,13 @@ Thumbs.db
 # Distribution / packaging
 dist/
 build/
-3_build/
+0_build/
+temp_build/
 *.egg-info/
 .eggs/
+
+# App runtime logs
+3_log/
 
 # Installer logs
 pip-log.txt

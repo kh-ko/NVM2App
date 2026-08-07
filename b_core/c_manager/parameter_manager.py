@@ -8,8 +8,8 @@ from PySide6.QtCore import QFile, QIODevice
 
 from b_core.a_define import file_folder_path as path_def
 from b_core.b_datatype import param_enum as p_enum
-from b_core.b_datatype.general_enum import LogType, ParamDataType, ParamAccType, ParamDisplayType, PARAM_DISPLAY_TYPE_MAP
-from b_core.c_manager.log_manager import LogManager
+from b_core.b_datatype.general_enum import ParamDataType, ParamAccType, ParamDisplayType, PARAM_DISPLAY_TYPE_MAP
+from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.b_datatype.parameter import Parameter
 
 
@@ -34,15 +34,22 @@ class ParamManager:
         self._init_manager()     
 
     def _init_manager(self):
+        self._log = AppLogManager().get_logger("ParamManager", is_global=True)
         self._param_map: Dict[tuple, Parameter] = {}  # (path, name) 검색용
         self._parameters: List[Parameter] = []         # 전체 리스트 보관용
+
+        # 스키마 파일이 없거나 로드에 실패해도 빈 목록으로 기동한다
+        # (param 을 못 찾는 오류는 이후 get 계열 호출에서 개별 로그로 남음)
+        param_list = []
 
         if os.path.exists(path_def.RSRC_PARAM_SCHEMA_JSON_FILE):
             try:
                 with open(path_def.RSRC_PARAM_SCHEMA_JSON_FILE, 'r', encoding='utf-8') as f:
                     param_list = json.load(f)
             except Exception as e:
-                print(f"[ParamManager] 로드 실패: {e}")
+                self._log.error(f"param schema 로드 실패: {e}")
+        else:
+            self._log.error(f"param schema 파일 없음: {path_def.RSRC_PARAM_SCHEMA_JSON_FILE}")
 
         for param in param_list:
             param_type = param.get("type", "")
@@ -62,13 +69,13 @@ class ParamManager:
         path, name = full_path.rsplit(".", 1)
         ret_param = self._param_map.get((path, name))
         if ret_param is None:
-            LogManager().log(LogType.ERROR, f"[ParameterManager] 파라미터를 찾을 수 없습니다: {full_path}")
+            self._log.error(f"파라미터를 찾을 수 없습니다: {full_path}")
         return ret_param
 
     def get(self, path: str, name: str) -> Optional[Parameter]:
         ret_param = self._param_map.get((path, name))
         if ret_param is None:
-            LogManager().log(LogType.ERROR, f"[ParameterManager] 파라미터를 찾을 수 없습니다: {path}, {name}")
+            self._log.error(f"파라미터를 찾을 수 없습니다: {path}, {name}")
         return ret_param
 
     def get_params_in_folder(self, folder_path: str) -> List[Parameter]:

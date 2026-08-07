@@ -91,40 +91,7 @@ class PosiConverterManager(QObject):
 
         self.sig_posi_range_changed.emit()
 
-    def convert_pfs_to_dp_posi_str(self, value:float):
-        if value is None:
-            return None 
-        
-        if self.posi_unit == -1:
-            return None 
-
-        fmt_spec = f".{self.posi_decimal_places}f"    
-        return format(Decimal(str(value * 100)), fmt_spec)   
-
-    def convert_pfs_to_dp_posi(self, value:float) -> float:
-        if value is None:
-            return None 
-        
-        if self.posi_unit == -1:
-            return None 
-
-        return value * 100
-
-    def convert_dp_posi_str_to_pfs(self, value: str) -> float:
-        try:
-            float_value = float(value)
-        except Exception:
-            return None
-
-        return float_value / 100 
-
-    def convert_dp_posi_to_pfs(self, value: float) -> float:
-        if value is None:
-            return None
-
-        return value / 100 
-
-    def convert_posi_to_display_value(self, ori_value: float) -> float:
+    def convert_posi_to_dp(self, ori_value: float) -> float:
         if ori_value is None:
             return None 
         
@@ -140,16 +107,16 @@ class PosiConverterManager(QObject):
 
             return converted_value
 
-    def convert_posi_to_display_value_str(self, ori_value: float) -> str:
-        converted_value = self.convert_posi_to_display_value(ori_value)
+    def convert_posi_to_dp_str(self, ori_value: float) -> str:
+        converted_value = self.convert_posi_to_dp(ori_value)
 
         if converted_value is None:
             return None
         
         fmt_spec = f".{self.posi_decimal_places}f"
-        return format(Decimal(str(converted_value)), fmt_spec)
+        return format(Decimal(str(converted_value)), fmt_spec)        
 
-    def convert_display_to_posi_value(self, display_value: float) -> float:
+    def convert_dp_to_posi(self, display_value: float) -> float:
         if self.posi_unit == -1 or display_value is None:
             return None
 
@@ -161,7 +128,7 @@ class PosiConverterManager(QObject):
             ori_value = (display_value / 100.0) * range_value + self.posi_min
             return ori_value
 
-    def convert_display_to_posi_value_str(self, display_value: float) -> str:
+    def convert_dp_to_posi_str(self, display_value: float) -> str:
         if self.posi_unit == -1 or display_value is None:
             return None
 
@@ -173,4 +140,3 @@ class PosiConverterManager(QObject):
             result_value = (display_value / 100.0) * range_value + self.posi_min
         
         return self.float_converter.to_str(result_value)
-        

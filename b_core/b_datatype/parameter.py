@@ -4,8 +4,10 @@ from PySide6.QtCore import QObject, Signal
 
 from b_core.b_datatype.general_enum import ParamDisplayType, ParamDataType, ParamAccType, ParamParseErrType, PARAM_DISPLAY_TYPE_MAP
 from b_core.b_datatype import param_enum as p_enum
+from b_core.c_manager.app_log_manager import AppLogManager
 
-from b_core.c_manager.log_manager import LogManager
+# Parameter 인스턴스가 수백 개라 인스턴스별 로거 대신 모듈 로거를 공유한다
+_log = AppLogManager().get_logger("Parameter", is_global=True)
 
 class ParamCondition(QObject):
     def __init__(self, parent:QObject):
@@ -22,6 +24,11 @@ class Parameter(QObject):
     sig_value_changed = Signal()
     sig_is_not_support_changed = Signal()
     sig_is_err_changed = Signal()
+    # 장비 값으로 동기화가 확정되었을 때 발생하는 시그널.
+    # sig_value_changed 와 달리 값이 변하지 않아도 발생한다 — refresh 시퀀스에서
+    # UI 측 dirty 상태를 클리어하기 위한 용도. (write 후 read-back 이나 모니터링에서는
+    # 발생시키지 않는다 — 쓰기 미반영/사용자 편집 중 dirty 는 유지되어야 하므로)
+    sig_synced = Signal()
 
     ERR_CODE_MAP = {
         "0C" : ParamParseErrType.ERR_0C_WRONG_CMD_LEN                                   ,                                  
@@ -299,6 +306,10 @@ class Parameter(QObject):
             # 값이 변경되면 시그널 발생
             self.sig_value_changed.emit()
 
+    def notify_synced(self):
+        # 호출 주체는 워커 — refresh 시퀀스의 읽기 성공 시점에만 호출한다
+        self.sig_synced.emit()
+
     @property
     def is_not_support(self) -> bool:
         return self._is_not_support
@@ -342,8 +353,7 @@ class Parameter(QObject):
                 
             self.is_err = False
         except ValueError:
-            print(f"[Parameter]set_force_value() : 설정 값이 잘못 되었습니다. {self.path}, {self.name}, {new_val}")
-            pass
+            _log.error(f"set_force_value() 설정 값이 잘못 되었습니다: {self.path}, {self.name}, {new_val}")
 
     def set_read_response_packet(self, resp_msg: str) -> tuple[ParamParseErrType | None, bool]:        
         parse_err_type : ParamParseErrType = ParamParseErrType.NONE
@@ -394,7 +404,7 @@ class Parameter(QObject):
                 new_val = resp_msg[offset:offset+data_len]
                 sub_param.set_force_value(new_val)
             else:
-                print("WRONG_PARAM_LENGTH")
+                _log.error(f"nv1 group 응답 길이 오류(WRONG_PARAM_LENGTH): {self.path}, {self.name}")
                 return ParamParseErrType.WRONG_PARAM_LENGTH, True
 
         return parse_err_type, False        
