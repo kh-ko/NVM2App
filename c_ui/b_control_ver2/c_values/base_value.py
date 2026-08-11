@@ -2,7 +2,7 @@ from decimal import Decimal
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
-from b_core.a_define.float_util import is_float_equal
+from b_core.f_helper.float_util import is_float_equal
 
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors

@@ -37,6 +37,7 @@ from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QMessageBox, QVBoxLayout
 
 from b_core.b_datatype import param_enum as p_enum
 from b_core.c_manager.local_setting_manager import LocalSettingManager
+from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper
 
 from c_ui.a_converter.position_converter_manager import PosiConverterManager
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
@@ -47,7 +48,6 @@ from c_ui.b_control_ver2.b_base.inputs import BaseCheckBox
 from c_ui.b_control_ver2.b_base.labels import BaseLabel
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.c_values.read_write_values import ReadWriteEnumValueWidget, ReadWriteFloatValueWidget
-from c_ui.c_window_ver2.a_main.chart_recorder import ChartRecorder
 from c_ui.c_window_ver2.d_analysis.chart_analysis_win import ChartAnalysisWin
 
 # 보관 샘플 수 — 최악 20ms 간격 기준으로도 최대 시간창(10min)을 채울 수 있는 크기.
@@ -81,7 +81,7 @@ class MainChartPanel(PanelWidget):
         self._size = 0
         self._t0_ms = None  # 첫 샘플 시각 — X축(초)의 원점
 
-        self._recorder = None  # Record 중일 때만 ChartRecorder 인스턴스
+        self._recorder = None  # Record 중일 때만 ChartCSVFileHelper 인스턴스 (기록 세션)
 
         self._build_chart()
         # 차트 열(_chart_area)을 완성한 뒤 main_row 에 조립한다
@@ -475,7 +475,7 @@ class MainChartPanel(PanelWidget):
     # ------------------------------------------------------------ 기록 (Record)
     def on_clicked_record(self):
         if self._recorder is None:
-            self._recorder = ChartRecorder()
+            self._recorder = ChartCSVFileHelper()
             self.record_btn.set_icon(icons.GLYPH_STOP, tokens().danger)
             self.record_btn.setText("Stop - 00:00:00")
             self._record_timer.start()

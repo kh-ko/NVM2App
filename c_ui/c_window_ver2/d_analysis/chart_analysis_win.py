@@ -2,8 +2,9 @@
 
 데이터 소스 두 가지:
 - Capture: 메인 차트 패널이 캡처 시점에 화면에 표시하던 구간(dp 값)을 넘겨준다.
-- Open CSV: ChartRecorder 가 저장한 CSV 파일(들)을 읽어 표시한다.
-  여러 파일을 선택하면 timestamp 순으로 이어 붙인다.
+- Open CSV: ChartCSVFileHelper 가 저장한 CSV 파일(들)을 읽어 표시한다.
+  파싱/병합/정렬은 헬퍼의 read_csv_files() 가 담당하고 (포맷 소유자),
+  이 창은 단위 변환과 표시만 맡는다.
 
 압력 단위:
 - 내부 저장은 캐노니컬 단위(Torr)로 통일한다 — 캡처/CSV 값을 로드 시점에
@@ -27,7 +28,6 @@ pyqtgraph 가 적합하고, matplotlib 은 미설치 의존성이라 빌드 부�
 WA_DeleteOnClose 로 파괴되어도 좀비 연결 문제가 없다.
 """
 
-import csv
 import os
 import time
 
@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QHBoxLayout, QHea
                                QVBoxLayout, QWidget)
 
 from b_core.b_datatype import param_enum as p_enum
+from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper
 
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 from c_ui.b_control_ver2.a_theme.tokens import tokens
@@ -48,10 +49,6 @@ from c_ui.b_control_ver2.b_base.labels import BaseLabel
 from c_ui.b_control_ver2.b_base.toolbars import BaseToolBar
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.c_values.read_write_values import ReadWriteEnumValueWidget
-
-# ChartRecorder 의 CSV 헤더 (검증용)
-_CSV_HEADER = ["timestamp_ms", "time",
-               "posi_actual", "posi_target", "pres_actual", "pres_target", "pres_unit"]
 
 _SERIES = ("posi_actual", "posi_target", "pres_actual", "pres_target")
 _PRES_SERIES = ("pres_actual", "pres_target")
@@ -289,46 +286,28 @@ class ChartAnalysisWin(QMainWindow):
         self.lbl_source.setText(f"Capture @ {stamp}")
 
     def load_csv_files(self, paths):
-        """ChartRecorder CSV(들)를 읽어 표시한다. 여러 파일은 timestamp 순으로 병합.
+        """기록 CSV(들)를 읽어 표시한다 — 파싱/병합/정렬은 포맷 소유자인
+        ChartCSVFileHelper.read_csv_files() 몫이고, 이 창은 행마다 기록된
+        단위를 캐노니컬로 변환해 일관된 시리즈로 만든 뒤 표시만 한다."""
+        (timestamps, posi_act, posi_tgt,
+         pres_act, pres_tgt, unit_codes) = ChartCSVFileHelper.read_csv_files(paths)
 
-        행마다 기록된 pres_unit 을 이용해 캐노니컬 단위로 변환하므로
-        파일 간/파일 내 단위가 섞여 있어도 일관된 시리즈가 된다."""
-        rows = []
+        start_epoch_ms = timestamps[0]
 
-        for path in paths:
-            with open(path, newline="", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                header = next(reader, None)
-                if header != _CSV_HEADER:
-                    raise ValueError(f"unexpected csv header: {os.path.basename(path)}")
-
-                for row in reader:
-                    unit_member = p_enum.SensUnitEnum.from_desc(row[6])
-                    unit = unit_member.value if unit_member else _CANONICAL_UNIT
-                    values = [float(v) if v != "" else np.nan for v in row[2:6]]
-                    rows.append((int(row[0]), *values, unit))
-
-        if not rows:
-            raise ValueError("no data rows in selected csv")
-
-        rows.sort(key=lambda r: r[0])
-        data = np.array(rows, dtype=float)
-        start_epoch_ms = data[0, 0]
-
-        # 행 단위 -> 캐노니컬 변환 (고유 단위별로 벡터화)
-        pres_act = data[:, 3].copy()
-        pres_tgt = data[:, 4].copy()
-        unit_codes = data[:, 5].astype(int)
+        # 행 단위 -> 캐노니컬 변환 (고유 단위별로 벡터화. 단위 미상(-1)은 캐노니컬로 간주)
         for unit in np.unique(unit_codes):
-            gain, offset = self.pres_converter.get_unit_conversion(int(unit), _CANONICAL_UNIT)
+            from_unit = _CANONICAL_UNIT if unit < 0 else int(unit)
+            gain, offset = self.pres_converter.get_unit_conversion(from_unit, _CANONICAL_UNIT)
             mask = unit_codes == unit
             pres_act[mask] = pres_act[mask] * gain + offset
             pres_tgt[mask] = pres_tgt[mask] * gain + offset
 
         # 표시 단위 초기값은 첫 행의 단위
-        self._set_data((data[:, 0] - start_epoch_ms) / 1000.0,
-                       data[:, 1], data[:, 2], pres_act, pres_tgt,
-                       start_epoch_ms, display_unit=int(unit_codes[0]))
+        first_unit = int(unit_codes[0])
+        self._set_data((timestamps - start_epoch_ms) / 1000.0,
+                       posi_act, posi_tgt, pres_act, pres_tgt,
+                       start_epoch_ms,
+                       display_unit=_CANONICAL_UNIT if first_unit < 0 else first_unit)
 
         names = ", ".join(os.path.basename(p) for p in paths)
         self.lbl_source.setText(f"CSV: {names}")
