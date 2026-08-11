@@ -4,6 +4,8 @@
 - PanelWidget: [타이틀 행 / 구분선 / 콘텐츠] 구성의 카드형 패널
   (기존 my_card_widget.py 의 MyCardWidget 대응. 배경은 panel_bg 토큰,
   구분선은 테두리색을 따라간다).
+  title=None 이면 타이틀 행/구분선 없이 콘텐츠만 담고,
+  fit=True 면 바깥 여백/간격 0 으로 꽉 채운다 (차트 패널 등).
 - ScrolledPanelWidget: PanelWidget 과 동일 모양 — 내용이 넘치면 타이틀은
   고정한 채 콘텐츠 영역만 세로 스크롤된다.
 - BaseListWidget: 기본 리스트 위젯 (기존 my_list_widget.py 의 MyListWidget 대응).
@@ -19,11 +21,13 @@ QGroupBox 네이티브 타이틀은 텍스트만 가능해서, 타이틀 행에 
 - 상위 레이어는 add_title_widget() / add_title_stretch() 로 타이틀 행을 확장
 """
 
+from PySide6.QtCore import Signal
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QEnterEvent
 from PySide6.QtWidgets import (QFrame, QGroupBox, QHBoxLayout, QListWidget,
                                QScrollArea, QSplitter, QVBoxLayout, QWidget)
 
+from c_ui.b_control_ver2.b_base.buttons import BaseButton
 from c_ui.b_control_ver2.b_base.labels import BaseLabel, LabelRole
 from c_ui.b_control_ver2.a_theme import style
 from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors
@@ -101,35 +105,50 @@ class BaseGroupBox(QGroupBox, ColorStyled):
 
 
 class PanelWidget(QWidget, ColorStyled):
+    sig_clicked_title_btn = Signal()
 
-    def __init__(self, title, is_big_title = False, btn_icon=None, btn_text=None, parent=None):
+    def __init__(self, title, is_big_title = False, btn_icon=None, fit=False, btn_text=None, parent=None):
         super().__init__(parent)
 
         self.setAttribute(Qt.WA_StyledBackground, True)
 
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(10, 10, 10, 10)
-        self.main_layout.setSpacing(5)
-
-        self.title_layout = QHBoxLayout()
-        self.title_layout.setContentsMargins(0, 0, 0, 0)
-
-        # 1. 상단 타이틀
-        if is_big_title:
-            self.lbl_title = BaseLabel(text=title, role=LabelRole.TITLE)
+        if fit:
+            self.main_layout.setContentsMargins(0, 0, 0, 0)
+            self.main_layout.setSpacing(0)            
         else:
-            self.lbl_title = BaseLabel(text=title, role=LabelRole.DESCRIPTION)
+            self.main_layout.setContentsMargins(10, 10, 10, 10)
+            self.main_layout.setSpacing(5)
 
-        self.lbl_title.setWordWrap(False)
-        self.title_layout.addWidget(self.lbl_title)
-        self.title_layout.addStretch()
-        self.main_layout.addLayout(self.title_layout)
+        if title is not None:
+            self.title_layout = QHBoxLayout()
+            self.title_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 2. 타이틀/콘텐츠 구분선 — 색은 _build_qss 에서 테두리색과 함께 관리
-        self.separator = QFrame()
-        self.separator.setObjectName("panelSeparator")
-        self.separator.setFixedHeight(1) # 선의 두께를 명시적으로 1px로 지정
-        self.main_layout.addWidget(self.separator)
+            # 1. 상단 타이틀
+            if is_big_title:
+                self.lbl_title = BaseLabel(text=title, role=LabelRole.TITLE)
+            else:
+                self.lbl_title = BaseLabel(text=title, role=LabelRole.DESCRIPTION)
+
+            self.lbl_title.setWordWrap(False)
+            self.title_layout.addWidget(self.lbl_title)
+            self.title_layout.addStretch()
+
+            # 타이틀 우측 버튼 — btn_icon/btn_text 가 주어진 경우에만 생성.
+            # 사용측은 sig_clicked_title_btn 에 connect 한다 (버튼 유무와 무관하게 시그널은 항상 존재)
+            self.title_button = None
+            if btn_icon is not None or btn_text is not None:
+                self.title_button = BaseButton(btn_text if btn_text else "", btn_icon, border = False)
+                self.title_button.clicked.connect(self.sig_clicked_title_btn)
+                self.title_layout.addWidget(self.title_button)
+
+            self.main_layout.addLayout(self.title_layout)
+
+            # 2. 타이틀/콘텐츠 구분선 — 색은 _build_qss 에서 테두리색과 함께 관리
+            self.separator = QFrame()
+            self.separator.setObjectName("panelSeparator")
+            self.separator.setFixedHeight(1) # 선의 두께를 명시적으로 1px로 지정
+            self.main_layout.addWidget(self.separator)
 
         # 3. 하단 컨텐츠를 담을 빈 위젯 & 레이아웃
         # (qdarktheme 전역 QWidget 배경 규칙이 서브클래스가 아닌 plain QWidget 도

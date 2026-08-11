@@ -1,6 +1,7 @@
 """입력 위젯 컨트롤 모음.
 
 - BaseLineEdit: 텍스트 입력.
+- BaseFloatLineEdit: 실수 전용 라인에딧 (validator+fixup, 스핀박스 대응 API).
 - BaseDoubleSpinBox: 실수 스핀박스 입력.
 - BaseCheckBox: 체크박스 입력.
 - BaseComboBox: 콤보박스 선택 입력.
@@ -34,7 +35,8 @@ textEdited 를 쓸 것)
 """
 
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QLocale, QSignalBlocker, Signal
+from PySide6.QtGui import QDoubleValidator
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit,
                                QSizePolicy)
 
@@ -163,6 +165,7 @@ class BaseDoubleSpinBox(QDoubleSpinBox, ColorStyled):
 
     def __init__(self, border=True, parent=None):
         super().__init__(parent)
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
 
         self._assigning = False      # 코드 할당 중 가드
         self._user_touched = False   # 마지막 할당 이후 사용자가 값을 만졌는가
@@ -316,6 +319,119 @@ class BaseLineEdit(QLineEdit, ColorStyled):
                 border: 1px solid {c.hover_border};
             }}
         """
+
+
+class _FloatFixupValidator(QDoubleValidator):
+    """BaseFloatLineEdit 전용 — fixup 판단을 위젯의 클램프/포맷 정책에 위임한다."""
+
+    def __init__(self, owner):
+        # 기본 범위/자릿수는 QDoubleSpinBox 와 동일 (0.0~99.99, 2자리)
+        super().__init__(0.0, 99.99, 2, owner)
+
+        self.setNotation(QDoubleValidator.StandardNotation)  # 과학표기(1.5e+4) 불허
+
+        # 로케일 C 고정 — 소수점은 '.' 만, "1,234" 식 자릿수 구분자 불허
+        locale = QLocale.c()
+        locale.setNumberOptions(QLocale.RejectGroupSeparator)
+        self.setLocale(locale)
+
+        self._owner = owner
+
+    def fixup(self, text: str) -> str:
+        return self._owner._fixup_text(text)
+
+
+class BaseFloatLineEdit(BaseLineEdit):
+    """실수 전용 라인에딧 — QDoubleSpinBox 와 동일한 setRange/setDecimals/setValue/value() API.
+
+    (QSS 는 BaseLineEdit 선택자가 파생 클래스에도 매칭되므로 재정의 불필요)
+
+    [주의] QDoubleValidator 는 범위 초과 입력을 Invalid 가 아닌 Intermediate 로
+    판정하고, QLineEdit 은 Acceptable 상태가 아니면 editingFinished 를 발화하지
+    않는다. 그래서 fixup() 에서 클램프+재포맷으로 Acceptable 을 보장한다
+    (Enter/포커스 아웃 모두 fixup 을 경유) — 덕분에 sig_edited_by_user 발화
+    조건이 BaseLineEdit 과 동일하게 유지된다. 해석 불가 텍스트("", "-", ".")로
+    확정을 시도하면 마지막 유효값으로 복원한다 (스핀박스의 보정 동작과 동일).
+
+    '값 없음' 상태 (enum 콤보의 setCurrentIndex(-1) 과 동일 의미론):
+    - setValue(None) 은 텍스트를 비워 placeholder 가 노출되게 한다. 이 상태는
+      코드만 만들 수 있고, 사용자가 클릭했다 나가도 유지된다 (확정 미발생).
+    - 사용자가 유효값을 지우고 확정하면 마지막 유효값으로 복원된다 —
+      사용자는 '값 없음' 상태를 만들 수 없다.
+    - 값 없음 상태에서 value() 는 None 을 반환한다."""
+
+    def __init__(self, parent=None):
+        super().__init__("", parent)
+
+        self._validator = _FloatFixupValidator(self)
+        self.setValidator(self._validator)
+
+        # fixup 의 '해석 불가 시 복원' 기준값. 코드 할당과 사용자 확정에서 갱신된다.
+        self._last_value = 0.0
+        with QSignalBlocker(self):
+            self.setText(self._format(0.0))
+
+        self.editingFinished.connect(self._update_last_value)
+
+    # ------------------------------------------------------------ 내부
+    def _update_last_value(self):
+        value = self.value()
+        if value is not None:
+            self._last_value = value
+
+    def _format(self, value) -> str:
+        return f"{value:.{self._validator.decimals()}f}"
+
+    def _clamp(self, value):
+        return min(max(value, self._validator.bottom()), self._validator.top())
+
+    def _fixup_text(self, text) -> str:
+        try:
+            value = float(text)
+        except ValueError:
+            # 코드가 만든 '값 없음' 상태는 빈 표시를 유지하고 (빈 텍스트는 Acceptable 이
+            # 아니므로 확정 시그널도 발생하지 않는다), 사용자가 유효값을 지운 경우는
+            # 마지막 유효값으로 복원한다 — enum 콤보의 빈 상태 의미론과 동일
+            if self._last_value is None:
+                return ""
+            value = self._last_value
+
+        return self._format(self._clamp(value))
+
+    def _render_current(self):
+        # 표시 전용 재포맷/클램프 — 스핀박스의 setRange/setDecimals 처럼 알림 없음
+        value = self.value()
+        if value is None:
+            return
+
+        with QSignalBlocker(self):
+            self.setText(self._format(self._clamp(value)))
+
+    # ------------------------------------------------------------ 스핀박스 대응 API
+    def setRange(self, min_value: float, max_value: float):
+        self._validator.setRange(min_value, max_value, self._validator.decimals())
+        self._render_current()
+
+    def setDecimals(self, decimals: int):
+        self._validator.setRange(self._validator.bottom(), self._validator.top(), decimals)
+        self._render_current()
+
+    def setValue(self, value: float | None):
+        # None = '값 없음' — 코드 전용 상태. 비워서 placeholder 를 노출한다
+        if value is None:
+            self._last_value = None
+            self.clear()  # sig_assigned_by_code 1회 발화
+            return
+
+        self._last_value = self._clamp(value)
+        self.setText(self._format(self._last_value))  # sig_assigned_by_code 1회 발화
+
+    def value(self):
+        # 표시 텍스트를 그대로 해석 — 편집 중간 상태("", "-", "." 등)는 None
+        try:
+            return float(self.text())
+        except ValueError:
+            return None
 
 
 

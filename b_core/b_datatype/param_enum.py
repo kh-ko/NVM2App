@@ -15,6 +15,27 @@ class DescriptionEnum(Enum):
         except ValueError:
             return default
 
+    @classmethod
+    def from_desc(cls, description, default=None):
+        for member in cls:
+            if member.description == description:
+                return member
+        return default
+
+class ChartRangeModeEnum(DescriptionEnum):
+    # LocalSettingManager 의 *_chart_range_mode 값 (차트 축 범위 결정 방식)
+    AUTO          = (0, "Auto")
+    FULL          = (1, "Full")
+    CUSTOM        = (2, "Custom")
+
+class ChartXWindowEnum(DescriptionEnum):
+    # LocalSettingManager 의 chart_x_window_sec 값 (차트 X축 시간창, 초)
+    SEC_30        = (30, "30 sec")
+    MIN_1         = (60, "1 min")
+    MIN_2         = (120, "2 min")
+    MIN_5         = (300, "5 min")
+    MIN_10        = (600, "10 min")
+
 class OffOnEnum(DescriptionEnum):
     OFF           = (0, "Off")
     ON            = (1, "On")

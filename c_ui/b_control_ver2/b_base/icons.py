@@ -9,3 +9,6 @@ GLYPH_UNCHECK = chr(0xE835)   # 빈 체크박스
 GLYPH_EDIT = chr(0xE8B8)      # settings
 GLYPH_WARN = chr(0xE002)      # warning
 GLYPH_CHEVRON_RIGHT = chr(0xE5CC)  # chevron_right (툴바 확장 » 버튼)
+GLYPH_RECORD = chr(0xE061)    # fiber_manual_record (● 기록 시작)
+GLYPH_STOP = chr(0xE047)      # stop (■ 기록 중지)
+GLYPH_CAPTURE = chr(0xE412)   # photo_camera (차트 캡처)

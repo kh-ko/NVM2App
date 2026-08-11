@@ -162,12 +162,12 @@ class PresConverterManager(QObject):
             else:
                 self.slope = (sens_max - sens_min) / (iface_max - iface_min)
                 self.intercept = sens_min - (self.slope * iface_min)
-                self.unit_gain, self.unit_offset = self._get_unit_conversion(sens_unit, self.local_setting.pres_unit)
+                self.unit_gain, self.unit_offset = self.get_unit_conversion(sens_unit, self.local_setting.pres_unit)
         else:
             self.slope = 1.0
             self.intercept = 0.0
             iface_unit = self.IFACE_TO_SENS_UNIT.get(self.iface_unit_param.value, p_enum.SensUnitEnum.PA.value)
-            self.unit_gain, self.unit_offset = self._get_unit_conversion(iface_unit, self.local_setting.pres_unit)
+            self.unit_gain, self.unit_offset = self.get_unit_conversion(iface_unit, self.local_setting.pres_unit)
 
         # UI 갱신 등을 위한 시그널 발생
         self.sig_pres_range_changed.emit()
@@ -175,8 +175,8 @@ class PresConverterManager(QObject):
     def _select_active_sensor(self, s1_active: bool, s2_active: bool) -> tuple[int, float, float]:
         """활성 센서의 (단위, min, max) 선택. 둘 다 활성이면 Max 압력(Pa 환산)이 큰 쪽."""
         if s1_active and s2_active:
-            s1_max_pa = self._convert_pressure(self.sens1_max_value_param.value, self.sens1_unit_param.value, p_enum.SensUnitEnum.PA.value)
-            s2_max_pa = self._convert_pressure(self.sens2_max_value_param.value, self.sens2_unit_param.value, p_enum.SensUnitEnum.PA.value)
+            s1_max_pa = self.convert_pressure(self.sens1_max_value_param.value, self.sens1_unit_param.value, p_enum.SensUnitEnum.PA.value)
+            s2_max_pa = self.convert_pressure(self.sens2_max_value_param.value, self.sens2_unit_param.value, p_enum.SensUnitEnum.PA.value)
             use_sens1 = s1_max_pa >= s2_max_pa
         elif s1_active:
             use_sens1 = True
@@ -213,6 +213,28 @@ class PresConverterManager(QObject):
 
     def convert_iface_pres_to_dp_pres_str(self, ori_value: float) -> str | None:
         return self._format_dp(self.convert_iface_pres_to_dp_pres(ori_value))
+
+    def convert_dp_pres_str_to_iface_pres(self, display_value: str) -> float | None:
+        if display_value is None:
+            return None
+
+        try:
+            dp_value = float(display_value)
+        except Exception:
+            return None
+
+        return self.convert_dp_pres_to_iface_pres(dp_value)
+
+    def convert_dp_pres_str_to_iface_pres_str(self, display_value: str) -> str | None:
+        if display_value is None:
+            return None
+
+        try:
+            dp_value = float(display_value)
+        except Exception:
+            return None
+
+        return self.convert_dp_pres_to_iface_pres_str(dp_value)
 
     def convert_dp_pres_to_iface_pres(self, value: float) -> float | None:
         if self.slope == 0 or self.unit_gain == 0 or value is None:
@@ -268,11 +290,13 @@ class PresConverterManager(QObject):
         fmt_spec = f".{self.pres_decimal_places}f"
         return format(Decimal(str(value)), fmt_spec)
 
-    def _convert_pressure(self, value: float, from_unit_idx: int, to_unit_idx: int) -> float:
-        gain, offset = self._get_unit_conversion(from_unit_idx, to_unit_idx)
+    # ------------------------------------------------------------ 단위 환산 (공개 API)
+    # 통신 상태와 무관한 정적 계산이므로 외부(차트 분석 윈도우 등)에서도 사용한다.
+    def convert_pressure(self, value: float, from_unit_idx: int, to_unit_idx: int) -> float:
+        gain, offset = self.get_unit_conversion(from_unit_idx, to_unit_idx)
         return (value * gain) + offset
 
-    def _get_unit_conversion(self, from_unit_idx: int, to_unit_idx: int) -> tuple[float, float]:
+    def get_unit_conversion(self, from_unit_idx: int, to_unit_idx: int) -> tuple[float, float]:
         """단위 변환의 (gain, offset). Pa 경유 환산이며 PSIG 는 대기압 오프셋 보정."""
         from_factor = self.PA_FACTORS.get(from_unit_idx, 1.0)
         to_factor = self.PA_FACTORS.get(to_unit_idx, 1.0)

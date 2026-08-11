@@ -67,6 +67,12 @@ class ThemeTokens:
     panel_pres_bg: str = "#ffebee"
     panel_pres_border: str = "#d32f2f"
     panel_pres_text: str = "#c62828"
+
+    # 차트 곡선 색 — posi/pres 축별 단일 색이며 actual/target 은 색이 아니라
+    # 실선/점선으로 구분한다 (이름의 target 은 유래일 뿐, 두 곡선이 함께 쓴다)
+    chart_posi_target: str = "#0d47a1"
+    chart_pres_target: str = "#c62828"
+    chart_grid: str = "#9e9e9e"          # Y 그리드/Y 축선 (얇은 회색)
     
 
 

@@ -92,6 +92,7 @@ class LocalSettingManager(QObject):
     sig_pres_chart_range_mode_changed = Signal()
     sig_pres_chart_range_custom_min_changed = Signal()
     sig_pres_chart_range_custom_max_changed = Signal()
+    sig_chart_x_window_sec_changed = Signal()
 
     # ------------------------------------------------------------ 설정 선언
     _settings: dict = {}  # _Setting.__set_name__ 이 채우는 레지스트리 (직접 수정 금지)
@@ -123,6 +124,7 @@ class LocalSettingManager(QObject):
     pres_chart_range_mode = _Setting(1)  # 0: Auto, 1: Full, 2: Custom
     pres_chart_range_custom_min = _Setting(0.0)
     pres_chart_range_custom_max = _Setting(100.0)
+    chart_x_window_sec = _Setting(60)    # X축 시간창(초) — 30/60/120/300/600
 
     # ------------------------------------------------------------ 생성/초기화
     def __new__(cls, *args, **kwargs):

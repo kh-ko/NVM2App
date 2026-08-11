@@ -114,7 +114,29 @@ class PosiConverterManager(QObject):
             return None
         
         fmt_spec = f".{self.posi_decimal_places}f"
-        return format(Decimal(str(converted_value)), fmt_spec)        
+        return format(Decimal(str(converted_value)), fmt_spec)      
+
+    def convert_dp_str_to_posi(self, display_value: str) -> float:
+        if display_value is None:
+            return None
+
+        try:
+            dp_value = float(display_value)
+        except Exception:
+            return None
+
+        return self.convert_dp_to_posi(dp_value)       
+
+    def convert_dp_str_to_posi_str(self, display_value: str) -> str:
+        if display_value is None:
+            return None
+
+        try:
+            dp_value = float(display_value)
+        except Exception:
+            return None
+
+        return self.convert_dp_to_posi_str(dp_value)          
 
     def convert_dp_to_posi(self, display_value: float) -> float:
         if self.posi_unit == -1 or display_value is None:
@@ -140,3 +162,25 @@ class PosiConverterManager(QObject):
             result_value = (display_value / 100.0) * range_value + self.posi_min
         
         return self.float_converter.to_str(result_value)
+
+    def convert_dp_to_pfs(self, display_value: float) -> float:
+        if self.posi_max == 0:
+            return 0.0
+        
+        return display_value / self.posi_max
+
+
+    def convert_pfs_to_dp_str(self, value):
+        if value == None:
+            return ""
+
+        converted_value = self.posi_max * value
+
+        return self.convert_posi_to_dp_str(converted_value)
+
+    def convert_pfs_to_dp(self, value):
+
+        converted_value = self.posi_max * value
+
+        return self.convert_posi_to_dp(converted_value)
+

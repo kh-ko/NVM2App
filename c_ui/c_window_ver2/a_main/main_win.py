@@ -20,6 +20,8 @@ from c_ui.b_control_ver2.b_base.statusbars import BaseStatusBar
 
 from c_ui.c_window_ver2.win_manager import WinManager
 from c_ui.c_window_ver2.b_connection.connection_connect_win import ConnectionConnectWin
+from c_ui.c_window_ver2.c_localsetting.local_posi_setting_win import LocalPosiSettingWin
+from c_ui.c_window_ver2.c_localsetting.local_pres_setting_win import LocalPresSettingWin
 
 from c_ui.c_window_ver2.log_view_win import LogViewWin
 from c_ui.c_window_ver2.x_message.connection_message_box import ask_disconnect
@@ -132,13 +134,15 @@ class MainWin(QMainWindow):
             
         self.posi_panel = MainPositionPanel()
         bottom_layout.addWidget(self.posi_panel, 20)
-        #self.posi_panel.posi_input.sig_value_changed.connect(self.on_posi_input_finished, Qt.QueuedConnection)
+        self.posi_panel.sig_clicked_title_btn.connect(self.on_posi_setting_edit_clicked, Qt.QueuedConnection)
+        self.posi_panel.sig_setpoint.connect(self.on_posi_input_finished, Qt.QueuedConnection)
         #self.posi_panel.sig_btn_clicked.connect(self.on_clicked_posi_btn, Qt.QueuedConnection)
         #self.posi_panel.btn_edit.clicked.connect(self.on_clicked_posi_edit_btn, Qt.QueuedConnection)
 
         self.pres_panel = MainPressurePanel()
         bottom_layout.addWidget(self.pres_panel, 20)
-        #self.pres_panel.pres_input.sig_value_changed.connect(self.on_pres_input_finished, Qt.QueuedConnection)
+        self.pres_panel.sig_clicked_title_btn.connect(self.on_pres_setting_edit_clicked, Qt.QueuedConnection)
+        self.pres_panel.sig_setpoint.connect(self.on_pres_input_finished, Qt.QueuedConnection)
         #self.pres_panel.sig_btn_clicked.connect(self.on_clicked_pres_btn, Qt.QueuedConnection)
         #self.pres_panel.btn_edit.clicked.connect(self.on_clicked_pres_edit_btn, Qt.QueuedConnection)
 
@@ -296,10 +300,22 @@ class MainWin(QMainWindow):
         # Pressure panel param 연결
         self.pres_panel.set_actual_pres_param(self.act_pres_param)
         self.pres_panel.set_target_pres_used_param(self.target_used_pres_param)
+        self.pres_panel.set_max_pres_param(self.pres_full_scale_param)
         self.pres_panel.set_target_pres_param(self.target_pres_param)
 
     def single_param_write(self, param, value):
         pairs = [(param, value)]
+        result = self.param_worker.write(pairs)
+
+        # Local 전환 후 재시도 여부는 윈도우가 결정한다 (x_message 는 표시 전용)
+        if result == StartResult.NEED_LOCAL_SWITCH:
+            if not ask_local_switch(self):
+                return
+            result = self.param_worker.write(pairs, switch_to_local=True)
+
+        show_param_write_warning(self, result)
+
+    def multiple_param_write(self, pairs: list):
         result = self.param_worker.write(pairs)
 
         # Local 전환 후 재시도 여부는 윈도우가 결정한다 (x_message 는 표시 전용)
@@ -333,6 +349,20 @@ class MainWin(QMainWindow):
     def on_clicked_learn_btn(self):
         # lean window 띄우도록 해야된다
         pass
+
+    def on_posi_setting_edit_clicked(self):
+        WinManager().show_window(win_class=LocalPosiSettingWin, parent=self)
+
+    def on_pres_setting_edit_clicked(self):
+        WinManager().show_window(win_class=LocalPresSettingWin, parent=self)
+
+    def on_posi_input_finished(self, value : str):
+        pairs = [(self.ctrl_mode_param, f"{p_enum.ControlModeEnum.POSITION.value}"), (self.target_posi_param, value)]
+        self.multiple_param_write(pairs)
+
+    def on_pres_input_finished(self, value : str):
+        pairs = [(self.ctrl_mode_param, f"{p_enum.ControlModeEnum.PRESSURE.value}"), (self.target_pres_param, value)]
+        self.multiple_param_write(pairs)
     
     def on_clicked_log_view(self):
         # compound worker 는 log_source=win_name 으로 생성했고 전역 로그(stderr 등)는
@@ -406,7 +436,7 @@ class MainWin(QMainWindow):
     def handle_compound_data(self):
         data_list = self.compound_worker.pop_all_data()
         if data_list:
-            pass#self.chart_panel.update_chart(data_list)
+            self.chart_panel.update_chart(data_list)
 
         if len(data_list) > 1:
             total_ms = data_list[-1].timestamp - data_list[0].timestamp

@@ -1,5 +1,8 @@
-from PySide6.QtCore import QSignalBlocker, Signal
+from decimal import Decimal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
+
+from b_core.a_define.float_util import is_float_equal
 
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors
@@ -19,9 +22,9 @@ def _value_widget_ref_height():
     return _ref_height
 
 class ValueWidget(QWidget, ColorStyled):
-    sig_edited_by_user   = Signal(object)    # checked: bool
-    sig_assigned_by_code = Signal(object)    # checked: bool
-    sig_edited_by_enter  = Signal(object)
+    sig_edited_by_user   = Signal(object)    # 위젯 자신(self) 전달
+    sig_assigned_by_code = Signal(object)    # 위젯 자신(self) 전달
+    sig_edited_by_enter  = Signal(object)    # 위젯 자신(self) 전달
     sig_editing_by_user  = Signal(object)    # 편집 진행 중 (표시 전용 — 쓰기 경로 연결 금지)
 
     def __init__(self, label_text="", label_width=150, is_show_dirty = False, value_widget = None, is_vertical_mode = False, parent=None):
@@ -33,7 +36,6 @@ class ValueWidget(QWidget, ColorStyled):
         self.dirty_label = None
         self.value_widget = None
         self.ori_value = None
-        self.last_set_value = None
         
         if is_vertical_mode:
             self._build_vertical_gui(label_text, label_width, is_show_dirty, value_widget)
@@ -151,45 +153,9 @@ class ValueWidget(QWidget, ColorStyled):
         self.proc_dirty()
         self.sig_assigned_by_code.emit(self)
 
-    def set_value(self, value, is_commit=False):
-        """값 할당 진입점 — 베이스 전용이며 하위 클래스는 오버라이드하지 않는다.
-        하위 클래스는 apply_value() 로 화면 갱신만 구현한다.
-
-        [계약] _commit 은 이 메서드(is_commit=True)를 통해서만 실행된다.
-        commit 을 단독 호출할 수 있으면 last_set_value(코드 할당값)와 화면값이
-        갈라진 상태에서 기준값이 확정되는 모순이 생기므로,
-        '할당과 확정은 항상 짝'을 구조적으로 강제한다."""
-        value = self.normalize_value(value)
-        self.last_set_value = value
-        self.apply_value(value)
-
-        if is_commit:
-            self._commit()
-
-    def _commit(self):
-        # set_value(is_commit=True) 전용 — 단독 호출 금지 (set_value 계약 참고)
-        self.ori_value = self.last_set_value
+    def commit(self):
+        self.ori_value = self.get_value()
         self.proc_dirty()
-
-    def commit_for_ui(self):
-        """사용자 편집 값을 확정한다 — param 바인딩 없이 단독 사용하는 화면용.
-
-        현재 '화면 표시값'을 정식 할당 경로(set_value)로 재주입하므로
-        '할당과 확정은 짝' 계약이 그대로 지켜진다.
-
-        dirty 가 아닐 때는 아무것도 하지 않는다 — get_value 는 표시값(소수점
-        잘린 값)이라, 편집이 없는데 확정하면 풀 정밀도 ori_value 가 잘린 값으로
-        조용히 강등되기 때문 (이후 자릿수 확대 재렌더에서 원본 손실)."""
-        if not self.is_dirty():
-            return
-
-        # 이미 화면에 있는 값의 재주입이라 새 정보가 없다 — '코드 할당' 알림이
-        # 한 번 더 나가지 않게 차단한다 (dirty 마커 갱신은 _commit 의 proc_dirty 가 수행)
-        with QSignalBlocker(self.value_widget):
-            self.set_value(self.get_value(), is_commit=True)
-
-    def restore(self):
-        self.set_value(self.ori_value)
 
     def proc_dirty(self):
         if self.dirty_label is None:
@@ -202,29 +168,49 @@ class ValueWidget(QWidget, ColorStyled):
 
 
     def is_dirty(self):
-        #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 구현해야됨
-        # 실수 비교는 앱 전역 정책인 b_core.a_define.float_util.is_float_equal 을 사용할 것
-        pass
+        curr_value = self.get_value()
+
+        # 실수가 끼면 앱 전역 유효숫자 6자리 정책으로 비교 (float↔None 혼합도 안전)
+        if isinstance(curr_value, float) or isinstance(self.ori_value, float):
+            return not is_float_equal(curr_value, self.ori_value)
+
+        return curr_value != self.ori_value
         
+    def get_value_str(self):
+        curr_value = self.get_value()
+
+        if curr_value is None:
+            return None
+
+        if isinstance(curr_value, float):
+            try:
+                s = f"{curr_value:.6g}"
+                str_value = f"{Decimal(s):f}" if 'e' in s else s
+                return str_value
+            except Exception:
+                return None
+        elif isinstance(curr_value, int):
+            try:
+                return str(curr_value)
+            except Exception:
+                return None
+        elif isinstance(curr_value, str):
+            return curr_value
+        
+        return None        
+
+    def set_value(self, value):
+        #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 구현해야됨
+        pass
+
     def get_value(self):
         #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 구현해야됨
         #
         # [계약] get_value 는 '화면에 표시되고 있는 값'을 반환한다.
         # 화면에서 소수점이 잘렸다면 잘린 값을 반환해야 한다 — 표시된 값과
         # 실제 동작 값이 다르면 사용자가 혼란스럽기 때문.
-        # (enum 은 표시가 설명 텍스트라 역변환이 불가하므로 ori_value 반환이 예외)
+        # (enum 도 예외가 아니다 — RO 는 from_desc 역변환, RW 는 currentData)
         pass
-
-    def normalize_value(self, value):
-        #필요한 하위 클래스만 오버라이드 — 표현 불가능한 값을 표시 가능한 값으로
-        #정규화한다 (예: enum 에 없는 값 -> None). 기본은 그대로 통과.
-        return value
-
-    def apply_value(self, value):
-        #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 화면 갱신만 담당한다
-        #(last_set_value 기록과 commit 은 set_value 가 처리하므로 super 호출 불필요)
-        pass
-
 
     def set_not_support(self, is_not_support):
         #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 구현해야됨
