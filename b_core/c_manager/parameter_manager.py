@@ -78,10 +78,59 @@ class ParamManager:
             self._log.error(f"파라미터를 찾을 수 없습니다: {path}, {name}")
         return ret_param
 
-    def get_params_in_folder(self, folder_path: str) -> List[Parameter]:
+    def get_all_folder_paths(self, root_path: str = "") -> List[str]:
+        """root_path 하위(자신 포함)에서 파라미터를 직접 담고 있는 폴더 경로 목록.
+
+        폴더는 스키마에 별도 노드가 없고 param.path 로만 존재하므로,
+        파라미터가 직접 속한 path 의 중복 제거 목록이 곧 폴더 목록이다
+        (파라미터 없이 하위 폴더만 가진 중간 폴더는 나오지 않는다).
+        순서는 스키마(json) 등장 순서를 따른다. root_path 가 빈 문자열이면
+        전체 폴더를 반환한다.
+        """
+        prefix = root_path + "." if root_path else ""
+        seen = set()
+        folder_paths: List[str] = []
+
+        for param in self._parameters:
+            if param.path in seen:
+                continue
+            # root 자신이거나 root 의 하위 경로만 통과 ("System" 이 "SystemX" 에 걸리지 않도록)
+            if root_path and param.path != root_path and not param.path.startswith(prefix):
+                continue
+            seen.add(param.path)
+            folder_paths.append(param.path)
+
+        return folder_paths
+
+    def get_params_grouped(self, root_path: str = "",
+                           filter_param_paths: Optional[List[str]] = None) -> Dict[str, List[Parameter]]:
+        """root_path 하위의 폴더별 param 목록을 한 번의 순회로 그룹핑해 반환.
+
+        [get_all_folder_paths() + 폴더별 get_params_in_folder() 반복] 은
+        O(폴더수 x 전체 param) 이라 넓은 경로에서 창 생성이 느려진다 — 이 API 는
+        전체 param 을 1회만 훑는다. 폴더/param 순서는 스키마(json) 등장 순서
+        (dict 삽입 순서) 그대로다. filter_param_paths 는 full path 제외 목록."""
+        prefix = root_path + "." if root_path else ""
+        filter_set = set(filter_param_paths) if filter_param_paths else None
+        grouped: Dict[str, List[Parameter]] = {}
+
+        for param in self._parameters:
+            # root 자신이거나 root 의 하위 경로만 통과 (get_all_folder_paths 와 동일 규칙)
+            if root_path and param.path != root_path and not param.path.startswith(prefix):
+                continue
+            if filter_set is not None and f"{param.path}.{param.name}" in filter_set:
+                continue
+            grouped.setdefault(param.path, []).append(param)
+
+        return grouped
+
+    def get_params_in_folder(self, folder_path: str, filter_param_paths: Optional[List[str]] = None) -> List[Parameter]:
         ret_params: List[Parameter] = []
         for param in self._parameters:
             if param.path == folder_path:
+                param_full_path = f"{folder_path}.{param.name}"
+                if filter_param_paths is not None and param_full_path in filter_param_paths:
+                    continue
                 ret_params.append(param)
         return ret_params
 

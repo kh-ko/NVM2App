@@ -2,6 +2,7 @@
 
 - BaseLineEdit: 텍스트 입력.
 - BaseFloatLineEdit: 실수 전용 라인에딧 (validator+fixup, 스핀박스 대응 API).
+- BaseHexLineEdit: 16진수(정수) 전용 라인에딧 (BaseFloatLineEdit 의 hex 대응).
 - BaseDoubleSpinBox: 실수 스핀박스 입력.
 - BaseCheckBox: 체크박스 입력.
 - BaseComboBox: 콤보박스 선택 입력.
@@ -35,10 +36,12 @@ textEdited 를 쓸 것)
 """
 
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import QLocale, QSignalBlocker, Signal
-from PySide6.QtGui import QDoubleValidator
+from PySide6.QtCore import QLocale, QSignalBlocker, Qt, Signal
+from PySide6.QtGui import QDoubleValidator, QValidator
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit,
                                QSizePolicy)
+
+from b_core.f_helper.float_util import SIG_DIGITS, to_sig_str
 
 from c_ui.b_control_ver2.a_theme import style
 from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors
@@ -48,10 +51,15 @@ from c_ui.b_control_ver2.a_theme.tokens import tokens
 class BaseCheckBox(QCheckBox, ColorStyled):
     """체크박스 입력.
 
-    clicked 는 Qt 가 사용자 조작(클릭/스페이스)에서만 발생시킨다."""
+    clicked 는 Qt 가 사용자 조작(클릭/스페이스)에서만 발생시킨다.
 
-    sig_edited_by_user = Signal(QWidget)    
-    sig_assigned_by_code = Signal(QWidget)  
+    중간 상태(PartiallyChecked)는 코드 전용이다 — setCheckState(Partially...)
+    가 tristate 를 자동으로 켜더라도, 사용자 클릭은 항상 2상태로만 확정된다
+    (중간 상태에서 클릭하면 Checked). '값 없음' 표시(비트맵 위젯 등)에 중간
+    상태를 쓰면서 사용자에게 3상태 순환을 노출하지 않기 위한 규칙이다."""
+
+    sig_edited_by_user = Signal(QWidget)
+    sig_assigned_by_code = Signal(QWidget)
 
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
@@ -62,6 +70,13 @@ class BaseCheckBox(QCheckBox, ColorStyled):
 
     def _on_user_clicked(self, checked: bool):
         self.sig_edited_by_user.emit(self)
+
+    def nextCheckState(self):
+        # 사용자 클릭의 다음 상태 — tristate 여부와 무관하게 2상태 토글
+        # (중간 상태 클릭 -> Checked 확정). 사용자 조작이므로 코드 할당 알림이
+        # 나가면 안 된다 — 오버라이드된 setCheckState 대신 원본을 직접 호출
+        next_state = Qt.CheckState.Unchecked if self.checkState() == Qt.CheckState.Checked else Qt.CheckState.Checked
+        QCheckBox.setCheckState(self, next_state)
 
     def setChecked(self, checked: bool):
         super().setChecked(checked)
@@ -322,11 +337,17 @@ class BaseLineEdit(QLineEdit, ColorStyled):
 
 
 class _FloatFixupValidator(QDoubleValidator):
-    """BaseFloatLineEdit 전용 — fixup 판단을 위젯의 클램프/포맷 정책에 위임한다."""
+    """BaseFloatLineEdit 전용 — fixup 판단을 위젯의 클램프/포맷 정책에 위임한다.
+
+    유효숫자 모드(위젯의 _decimals 가 None)에서는 소수 자릿수를 제한하지 않는
+    대신(decimals=-1), 유효숫자(float_util.SIG_DIGITS)로 표현할 수 없는
+    정밀도의 입력을 Intermediate 로 판정한다 — 확정(Enter/포커스 아웃) 시
+    fixup 이 유효숫자 자릿수로 반올림해 수습한다."""
 
     def __init__(self, owner):
-        # 기본 범위/자릿수는 QDoubleSpinBox 와 동일 (0.0~99.99, 2자리)
-        super().__init__(0.0, 99.99, 2, owner)
+        # 기본 범위는 QDoubleSpinBox 와 동일 (0.0~99.99), 자릿수는 무제한(-1) —
+        # 유효숫자 모드의 정밀도 제한은 validate 에서 별도로 판정한다
+        super().__init__(0.0, 99.99, -1, owner)
 
         self.setNotation(QDoubleValidator.StandardNotation)  # 과학표기(1.5e+4) 불허
 
@@ -336,6 +357,22 @@ class _FloatFixupValidator(QDoubleValidator):
         self.setLocale(locale)
 
         self._owner = owner
+
+    def validate(self, text: str, pos: int):
+        state, text, pos = super().validate(text, pos)
+
+        # 유효숫자 모드: 6자리로 표현 불가한 정밀도는 확정 불가(Intermediate) —
+        # 자릿수 세기 대신 '6자리 반올림 시 값이 변하는가'로 판정한다
+        # (1000000 처럼 후행 0 만 긴 수는 통과, 0.123456789 는 걸린다)
+        if state == QDoubleValidator.Acceptable and self._owner._decimals is None:
+            try:
+                value = float(text)
+                if float(f"{value:.{SIG_DIGITS}g}") != value:
+                    return QDoubleValidator.Intermediate, text, pos
+            except ValueError:
+                pass
+
+        return state, text, pos
 
     def fixup(self, text: str) -> str:
         return self._owner._fixup_text(text)
@@ -358,10 +395,19 @@ class BaseFloatLineEdit(BaseLineEdit):
       코드만 만들 수 있고, 사용자가 클릭했다 나가도 유지된다 (확정 미발생).
     - 사용자가 유효값을 지우고 확정하면 마지막 유효값으로 복원된다 —
       사용자는 '값 없음' 상태를 만들 수 없다.
-    - 값 없음 상태에서 value() 는 None 을 반환한다."""
+    - 값 없음 상태에서 value() 는 None 을 반환한다.
+
+    자릿수 모드 — setDecimals() 호출 여부로 갈린다:
+    - 기본(미호출): 유효숫자 6자리 모드. 표시는 후행 0 없는 유효숫자 6자리
+      (지수 표기는 풀어쓴다 — 예: 0.00000123456789 -> "0.00000123457"),
+      코드 할당과 사용자 확정 모두 6자리로 반올림된다.
+    - setDecimals(n) 호출 후: 고정 소수점 n자리 모드 (기존 동작)."""
 
     def __init__(self, parent=None):
         super().__init__("", parent)
+
+        # None = 유효숫자(6자리) 모드, 정수 = 고정 소수점 자릿수 모드
+        self._decimals: int | None = None
 
         self._validator = _FloatFixupValidator(self)
         self.setValidator(self._validator)
@@ -380,7 +426,11 @@ class BaseFloatLineEdit(BaseLineEdit):
             self._last_value = value
 
     def _format(self, value) -> str:
-        return f"{value:.{self._validator.decimals()}f}"
+        if self._decimals is not None:
+            return f"{value:.{self._decimals}f}"
+
+        # 유효숫자 모드 — 앱 전역 정책의 단일 구현(float_util.to_sig_str)에 위임
+        return to_sig_str(value)
 
     def _clamp(self, value):
         return min(max(value, self._validator.bottom()), self._validator.top())
@@ -413,23 +463,167 @@ class BaseFloatLineEdit(BaseLineEdit):
         self._render_current()
 
     def setDecimals(self, decimals: int):
+        # 고정 소수점 모드로 전환 (유효숫자 모드로 되돌리는 API 는 두지 않는다 —
+        # 자릿수를 정한 위젯은 그 정책을 유지하는 것이 계약)
+        self._decimals = decimals
         self._validator.setRange(self._validator.bottom(), self._validator.top(), decimals)
         self._render_current()
 
     def setValue(self, value: float | None):
-        # None = '값 없음' — 코드 전용 상태. 비워서 placeholder 를 노출한다
+        # None = '값 없음' — 코드 전용 상태. 비워서 placeholder 를 노출한다.
+        # 범위 밖 값도 '값 없음' 처리한다 — 클램프하면 표시값이 실제(장비)값과
+        # 달라지는 거짓 표시가 되기 때문. (사용자 입력의 fixup 클램프는 입력
+        # 보정이므로 별개 — 이 규칙은 코드 할당에만 적용된다)
+        if value is not None and not (self._validator.bottom() <= value <= self._validator.top()):
+            value = None
+
         if value is None:
             self._last_value = None
             self.clear()  # sig_assigned_by_code 1회 발화
             return
 
-        self._last_value = self._clamp(value)
+        self._last_value = value
         self.setText(self._format(self._last_value))  # sig_assigned_by_code 1회 발화
 
     def value(self):
         # 표시 텍스트를 그대로 해석 — 편집 중간 상태("", "-", "." 등)는 None
         try:
             return float(self.text())
+        except ValueError:
+            return None
+
+class _HexFixupValidator(QValidator):
+    """BaseHexLineEdit 전용 — 16진수 문자만 허용, fixup 판단은 위젯 정책에 위임한다.
+
+    QDoubleValidator 의 전략을 그대로 따른다: 범위 초과는 Invalid 가 아닌
+    Intermediate 로 판정해 타이핑을 막지 않고, 확정 시 fixup 클램프로 수습한다."""
+
+    _HEX_CHARS = set("0123456789abcdefABCDEF")
+
+    def __init__(self, owner):
+        super().__init__(owner)
+        self._owner = owner
+
+    def validate(self, text: str, pos: int):
+        if text == "":
+            return QValidator.Intermediate, text, pos
+
+        # "0x" 접두사 없이 hex 문자만 허용 (표시 포맷과 입력 포맷 통일)
+        if any(ch not in self._HEX_CHARS for ch in text):
+            return QValidator.Invalid, text, pos
+
+        if self._owner._minimum <= int(text, 16) <= self._owner._maximum:
+            return QValidator.Acceptable, text, pos
+        return QValidator.Intermediate, text, pos
+
+    def fixup(self, text: str) -> str:
+        return self._owner._fixup_text(text)
+
+
+class BaseHexLineEdit(BaseLineEdit):
+    """16진수(정수) 전용 라인에딧 — BaseFloatLineEdit 와 대응하는
+    setRange/setDigits/setValue/value() API. 값 타입은 int, 표시는 대문자
+    0 패딩 hex (기본 8자리 = 32bit).
+
+    (QSS 는 BaseLineEdit 선택자가 파생 클래스에도 매칭되므로 재정의 불필요)
+
+    [주의] QLineEdit 은 Acceptable 상태가 아니면 editingFinished 를 발화하지
+    않는다. validator 는 hex 문자가 아니면 Invalid(타이핑 차단), 범위 초과면
+    Intermediate 로 판정하고, fixup() 에서 클램프+재포맷으로 Acceptable 을
+    보장한다 (Enter/포커스 아웃 모두 fixup 을 경유) — 덕분에 sig_edited_by_user
+    발화 조건이 BaseLineEdit 과 동일하게 유지된다. 해석 불가 텍스트("")로
+    확정을 시도하면 마지막 유효값으로 복원한다 (BaseFloatLineEdit 와 동일).
+
+    '값 없음' 상태 (enum 콤보의 setCurrentIndex(-1) 과 동일 의미론):
+    - setValue(None) 은 텍스트를 비워 placeholder 가 노출되게 한다. 이 상태는
+      코드만 만들 수 있고, 사용자가 클릭했다 나가도 유지된다 (확정 미발생).
+    - 사용자가 유효값을 지우고 확정하면 마지막 유효값으로 복원된다 —
+      사용자는 '값 없음' 상태를 만들 수 없다.
+    - 값 없음 상태에서 value() 는 None 을 반환한다."""
+
+    def __init__(self, parent=None):
+        super().__init__("", parent)
+
+        # 범위/자릿수는 위젯이 소유한다 (QDoubleValidator 같은 보관처가 없으므로)
+        self._minimum = 0
+        self._maximum = 0xFFFFFFFF
+        self._digits = 8
+
+        self._validator = _HexFixupValidator(self)
+        self.setValidator(self._validator)
+
+        # fixup 의 '해석 불가 시 복원' 기준값. 코드 할당과 사용자 확정에서 갱신된다.
+        self._last_value = 0
+        with QSignalBlocker(self):
+            self.setText(self._format(0))
+
+        self.editingFinished.connect(self._update_last_value)
+
+    # ------------------------------------------------------------ 내부
+    def _update_last_value(self):
+        value = self.value()
+        if value is not None:
+            self._last_value = value
+
+    def _format(self, value) -> str:
+        return f"{value:0{self._digits}X}"
+
+    def _clamp(self, value):
+        return min(max(value, self._minimum), self._maximum)
+
+    def _fixup_text(self, text) -> str:
+        try:
+            value = int(text, 16)
+        except ValueError:
+            # 코드가 만든 '값 없음' 상태는 빈 표시를 유지하고 (빈 텍스트는 Acceptable 이
+            # 아니므로 확정 시그널도 발생하지 않는다), 사용자가 유효값을 지운 경우는
+            # 마지막 유효값으로 복원한다 — enum 콤보의 빈 상태 의미론과 동일
+            if self._last_value is None:
+                return ""
+            value = self._last_value
+
+        return self._format(self._clamp(value))
+
+    def _render_current(self):
+        # 표시 전용 재포맷/클램프 — 스핀박스의 setRange/setDecimals 처럼 알림 없음
+        value = self.value()
+        if value is None:
+            return
+
+        with QSignalBlocker(self):
+            self.setText(self._format(self._clamp(value)))
+
+    # ------------------------------------------------------------ 스핀박스 대응 API
+    def setRange(self, min_value: int, max_value: int):
+        self._minimum = min_value
+        self._maximum = max_value
+        self._render_current()
+
+    def setDigits(self, digits: int):
+        """표시 자릿수(0 패딩 폭). 예: 8 -> '0000ABCD'"""
+        self._digits = digits
+        self._render_current()
+
+    def setValue(self, value: int | None):
+        # None = '값 없음' — 코드 전용 상태. 비워서 placeholder 를 노출한다.
+        # 범위 밖 값도 '값 없음' 처리한다 — 클램프하면 표시값이 실제(장비)값과
+        # 달라지는 거짓 표시가 되기 때문. (사용자 입력의 fixup 클램프는 입력
+        # 보정이므로 별개 — 이 규칙은 코드 할당에만 적용된다)
+        if value is not None and not (self._minimum <= value <= self._maximum):
+            value = None
+
+        if value is None:
+            self._last_value = None
+            self.clear()  # sig_assigned_by_code 1회 발화
+            return
+
+        self._last_value = value
+        self.setText(self._format(self._last_value))  # sig_assigned_by_code 1회 발화
+
+    def value(self):
+        # 표시 텍스트를 그대로 해석 — 편집 중간 상태("")는 None
+        try:
+            return int(self.text(), 16)
         except ValueError:
             return None
 

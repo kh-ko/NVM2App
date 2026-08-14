@@ -18,7 +18,8 @@
 """
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QMessageBox,
+                               QProgressBar, QPushButton, QVBoxLayout)
 
 
 def show_wait_message_box(parent, title: str, message: str) -> QMessageBox:
@@ -33,3 +34,47 @@ def show_wait_message_box(parent, title: str, message: str) -> QMessageBox:
     box.setWindowModality(Qt.WindowModality.WindowModal)
     box.show()
     return box
+
+
+class _BusyWaitDialog(QDialog):
+    """무한 진행 표시 대기 다이얼로그 — Esc/X 로는 닫히지 않는다.
+
+    닫기는 호출측의 accept() 또는 quit_button(있는 경우) 경유만 허용 —
+    대기 중 우회 종료를 막기 위한 장치다."""
+
+    def reject(self):
+        pass
+
+
+def show_busy_wait_message_box(parent, title: str, message: str,
+                               quit_text: str | None = None) -> QDialog:
+    """무한 진행(busy) 프로그래스바가 있는 WindowModal 대기 다이얼로그를 띄우고
+    참조를 반환한다.
+
+    - 프로그래스바 range (0,0) = 무한 진행 표시 — 작업이 계속 진행 중임을 보인다.
+    - Esc/X 로는 닫히지 않는다. 닫기는 호출측이 accept() 로 수행한다.
+    - quit_text 를 주면 버튼이 생기고 dialog.quit_button 으로 노출된다 —
+      클릭 후 동작(앱 종료 등) 결정은 호출측이 connect 해서 정한다."""
+    dialog = _BusyWaitDialog(parent)
+    dialog.setWindowTitle(title)
+    dialog.setWindowModality(Qt.WindowModality.WindowModal)
+    # 타이틀바 닫기(X) 버튼 제거 — 종료 경로를 quit_button 하나로 좁힌다
+    dialog.setWindowFlags(dialog.windowFlags() & ~Qt.WindowCloseButtonHint)
+
+    root = QVBoxLayout(dialog)
+    root.addWidget(QLabel(message))
+
+    progress = QProgressBar()
+    progress.setRange(0, 0)  # 무한 진행(busy) 표시
+    root.addWidget(progress)
+
+    dialog.quit_button = None
+    if quit_text is not None:
+        dialog.quit_button = QPushButton(quit_text)
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        button_row.addWidget(dialog.quit_button)
+        root.addLayout(button_row)
+
+    dialog.show()
+    return dialog

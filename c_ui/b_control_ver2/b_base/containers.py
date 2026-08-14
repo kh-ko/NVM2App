@@ -8,8 +8,13 @@
   fit=True 면 바깥 여백/간격 0 으로 꽉 채운다 (차트 패널 등).
 - ScrolledPanelWidget: PanelWidget 과 동일 모양 — 내용이 넘치면 타이틀은
   고정한 채 콘텐츠 영역만 세로 스크롤된다.
+- BaseValueBox: 값 표시 위젯 n개를 세로로 담는 박스 컨테이너
+  (placeholder 전환 장치 포함 — 비트맵/enum 나열 등 상위 레이어가 채운다).
 - BaseListWidget: 기본 리스트 위젯 (기존 my_list_widget.py 의 MyListWidget 대응).
 - BaseSplitter: 핸들이 1px 인 스플리터 (기존 my_splitter.py 의 MySplitter 대응).
+- BaseFlowLayout: 아이템을 왼쪽->오른쪽으로 배치하다 폭이 모자라면 다음 줄로
+  내려가는 흐름 레이아웃 (기존 my_flow_layout.py 의 MyFlowLayout 계승).
+  줄이 확정되면 그 줄의 아이템들이 남는 폭을 균등 분배해 가로를 꽉 채운다.
 
 base 레이어 규칙: 기본 커스텀 컨트롤 — 스타일 + 기본 합성을 모두 관장하되,
 값 계약(set_value 등)과 앱 도메인 의미는 모른다.
@@ -22,10 +27,11 @@ QGroupBox 네이티브 타이틀은 텍스트만 가능해서, 타이틀 행에 
 """
 
 from PySide6.QtCore import Signal
-from PySide6.QtCore import QEvent, Qt
+from PySide6.QtCore import QEvent, QRect, QSize, Qt
 from PySide6.QtGui import QEnterEvent
-from PySide6.QtWidgets import (QFrame, QGroupBox, QHBoxLayout, QListWidget,
-                               QScrollArea, QSplitter, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QFrame, QGroupBox, QHBoxLayout, QLayout,
+                               QListWidget, QScrollArea, QSplitter, QVBoxLayout,
+                               QWidget)
 
 from c_ui.b_control_ver2.b_base.buttons import BaseButton
 from c_ui.b_control_ver2.b_base.labels import BaseLabel, LabelRole
@@ -236,6 +242,76 @@ class ScrolledPanelWidget(PanelWidget):
         """
 
 
+class BaseValueBox(QWidget, ColorStyled):
+    """값 표시 위젯 n개를 세로로 수납하는 박스 컨테이너.
+
+    - add_value_widget(widget): 행 추가 (위→아래 순서 유지).
+    - box=True: 테두리 박스 스타일 (BaseLabel 의 box 옵션과 동일 컨셉).
+      QSS padding 은 plain QWidget 레이아웃에 반영되지 않으므로 안쪽 여백은
+      레이아웃 마진으로 확보한다.
+    - placeholder: set_placeholder_visible(True) 면 수납된 위젯을 전부 숨기고
+      setPlaceholderText() 로 설정한 문구 한 줄만 표시한다.
+
+    base 레이어 규칙에 따라 값 계약(set_value 등)과 'Unknown'/'Not Support'
+    같은 문구의 의미는 모른다 — 값 구성/문구 결정은 상위(c_values) 몫이다."""
+
+    def __init__(self, box=False, parent=None):
+        super().__init__(parent)
+        # plain QWidget 서브클래스는 이 속성이 있어야 QSS 배경/테두리가 그려진다
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self._boxed = box
+
+        self._root_layout = QVBoxLayout(self)
+        self._root_layout.setContentsMargins(*((5, 5, 5, 5) if box else (0, 0, 0, 0)))
+        self._root_layout.setSpacing(5)
+
+        self._placeholder_label = BaseLabel("")
+        self._placeholder_label.setVisible(False)
+        self._root_layout.addWidget(self._placeholder_label)
+
+        self._value_widgets = []
+        self._placeholder_visible = False
+
+        self._init_colors(WidgetColors(border=tokens().border))
+
+    def add_value_widget(self, widget):
+        self._value_widgets.append(widget)
+        self._root_layout.addWidget(widget)
+        # placeholder 표시 중에 추가된 행은 곧바로 숨겨 문구만 보이게 유지한다
+        if self._placeholder_visible:
+            widget.setVisible(False)
+
+    def setPlaceholderText(self, text: str):
+        """placeholder 문구 설정 — 라인에딧의 setPlaceholderText 대응 (문구 결정은 호출측)."""
+        self._placeholder_label.setText(text)
+
+    def set_placeholder_visible(self, visible: bool):
+        """True 면 수납 위젯 전부 숨김 + placeholder 만 표시, False 면 복원."""
+        self._placeholder_visible = visible
+        self._placeholder_label.setVisible(visible)
+        for widget in self._value_widgets:
+            widget.setVisible(not visible)
+
+    def _build_qss(self, c: WidgetColors) -> str:
+        border = self._effective_border()
+        if self._boxed:
+            box = f"border: 1px solid {border}; border-radius: 4px;"
+            box_disabled = f"border: 1px solid {style.disabled(border)}; border-radius: 4px;"
+        else:
+            box = box_disabled = ""
+
+        return f"""
+            BaseValueBox {{
+                background-color: {c.bg};
+                {box}
+            }}
+            BaseValueBox:disabled {{
+                background-color: {style.disabled(c.bg)};
+                {box_disabled}
+            }}
+        """
+
+
 class BaseListWidget(QListWidget, ColorStyled):
     """기본 리스트 위젯. 선택 항목은 selection_* 토큰으로 강조한다."""
 
@@ -297,3 +373,133 @@ class BaseSplitter(QSplitter, ColorStyled):
                 height: 1px;
             }}
         """
+
+
+class BaseFlowLayout(QLayout):
+    """아이템을 왼쪽 -> 오른쪽으로 배치하다 폭이 모자라면 다음 줄로 내려가는
+    흐름 레이아웃 (기존 my_flow_layout.py 의 MyFlowLayout 계승).
+
+    - 줄 구성(한 줄에 몇 개)은 item_width(줄 구성 기준 폭)로 판단한다.
+      None 이면 무제한 폭으로 간주해 한 줄에 1개씩 — 가로 분할이 일어나지
+      않고 아이템이 항상 전체 폭을 채운다.
+    - 줄이 확정되면 그 줄의 아이템들이 남는 폭을 균등 분배해 가로를 꽉 채운다
+      (justify — 나머지 픽셀은 앞쪽 아이템에 1px 씩 배분). 따라서 아이템 폭은
+      item_width ~ 2*item_width 사이에서 늘어나다 다음 열이 들어갈 수 있을 때
+      분할된다.
+    - heightForWidth 를 제공하므로 QScrollArea(widgetResizable) 안에서도
+      콘텐츠 높이가 뷰포트 폭에 맞춰 올바르게 계산된다."""
+
+    def __init__(self, parent=None, margin=0, spacing=5, item_width=None):
+        super().__init__(parent)
+        self.setContentsMargins(margin, margin, margin, margin)
+        self.setSpacing(spacing)
+        self._items = []
+
+        # 줄 구성 기준 폭 — 아이템 하나가 '원하는 폭'으로 간주되어 한 줄에 몇 개
+        # 들어갈지 결정한다. None 이면 무제한 폭으로 간주 -> 한 줄에 1개씩
+        # (가로 분할 없이 항상 세로 나열, 아이템은 전체 폭을 채운다)
+        self._item_width = item_width
+
+    def set_item_width(self, item_width):
+        """줄 구성 기준 폭 변경 (None = 무제한 -> 분할 없음). 즉시 재배치한다."""
+        self._item_width = item_width
+        self.invalidate()
+
+    # ------------------------------------------------------------ QLayout 필수 구현
+    def addItem(self, item):
+        self._items.append(item)
+
+    def count(self):
+        return len(self._items)
+
+    def itemAt(self, index):
+        if 0 <= index < len(self._items):
+            return self._items[index]
+        return None
+
+    def takeAt(self, index):
+        if 0 <= index < len(self._items):
+            return self._items.pop(index)
+        return None
+
+    def expandingDirections(self):
+        return Qt.Orientations(0)  # 스스로 늘어나지 않는다 — 부모가 폭을 정한다
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, width):
+        return self._do_layout(QRect(0, 0, width, 0), test_only=True)
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        self._do_layout(rect, test_only=False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+        for item in self._items:
+            size = size.expandedTo(item.minimumSize())
+
+        margins = self.contentsMargins()
+        size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom())
+        return size
+
+    # ------------------------------------------------------------ 배치 계산
+    def _do_layout(self, rect, test_only) -> int:
+        """rect 폭 기준으로 흐름 배치를 계산하고 필요한 전체 높이를 반환한다.
+
+        test_only=True 면 지오메트리를 건드리지 않고 높이 계산만 한다
+        (heightForWidth 경로). 줄 구성은 item_width(줄 구성 기준 폭)로 판단하고,
+        줄이 확정되면 그 줄의 아이템들에게 남는 폭을 균등 분배해 가로를 꽉
+        채운다. 줄 높이는 그 줄에서 가장 큰 아이템 높이(sizeHint)다."""
+        margins = self.contentsMargins()
+        effective = rect.adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom())
+        spacing = max(self.spacing(), 0)
+
+        def flush_row(row_items, row_y) -> int:
+            """한 줄을 확정 배치하고 줄 높이를 반환한다 — 폭 균등 분배(justify)."""
+            available = effective.width() - spacing * (len(row_items) - 1)
+            item_width = max(1, available // len(row_items))
+            remainder = available % len(row_items)
+
+            x = effective.x()
+            row_height = 0
+            for i, item in enumerate(row_items):
+                # 나머지 픽셀을 앞쪽 아이템에 1px 씩 배분해 정확히 꽉 채운다
+                width = item_width + (1 if i < remainder else 0)
+                height = item.sizeHint().height()
+                row_height = max(row_height, height)
+
+                if not test_only:
+                    item.setGeometry(QRect(x, row_y, width, height))
+                x += width + spacing
+
+            return row_height
+
+        # 줄 구성 기준 폭 — item_width 미지정(None)이면 유효 폭 전체로 간주해
+        # 어떤 폭에서도 한 줄에 1개만 들어간다 (가로 분할 없음)
+        base_width = self._item_width if self._item_width is not None else effective.width()
+
+        y = effective.y()
+        row_items = []
+        row_width = 0
+
+        for item in self._items:
+            needed = base_width + (spacing if row_items else 0)
+
+            # 현재 줄에 안 들어가면 지금까지의 줄을 확정하고 새 줄 시작
+            if row_items and row_width + needed > effective.width():
+                y += flush_row(row_items, y) + spacing
+                row_items = [item]
+                row_width = base_width
+            else:
+                row_items.append(item)
+                row_width += needed
+
+        if row_items:
+            y += flush_row(row_items, y)
+
+        return y - rect.y() + margins.bottom()

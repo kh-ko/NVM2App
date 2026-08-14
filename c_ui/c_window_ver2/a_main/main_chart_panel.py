@@ -40,7 +40,7 @@ from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper
 
 from c_ui.a_converter.position_converter_manager import PosiConverterManager
-from c_ui.a_converter.pressure_converter_manager import PresConverterManager
+from c_ui.a_converter.pressure_converter_manager import PresConverterManager, PresConvertType
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.b_base import icons
 from c_ui.b_control_ver2.b_base.buttons import BaseButton
@@ -48,7 +48,7 @@ from c_ui.b_control_ver2.b_base.inputs import BaseCheckBox
 from c_ui.b_control_ver2.b_base.labels import BaseLabel
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.c_values.read_write_values import ReadWriteEnumValueWidget, ReadWriteFloatValueWidget
-from c_ui.c_window_ver2.d_analysis.chart_analysis_win import ChartAnalysisWin
+from c_ui.c_window_ver2.c_analysis.chart_analysis_win import ChartAnalysisWin
 
 # 보관 샘플 수 — 최악 20ms 간격 기준으로도 최대 시간창(10min)을 채울 수 있는 크기.
 # 넘치면 오래된 샘플부터 밀려난다.
@@ -175,12 +175,14 @@ class MainChartPanel(PanelWidget):
         bottom_axis.setStyle(showValues=False, tickLength=0)
         bottom_axis.setPen(pg.mkPen(t.text))
 
-        # 곡선 4개 — key 는 로컬 설정 이름과 1:1 대응. target 은 점선으로 구분한다
+        # 곡선 4개 — key 는 로컬 설정 이름과 1:1 대응. target 은 점선으로 구분한다.
+        # pres 곡선(pres_viewbox 소속)이 posi 곡선 아래에 그려지므로(실측),
+        # 겹칠 때도 보이도록 pres 쪽을 약간 더 두껍게 그린다
         self._curves = {
             "posi_chart_enable_actual": pg.PlotDataItem(pen=pg.mkPen(t.chart_posi_target, width=1)),
             "posi_chart_enable_target": pg.PlotDataItem(pen=pg.mkPen(t.chart_posi_target, width=1, style=Qt.DashLine)),
-            "pres_chart_enable_actual": pg.PlotDataItem(pen=pg.mkPen(t.chart_pres_target, width=1)),
-            "pres_chart_enable_target": pg.PlotDataItem(pen=pg.mkPen(t.chart_pres_target, width=1, style=Qt.DashLine)),
+            "pres_chart_enable_actual": pg.PlotDataItem(pen=pg.mkPen(t.chart_pres_target, width=2)),
+            "pres_chart_enable_target": pg.PlotDataItem(pen=pg.mkPen(t.chart_pres_target, width=2, style=Qt.DashLine)),
         }
         self._curve_rows = {
             "posi_chart_enable_actual": _ROW_POSI_ACT,
@@ -326,8 +328,8 @@ class MainChartPanel(PanelWidget):
 
             posi_act = self._to_plot(self.posi_converter.convert_posi_to_dp(data.act_posi))
             posi_tgt = self._to_plot(self.posi_converter.convert_posi_to_dp(data.target_posi))
-            pres_act = self._to_plot(self.pres_converter.convert_iface_pres_to_dp_pres(data.act_pres))
-            pres_tgt = self._to_plot(self.pres_converter.convert_iface_pres_to_dp_pres(data.target_pres))
+            pres_act = self._to_plot(self.pres_converter.convert_iface_pres_to_dp_pres(data.act_pres, PresConvertType.AUTO))
+            pres_tgt = self._to_plot(self.pres_converter.convert_iface_pres_to_dp_pres(data.target_pres, PresConvertType.AUTO))
 
             i = self._end
             self._buf[_ROW_TIME, i] = (data.timestamp - self._t0_ms) / 1000.0
@@ -588,7 +590,7 @@ class MainChartPanel(PanelWidget):
             self.local_setting.posi_chart_range_custom_max)
 
     def handle_pres_range_setting_changed(self):
-        full_max = self.pres_converter.get_dp_max_pres()
+        full_max = self.pres_converter.get_dp_max_pres(PresConvertType.AUTO)
         if full_max is None:
             full_max = 100.0  # 컨버터 미준비 시 대체값 (스펙)
 

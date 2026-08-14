@@ -7,7 +7,7 @@ ver1 에서 달라진 점:
   보일러플레이트를 _add_menu_button() 헬퍼로 통합.
 - reg_*_slot 래퍼 메서드(45개)를 제거. 액션(action_*)과 버튼(*_btn)이 모두
   공개 속성이므로 호출측에서 직접 연결한다:
-      toolbar.action_connect.triggered.connect(slot, Qt.QueuedConnection)
+      toolbar.action_connection_connect.triggered.connect(slot, Qt.QueuedConnection)
       toolbar.local_btn.clicked.connect(slot, Qt.QueuedConnection)
 - 오타 수정: advenced -> advanced, lagacy -> legacy (속성명 / UI 텍스트)
 """
@@ -56,14 +56,14 @@ class MainToolBar(BaseToolBar):
         self.addWidget(self.refresh_btn)
 
         # Connection
-        self.action_connect = QAction("Connect", self)
-        self.action_disconnect = QAction("Disconnect", self)
-        self.action_settings = QAction("Settings", self)
+        self.action_connection_connect = QAction("Connect", self)
+        self.action_connection_disconnect = QAction("Disconnect", self)
+        self.action_connection_settings = QAction("Settings", self)
         self.conn_btn, self.conn_menu = self._add_menu_button("Connection", [
-            self.action_connect,
-            self.action_disconnect,
+            self.action_connection_connect,
+            self.action_connection_disconnect,
             None,
-            self.action_settings,
+            self.action_connection_settings,
         ])
 
         self.addSeparator()
@@ -179,9 +179,11 @@ class MainToolBar(BaseToolBar):
 
         # Analysis
         self.action_analysis_sensor = QAction("Sensor Analysis", self)
+        self.action_analysis_chart = QAction("Chart Analysis", self)
         self.action_analysis_terminal = QAction("Terminal", self)
         self.analysis_btn, self.analysis_menu = self._add_menu_button("Analysis", [
             self.action_analysis_sensor,
+            self.action_analysis_chart,
             self.action_analysis_terminal,
         ])
 

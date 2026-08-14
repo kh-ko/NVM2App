@@ -1,8 +1,7 @@
-from decimal import Decimal
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
-from b_core.f_helper.float_util import is_float_equal
+from b_core.f_helper.float_util import is_float_equal, to_sig_str
 
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors
@@ -183,12 +182,8 @@ class ValueWidget(QWidget, ColorStyled):
             return None
 
         if isinstance(curr_value, float):
-            try:
-                s = f"{curr_value:.6g}"
-                str_value = f"{Decimal(s):f}" if 'e' in s else s
-                return str_value
-            except Exception:
-                return None
+            # 앱 전역 유효숫자 정책의 단일 구현(float_util.to_sig_str)에 위임한다
+            return to_sig_str(curr_value)
         elif isinstance(curr_value, int):
             try:
                 return str(curr_value)

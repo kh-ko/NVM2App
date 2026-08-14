@@ -27,7 +27,7 @@ class MainStatusPanel(ScrolledPanelWidget):
 
     def set_posi_ctrl_speed_param(self, param):
         self._posi_ctrl_speed_param = param
-        widget = ParamReadOnlyScaleValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text = "Pos. Control Speed", label_width = 180)
+        widget = ParamReadOnlyScaleValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text = "Pos. Control Speed (%)", label_width = 180)
         self.add_widget(widget)
 
     def set_pres_controller_selector_param(self, param):

@@ -179,12 +179,14 @@ class ChartAnalysisWin(QMainWindow):
             axis.setPen(pg.mkPen(t.chart_grid))
             axis.setTextPen(pg.mkPen(color))
 
-        # 곡선 4개 — 메인 차트와 같은 색/선 스타일 (target 은 점선)
+        # 곡선 4개 — 메인 차트와 같은 색/선 스타일 (target 은 점선).
+        # pres 곡선(pres_viewbox 소속)이 posi 곡선 아래에 그려지므로(실측),
+        # 겹칠 때도 보이도록 pres 쪽을 약간 더 두껍게 그린다 (메인 차트와 동일)
         self._curves = {
             "posi_actual": pg.PlotDataItem(pen=pg.mkPen(t.chart_posi_target, width=1)),
             "posi_target": pg.PlotDataItem(pen=pg.mkPen(t.chart_posi_target, width=1, style=Qt.DashLine)),
-            "pres_actual": pg.PlotDataItem(pen=pg.mkPen(t.chart_pres_target, width=1)),
-            "pres_target": pg.PlotDataItem(pen=pg.mkPen(t.chart_pres_target, width=1, style=Qt.DashLine)),
+            "pres_actual": pg.PlotDataItem(pen=pg.mkPen(t.chart_pres_target, width=2)),
+            "pres_target": pg.PlotDataItem(pen=pg.mkPen(t.chart_pres_target, width=2, style=Qt.DashLine)),
         }
         # 대용량 CSV 대비 — 화면 픽셀당 피크 보존 다운샘플링 + 화면 밖 클리핑.
         # 수백만 포인트에서도 페인트 비용이 화면 폭 기준으로 제한된다 (소량 데이터엔 무영향)

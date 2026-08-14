@@ -1,4 +1,4 @@
-"""라벨 컨트롤 모음.
+﻿"""라벨 컨트롤 모음.
 
 - BaseLabel: 기본 라벨.
   - role=LabelRole.TITLE/DESCRIPTION 으로 역할별 폰트 크기 지정 (상속 클래스 공통 적용).
@@ -11,6 +11,9 @@
   글리프+색이 고정된 프리셋 (기존 ver1 의 MyIconCheck / MyIconEdit / MyIconWarn 대응).
   체크 토글이 필요한 곳은 IconLabelCheck + IconLabelUncheck 두 객체를 만들고
   visible 을 전환하는 방식을 사용한다 (아이콘 객체 자체는 불변).
+- CheckLabel: [Check/Uncheck 아이콘 + 이름 라벨] 한 행짜리 체크 상태 표시 단위
+  (위 아이콘 visible 전환 관례를 클래스로 캡슐화 — set_checked / is_checked).
+  n개를 나열하는 박스는 containers.py 의 BaseValueBox 를 사용한다.
 
 기존 base_label.py + text_label.py + icons.py 의 라벨 클래스를 이 파일로 통합.
 (글리프 상수는 icons.py 에 유지. 기존 my_label / my_labeltitle /
@@ -21,7 +24,7 @@ from enum import Enum, auto
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QApplication, QLabel, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
 
 from c_ui.b_control_ver2.b_base import icons
 from c_ui.b_control_ver2.a_theme import style
@@ -147,3 +150,51 @@ class IconLabelWarn(IconLabel):
 
     def __init__(self, role: LabelRole = LabelRole.BODY, parent=None):
         super().__init__(icons.GLYPH_WARN, tokens().warning, role=role, parent=parent)
+
+
+class CheckLabel(QWidget):
+    """[Check/Uncheck 아이콘 + 이름 라벨] 한 행 — 체크 상태 표시 전용 단위.
+
+    모듈 관례(IconLabelCheck + IconLabelUncheck 두 객체를 만들고 visible 을
+    전환, 아이콘 객체 자체는 불변)를 클래스로 캡슐화한 것. 값 계약은 없다 —
+    체크 여부의 의미 부여(비트맵/enum 등)는 상위 레이어 몫이며, n개 나열은
+    containers.py 의 BaseValueBox 에 담는다.
+
+    sig_assigned_by_code: set_checked() 코드 할당 알림 — BaseLabel.setText 와
+    동일 계약 (값 변경 여부와 무관하게 setter 호출마다 발신)."""
+
+    sig_assigned_by_code = Signal(QWidget)
+
+    def __init__(self, text="", checked=False, parent=None):
+        super().__init__(parent)
+
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(5)
+
+        self._check_icon = IconLabelCheck()
+        self._uncheck_icon = IconLabelUncheck()
+        self._name_label = BaseLabel(text)
+
+        row.addWidget(self._check_icon)
+        row.addWidget(self._uncheck_icon)
+        row.addWidget(self._name_label, 1)
+
+        # 위젯 visible 은 부모 숨김에 영향받으므로 체크 상태는 별도 보관한다
+        self._checked = False
+        self.set_checked(checked)
+
+    def set_checked(self, checked: bool):
+        self._checked = bool(checked)
+        self._check_icon.setVisible(self._checked)
+        self._uncheck_icon.setVisible(not self._checked)
+        self.sig_assigned_by_code.emit(self)
+
+    def is_checked(self) -> bool:
+        return self._checked
+
+    def setText(self, text: str):
+        self._name_label.setText(text)
+
+    def text(self) -> str:
+        return self._name_label.text()

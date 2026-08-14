@@ -1,4 +1,4 @@
-"""실수 비교 공용 유틸 (앱 전역 정책).
+"""실수 비교/표시 공용 유틸 (앱 전역 정책).
 
 장비와의 통신 값은 4byte float(유효숫자 6~7자리)로 주고받으므로, 앱 전역에서
 실수 '같음' 판정은 보수적으로 유효숫자 6자리(rel_tol=1e-6) 기준으로 한다.
@@ -6,14 +6,21 @@
 (float32 양자화 오차를 변경으로 오판하는 것 방지). abs_tol 은 0 근처 전용
 안전망이다 (상대 기준이 0 에 수렴하는 구간의 연산 잡음 흡수).
 
+표시 문자열도 같은 정책을 따른다 — to_sig_str() 이 유효숫자 6자리 포맷의
+단일 구현이고(BaseFloatLineEdit 유효숫자 모드 / ValueWidget.get_value_str /
+각 컨버터가 직접 사용), 고정 자릿수 표시는 to_str_with_decimal_places() 다.
+
 GUI(c_values 의 is_dirty)뿐 아니라 b_core 어디서든 이 함수를 사용한다.
 장비 통신 정밀도가 바뀌면(예: double) 아래 상수만 조정하면 된다.
 """
 
 import math
 
-FLOAT_REL_TOL = 1e-6   # 유효숫자 6자리
+from decimal import Decimal
+
+FLOAT_REL_TOL = 1e-6   # 유효숫자 6자리 (비교)
 FLOAT_ABS_TOL = 1e-9   # 0 근처 안전망
+SIG_DIGITS = 6         # 유효숫자 6자리 (표시)
 
 
 def is_float_equal(a: float | None, b: float | None) -> bool:
@@ -22,3 +29,29 @@ def is_float_equal(a: float | None, b: float | None) -> bool:
         return a is None and b is None
 
     return math.isclose(a, b, rel_tol=FLOAT_REL_TOL, abs_tol=FLOAT_ABS_TOL)
+
+
+def to_sig_str(value: float | None) -> str | None:
+    """유효숫자 6자리 표시 문자열 — 후행 0 없음, 지수 표기는 풀어쓴다.
+
+    예: 0.00000123456789 -> "0.00000123457", 1234567.0 -> "1234570".
+    None/해석 불가 입력은 None 을 반환한다."""
+    if value is None:
+        return None
+
+    try:
+        text = f"{value:.{SIG_DIGITS}g}"
+        return f"{Decimal(text):f}" if "e" in text or "E" in text else text
+    except Exception:
+        return None
+
+
+def to_str_with_decimal_places(value: float | None, decimal_places: int) -> str | None:
+    """고정 소수점 자릿수 표시 문자열. None/해석 불가 입력은 None."""
+    if value is None:
+        return None
+
+    try:
+        return f"{value:.{decimal_places}f}"
+    except Exception:
+        return None

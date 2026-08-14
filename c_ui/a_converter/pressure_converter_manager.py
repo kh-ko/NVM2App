@@ -18,14 +18,26 @@ slope/intercept/unit_gain/unit_offset 은 관련 param(인터페이스 스케일
 import threading
 
 from decimal import Decimal
+from enum import Enum, auto
 
 from PySide6.QtCore import Signal, QObject
 
 from b_core.b_datatype import param_enum as p_enum
 from b_core.c_manager.parameter_manager import ParamManager
 from b_core.c_manager.local_setting_manager import LocalSettingManager
+from b_core.f_helper.float_util import to_sig_str
 
-from c_ui.a_converter.float_converter_manager import FloatConverterManager
+
+class PresConvertType(Enum):
+    """변환 시 어떤 센서 구성을 기준으로 할지 (USER_SPECIFIC 모드에서만 차이).
+
+    - AUTO   : 활성 센서 자동 선택 (기존 동작 — 둘 다 활성이면 Max 압력 큰 쪽)
+    - SENSOR1: Sensor 1 구성 고정 (기존 Sens1PresConverterManager 대응)
+    - SENSOR2: Sensor 2 구성 고정 (기존 Sens2PresConverterManager 대응)
+    변환 API 의 convert_type 인자에 None 을 주면 AUTO 로 동작한다."""
+    AUTO = auto()
+    SENSOR1 = auto()
+    SENSOR2 = auto()
 
 
 class PresConverterManager(QObject):
@@ -76,12 +88,15 @@ class PresConverterManager(QObject):
 
         self._initialized = True
         self.local_setting = LocalSettingManager()
-        self.float_converter = FloatConverterManager()
 
-        self.slope = 1.0
-        self.intercept = 0.0
-        self.unit_gain = 0.0
-        self.unit_offset = 0.0
+        # convert_type 별 변환 계수 (slope, intercept, unit_gain, unit_offset).
+        # None = 해당 타입의 구성 param 미준비 — 그 타입의 변환 결과도 None
+        # (표시측에서는 Unknown placeholder 로 나타난다)
+        self._coeffs: dict[PresConvertType, tuple | None] = {
+            PresConvertType.AUTO: None,
+            PresConvertType.SENSOR1: None,
+            PresConvertType.SENSOR2: None,
+        }
         self.pres_decimal_places = 6
 
         pm = ParamManager()
@@ -132,45 +147,76 @@ class PresConverterManager(QObject):
         self.sig_pres_range_changed.emit()
 
     def handle_sens_cfg_changed(self):
-        # 항상 필요한 인터페이스 param 준비 검사
+        # 항상 필요한 인터페이스 param 준비 검사 — 미준비면 세 타입 모두 계산 불가
         if any(p is None or p.value is None for p in self._iface_params):
+            self._coeffs = dict.fromkeys(self._coeffs, None)
+            self.sig_pres_range_changed.emit()
             return
 
         if self.iface_unit_param.value == p_enum.RS232PressureUnitEnum.USER_SPECIFIC.value:
-            # USER_SPECIFIC 모드는 센서 구성이 필요 — 활성 플래그부터 확인
-            if any(p is None or p.value is None for p in self._sens_flag_params):
-                return
-
-            s1_active = bool(self.sens1_avail_param.value and self.sens1_enable_param.value)
-            s2_active = bool(self.sens2_avail_param.value and self.sens2_enable_param.value)
-
-            # 활성 센서의 상세 param 만 준비되면 된다 (비활성 센서는 None 이어도 무관)
-            if s1_active and any(p is None or p.value is None for p in self._sens1_detail_params):
-                return
-            if s2_active and any(p is None or p.value is None for p in self._sens2_detail_params):
-                return
-
-            iface_min = self.iface_min_param.value
-            iface_max = self.iface_max_param.value
-            sens_unit, sens_min, sens_max = self._select_active_sensor(s1_active, s2_active)
-
-            if iface_max == iface_min or sens_max == sens_min:
-                self.slope = 1.0
-                self.intercept = 0.0
-                self.unit_gain = 0.0
-                self.unit_offset = 0.0
-            else:
-                self.slope = (sens_max - sens_min) / (iface_max - iface_min)
-                self.intercept = sens_min - (self.slope * iface_min)
-                self.unit_gain, self.unit_offset = self.get_unit_conversion(sens_unit, self.local_setting.pres_unit)
+            # 타입별 독립 판정 — 준비 안 된 타입만 None 으로 남는다
+            # (예: Sensor 2 미장착이면 SENSOR2 변환만 Unknown, AUTO/SENSOR1 은 정상)
+            self._coeffs[PresConvertType.SENSOR1] = self._make_sensor_coeff(self._sens1_detail_params)
+            self._coeffs[PresConvertType.SENSOR2] = self._make_sensor_coeff(self._sens2_detail_params)
+            self._coeffs[PresConvertType.AUTO] = self._make_auto_coeff()
         else:
-            self.slope = 1.0
-            self.intercept = 0.0
+            # 고정 인터페이스 단위 — 센서 구성과 무관하게 세 타입 동일 계수
             iface_unit = self.IFACE_TO_SENS_UNIT.get(self.iface_unit_param.value, p_enum.SensUnitEnum.PA.value)
-            self.unit_gain, self.unit_offset = self.get_unit_conversion(iface_unit, self.local_setting.pres_unit)
+            unit_gain, unit_offset = self.get_unit_conversion(iface_unit, self.local_setting.pres_unit)
+            self._coeffs = dict.fromkeys(self._coeffs, (1.0, 0.0, unit_gain, unit_offset))
 
         # UI 갱신 등을 위한 시그널 발생
         self.sig_pres_range_changed.emit()
+
+    def _make_sensor_coeff(self, detail_params) -> tuple | None:
+        """특정 센서(unit/min/max param) 고정 계수. 상세 param 미준비면 None."""
+        if any(p is None or p.value is None for p in detail_params):
+            return None
+
+        unit_param, min_param, max_param = detail_params
+        return self._make_coeff(unit_param.value, min_param.value, max_param.value)
+
+    def _make_auto_coeff(self) -> tuple | None:
+        """활성 센서 자동 선택(AUTO) 계수 — 기존 동작. 필요 param 미준비면 None."""
+        if any(p is None or p.value is None for p in self._sens_flag_params):
+            return None
+
+        s1_active = bool(self.sens1_avail_param.value and self.sens1_enable_param.value)
+        s2_active = bool(self.sens2_avail_param.value and self.sens2_enable_param.value)
+
+        # 활성 센서의 상세 param 만 준비되면 된다 (비활성 센서는 None 이어도 무관)
+        if s1_active and any(p is None or p.value is None for p in self._sens1_detail_params):
+            return None
+        if s2_active and any(p is None or p.value is None for p in self._sens2_detail_params):
+            return None
+
+        sens_unit, sens_min, sens_max = self._select_active_sensor(s1_active, s2_active)
+        return self._make_coeff(sens_unit, sens_min, sens_max)
+
+    def _make_coeff(self, sens_unit, sens_min, sens_max) -> tuple:
+        iface_min = self.iface_min_param.value
+        iface_max = self.iface_max_param.value
+
+        if iface_max == iface_min or sens_max == sens_min:
+            return (1.0, 0.0, 0.0, 0.0)  # 퇴화 구성 — 기존 동작 유지
+
+        slope = (sens_max - sens_min) / (iface_max - iface_min)
+        intercept = sens_min - (slope * iface_min)
+        unit_gain, unit_offset = self.get_unit_conversion(sens_unit, self.local_setting.pres_unit)
+        return (slope, intercept, unit_gain, unit_offset)
+
+    def _coeff(self, convert_type: PresConvertType | None) -> tuple | None:
+        """convert_type 의 계수 조회 — None 은 AUTO 로 취급한다.
+
+        PresConvertType 이 아닌 값(다른 enum 등)은 조용히 None(Unknown 표시)으로
+        숨지 않도록 즉시 TypeError 로 실패시킨다 (오용 조기 발견)."""
+        if convert_type is None:
+            convert_type = PresConvertType.AUTO
+
+        if convert_type not in self._coeffs:
+            raise TypeError(f"convert_type must be a PresConvertType, got {convert_type!r}")
+
+        return self._coeffs[convert_type]
 
     def _select_active_sensor(self, s1_active: bool, s2_active: bool) -> tuple[int, float, float]:
         """활성 센서의 (단위, min, max) 선택. 둘 다 활성이면 Max 압력(Pa 환산)이 큰 쪽."""
@@ -198,23 +244,29 @@ class PresConverterManager(QObject):
         return self.iface_max_param.value
 
     # ------------------------------------------------------------ 변환 (iface <-> dp)
-    def get_dp_max_pres(self) -> float | None:
-        return self.convert_iface_pres_to_dp_pres(self.iface_max_param.value)
+    # convert_type: 어떤 센서 구성 기준으로 변환할지 (None/AUTO = 활성 센서 자동)
+    def get_dp_max_pres(self, convert_type: PresConvertType | None) -> float | None:
+        return self.convert_iface_pres_to_dp_pres(self.iface_max_param.value, convert_type)
 
-    def get_dp_max_pres_str(self) -> str | None:
-        return self._format_dp(self.get_dp_max_pres())
+    def get_dp_max_pres_str(self, convert_type: PresConvertType | None) -> str | None:
+        return self._format_dp(self.get_dp_max_pres(convert_type))
 
-    def convert_iface_pres_to_dp_pres(self, ori_value: float) -> float | None:
-        if ori_value is None:
+    def convert_iface_pres_to_dp_pres(self, ori_value: float,
+                                      convert_type: PresConvertType | None) -> float | None:
+        coeff = self._coeff(convert_type)
+        if ori_value is None or coeff is None:
             return None
 
-        real_pres_in_sens_unit = (ori_value * self.slope) + self.intercept
-        return (real_pres_in_sens_unit * self.unit_gain) + self.unit_offset
+        slope, intercept, unit_gain, unit_offset = coeff
+        real_pres_in_sens_unit = (ori_value * slope) + intercept
+        return (real_pres_in_sens_unit * unit_gain) + unit_offset
 
-    def convert_iface_pres_to_dp_pres_str(self, ori_value: float) -> str | None:
-        return self._format_dp(self.convert_iface_pres_to_dp_pres(ori_value))
+    def convert_iface_pres_to_dp_pres_str(self, ori_value: float,
+                                          convert_type: PresConvertType | None) -> str | None:
+        return self._format_dp(self.convert_iface_pres_to_dp_pres(ori_value, convert_type))
 
-    def convert_dp_pres_str_to_iface_pres(self, display_value: str) -> float | None:
+    def convert_dp_pres_str_to_iface_pres(self, display_value: str,
+                                          convert_type: PresConvertType | None) -> float | None:
         if display_value is None:
             return None
 
@@ -223,9 +275,10 @@ class PresConverterManager(QObject):
         except Exception:
             return None
 
-        return self.convert_dp_pres_to_iface_pres(dp_value)
+        return self.convert_dp_pres_to_iface_pres(dp_value, convert_type)
 
-    def convert_dp_pres_str_to_iface_pres_str(self, display_value: str) -> str | None:
+    def convert_dp_pres_str_to_iface_pres_str(self, display_value: str,
+                                              convert_type: PresConvertType | None) -> str | None:
         if display_value is None:
             return None
 
@@ -234,37 +287,47 @@ class PresConverterManager(QObject):
         except Exception:
             return None
 
-        return self.convert_dp_pres_to_iface_pres_str(dp_value)
+        return self.convert_dp_pres_to_iface_pres_str(dp_value, convert_type)
 
-    def convert_dp_pres_to_iface_pres(self, value: float) -> float | None:
-        if self.slope == 0 or self.unit_gain == 0 or value is None:
+    def convert_dp_pres_to_iface_pres(self, value: float,
+                                      convert_type: PresConvertType | None) -> float | None:
+        coeff = self._coeff(convert_type)
+        if value is None or coeff is None:
             return None
 
-        real_pres_in_sens_unit = (value - self.unit_offset) / self.unit_gain
-        return (real_pres_in_sens_unit - self.intercept) / self.slope
+        slope, intercept, unit_gain, unit_offset = coeff
+        if slope == 0 or unit_gain == 0:
+            return None
 
-    def convert_dp_pres_to_iface_pres_str(self, value: float) -> str | None:
-        result_value = self.convert_dp_pres_to_iface_pres(value)
+        real_pres_in_sens_unit = (value - unit_offset) / unit_gain
+        return (real_pres_in_sens_unit - intercept) / slope
+
+    def convert_dp_pres_to_iface_pres_str(self, value: float,
+                                          convert_type: PresConvertType | None) -> str | None:
+        result_value = self.convert_dp_pres_to_iface_pres(value, convert_type)
 
         if result_value is None:
             return None
 
-        return self.float_converter.to_str(result_value)
+        return to_sig_str(result_value)
 
     # ------------------------------------------------------------ 변환 (sfs <-> dp)
-    def convert_sfs_to_dp_pres(self, value: float) -> float | None:
-        pres_max = self.get_dp_max_pres()
+    def convert_sfs_to_dp_pres(self, value: float,
+                               convert_type: PresConvertType | None) -> float | None:
+        pres_max = self.get_dp_max_pres(convert_type)
 
         if pres_max is None or value is None:
             return None
 
         return pres_max * value
 
-    def convert_sfs_to_dp_pres_str(self, value: float) -> str | None:
-        return self._format_dp(self.convert_sfs_to_dp_pres(value))
+    def convert_sfs_to_dp_pres_str(self, value: float,
+                                   convert_type: PresConvertType | None) -> str | None:
+        return self._format_dp(self.convert_sfs_to_dp_pres(value, convert_type))
 
-    def convert_dp_pres_to_sfs(self, value: float) -> float | None:
-        pres_max = self.get_dp_max_pres()
+    def convert_dp_pres_to_sfs(self, value: float,
+                               convert_type: PresConvertType | None) -> float | None:
+        pres_max = self.get_dp_max_pres(convert_type)
 
         if pres_max is None or value is None:
             return None
@@ -273,13 +336,14 @@ class PresConverterManager(QObject):
             return 0.0
         return value / pres_max
 
-    def convert_dp_pres_str_to_sfs(self, value: str) -> float | None:
+    def convert_dp_pres_str_to_sfs(self, value: str,
+                                   convert_type: PresConvertType | None) -> float | None:
         try:
             float_value = float(value)
         except Exception:
             return None
 
-        return self.convert_dp_pres_to_sfs(float_value)
+        return self.convert_dp_pres_to_sfs(float_value, convert_type)
 
     # ------------------------------------------------------------ 내부 공통
     def _format_dp(self, value: float | None) -> str | None:

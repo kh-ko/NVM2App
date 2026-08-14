@@ -1,4 +1,3 @@
-from c_ui.a_converter.float_converter_manager import FloatConverterManager
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 import threading
 import math
@@ -8,6 +7,7 @@ from PySide6.QtCore import Signal, QObject
 
 from b_core.b_datatype import param_enum as p_enum
 from b_core.c_manager.parameter_manager import ParamManager
+from b_core.f_helper.float_util import to_sig_str
 
 class PosiConverterManager(QObject):
     _instance = None
@@ -32,7 +32,6 @@ class PosiConverterManager(QObject):
 
         self._initialized = True
         self.local_setting = LocalSettingManager()
-        self.float_converter = FloatConverterManager()
 
         self.posi_unit = p_enum.RS232PositionUnitEnum.USER_SPECIFIC.value
         self.posi_min  = 0.0
@@ -161,7 +160,7 @@ class PosiConverterManager(QObject):
         if range_value != 0:
             result_value = (display_value / 100.0) * range_value + self.posi_min
         
-        return self.float_converter.to_str(result_value)
+        return to_sig_str(result_value)
 
     def convert_dp_to_pfs(self, display_value: float) -> float:
         if self.posi_max == 0:

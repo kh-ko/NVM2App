@@ -256,7 +256,6 @@ class SysErrorBitmap(DescriptionEnum):
 
          
 class SysErrorNumberComponent(DescriptionEnum):
-    NO_ERROR        = (0, "No Error")
     ALL_MOTOR_UNITS = (1, "All Motor Units")
     MOTOR_UNIT_1    = (2, "Motor Unit 1")
     MOTOR_UNIT_2    = (3, "Motor Unit 2")
@@ -383,8 +382,8 @@ class SensCrossModeEnum(DescriptionEnum):
     TARGET_PRESSURE = (2, "Target Pressure")
 
 class SensLogPresOnIFace(DescriptionEnum):
-    LINEAR      = (0, "Linear:Linear signal is used on Interface")
-    LOGARITHMIC = (1, "Logarithmic:Logarithmic signal is used on Interface")
+    LINEAR      = (0, "Linear signal") # Linear signal is used on Interface
+    LOGARITHMIC = (1, "Logarithmic signal") # Logarithmic signal is used on Interface
 
 class PosiRampModeEnum(DescriptionEnum):
     USE_RAMP_TIME   = (0, "Use Ramp Time")

@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMainWindow, QVBoxLayout, QWidget
 
 from b_core.c_manager.local_setting_manager import LocalSettingManager
-from c_ui.a_converter.pressure_converter_manager import PresConverterManager
+from c_ui.a_converter.pressure_converter_manager import PresConverterManager, PresConvertType
 from c_ui.b_control_ver2.b_base.toolbars import BaseToolBar
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.c_values.read_write_values import ReadWriteFloatValueWidget
@@ -99,7 +99,7 @@ class LocalPresSettingWin(QMainWindow):
         widget = self._widgets[name]
         widget.set_decimals(self.local_setting.pres_decimal_places)
         sfs_value = getattr(self.local_setting, name)
-        dp_value = self.converter.convert_sfs_to_dp_pres(sfs_value)
+        dp_value = self.converter.convert_sfs_to_dp_pres(sfs_value, PresConvertType.AUTO)
         widget.set_value(dp_value)
         if dp_value is None:
             widget.setEnabled(False)
@@ -145,7 +145,7 @@ class LocalPresSettingWin(QMainWindow):
             # pres_decimal_places 가 float 로 저장되어 포맷 문자열이 깨진다
             if name in self._setpoint_names:
                 # get_value() 는 float 이므로 float 입력 계약인 convert_dp_pres_to_sfs 를 쓴다
-                value = self.converter.convert_dp_pres_to_sfs(value)
+                value = self.converter.convert_dp_pres_to_sfs(value, PresConvertType.AUTO)
             else:
                 value = int(value)
 
