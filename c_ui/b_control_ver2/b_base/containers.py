@@ -441,6 +441,8 @@ class BaseFlowLayout(QLayout):
     def minimumSize(self):
         size = QSize()
         for item in self._items:
+            if item.isEmpty():  # 숨긴 위젯은 배치에서 제외 (Qt 표준 레이아웃과 동일)
+                continue
             size = size.expandedTo(item.minimumSize())
 
         margins = self.contentsMargins()
@@ -488,6 +490,9 @@ class BaseFlowLayout(QLayout):
         row_width = 0
 
         for item in self._items:
+            if item.isEmpty():  # 숨긴 위젯은 배치에서 제외 — 빈 자리를 남기지 않는다
+                continue
+
             needed = base_width + (spacing if row_items else 0)
 
             # 현재 줄에 안 들어가면 지금까지의 줄을 확정하고 새 줄 시작

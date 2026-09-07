@@ -1,3 +1,4 @@
+
 from typing import NamedTuple
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
@@ -8,9 +9,10 @@ from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.parameter_manager import ParamManager
 from b_core.d_dal.service_port import ServicePort
 from b_core.e_worker_ver2.compound_run_worker import CompoundRunWorker
+from b_core.f_helper import firmware_util
 from b_core.e_worker_ver2.parameter_run_worker import ParameterRunWorker
 
-from c_ui.b_control_ver2.d_param.param_win import ParamWin
+from c_ui.b_control_ver2.d_param.param_win import ParamWorkerWinMixin, ParamWin, ParamPresCtrlWin, ParamIfaceDentWin, ParamIfaceEtherCatWin
 from c_ui.b_control_ver2.b_base.statusbars import BaseStatusBar
 
 from c_ui.c_window_ver2.win_manager import WinManager
@@ -22,13 +24,15 @@ from c_ui.c_window_ver2.a_main.main_position_panel import MainPositionPanel
 from c_ui.c_window_ver2.a_main.main_control_panel import MainControlPanel
 
 from c_ui.c_window_ver2.b_connection.connection_connect_win import ConnectionConnectWin
+from c_ui.c_window_ver2.c_analysis.chart_analysis_win import ChartAnalysisWin
 from c_ui.c_window_ver2.x_localsetting.local_posi_setting_win import LocalPosiSettingWin
 from c_ui.c_window_ver2.x_localsetting.local_pres_setting_win import LocalPresSettingWin
+from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin
+from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
 
 from c_ui.c_window_ver2.log_view_win import LogViewWin
 from c_ui.c_window_ver2.x_message.connection_message_box import ask_disconnect
 from c_ui.c_window_ver2.x_message.not_ready_message_box import show_not_ready
-from c_ui.c_window_ver2.param_worker_win_mixin import ParamWorkerWinMixin
 
 class CompoundData(NamedTuple):
     timestamp: int
@@ -44,6 +48,7 @@ class CompoundData(NamedTuple):
     error_bitmap: int
     error_number: int
     error_code: int
+    test_mode_used: int
 
 _COMPOUND_BANK = "Compound Commands.NVM For Sevice.Compound Commands 1"
 
@@ -60,6 +65,7 @@ _COMPOUND_REF_PATHS = [
     "System.Warning/Error.Error Bitmap",                        # [9]
     "System.Warning/Error.Error Number",                        # [10]
     "System.Warning/Error.Error Code",                          # [11]
+    "System.Services.Test Mode Used",                           # [12]
 ]
 
 def _make_compound_data(timestamp_ms: int, values: list[str]) -> CompoundData:
@@ -78,6 +84,7 @@ def _make_compound_data(timestamp_ms: int, values: list[str]) -> CompoundData:
         int(values[9]),    # error_bitmap
         int(values[10]),   # error_number
         int(values[11]),   # error_code
+        int(values[12]),   # Test Mode Used
     )
 
 class MainWin(ParamWorkerWinMixin, QMainWindow):
@@ -125,13 +132,16 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.main_top_toolbar.action_learn_bank2_setting.triggered.connect(self.on_clicked_learn_bank2_setting, Qt.QueuedConnection)
         self.main_top_toolbar.action_learn_bank3_setting.triggered.connect(self.on_clicked_learn_bank3_setting, Qt.QueuedConnection)
         self.main_top_toolbar.action_learn_bank4_setting.triggered.connect(self.on_clicked_learn_bank4_setting, Qt.QueuedConnection)
-        self.main_top_toolbar.action_learn_list_setting.triggered.connect(self.on_clicked_learn_list_setting, Qt.QueuedConnection)
+        self.main_top_toolbar.action_learn_list1_setting.triggered.connect(self.on_clicked_learn_list1_setting, Qt.QueuedConnection)
+        self.main_top_toolbar.action_learn_list2_setting.triggered.connect(self.on_clicked_learn_list2_setting, Qt.QueuedConnection)
+        self.main_top_toolbar.action_learn_list3_setting.triggered.connect(self.on_clicked_learn_list3_setting, Qt.QueuedConnection)
+        self.main_top_toolbar.action_learn_list4_setting.triggered.connect(self.on_clicked_learn_list4_setting, Qt.QueuedConnection)
         self.main_top_toolbar.action_pfo_setting.triggered.connect(self.on_clicked_pfo_setting, Qt.QueuedConnection)
         self.main_top_toolbar.action_iface_pwr_io.triggered.connect(self.on_clicked_iface_pwr_io, Qt.QueuedConnection)
         self.main_top_toolbar.action_iface_dnet.triggered.connect(self.on_clicked_iface_dnet, Qt.QueuedConnection)
         self.main_top_toolbar.action_iface_ethercat.triggered.connect(self.on_clicked_iface_ethercat, Qt.QueuedConnection)
         self.main_top_toolbar.action_iface_trace.triggered.connect(self.on_clicked_iface_trace, Qt.QueuedConnection)
-        self.main_top_toolbar.action_cluster_master.triggered.connect(self.on_clicked_cluster_master, Qt.QueuedConnection)
+        self.main_top_toolbar.action_cluster_setting.triggered.connect(self.on_clicked_cluster_setting, Qt.QueuedConnection)
         self.main_top_toolbar.action_cluster_monitor.triggered.connect(self.on_clicked_cluster_monitor, Qt.QueuedConnection)
         self.main_top_toolbar.action_compound_compound1.triggered.connect(self.on_clicked_compound_compound1, Qt.QueuedConnection)
         self.main_top_toolbar.action_compound_compound2.triggered.connect(self.on_clicked_compound_compound2, Qt.QueuedConnection)
@@ -155,6 +165,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         main_layout.setSpacing(0)
 
         self.chart_panel = MainChartPanel()
+        self.chart_panel.capture_btn.clicked.connect(self.on_clicked_analysis_chart)
         main_layout.addWidget(self.chart_panel)
 
         self.bottom_area = QWidget()
@@ -243,6 +254,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.warn_bitmap_param              = self.param_manager.get_by_full_path("System.Warning/Error.Warning Bitmap"                        )               
         self.err_bitmap_param               = self.param_manager.get_by_full_path("System.Warning/Error.Error Bitmap"                          )                 
         self.ctrl_mode_param                = self.param_manager.get_by_full_path("System.Control Mode"                                        )
+        self.test_mode_used_param           = self.param_manager.get_by_full_path("System.Services.Test Mode Used"                             )
         self.target_posi_param              = self.param_manager.get_by_full_path("Position Control.Basic.Target.Target Position"              )
         self.act_posi_param                 = self.param_manager.get_by_full_path("Position Control.Basic.Actual Position"                     )
         self.target_used_posi_param         = self.param_manager.get_by_full_path("Position Control.Basic.Target Position Used"                )
@@ -329,11 +341,12 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.user_iface_param.sig_value_changed.connect(self.handle_changed_user_iface_param)
 
         # status panel param 연결
+        self.status_panel.set_test_mode_used_param(self.test_mode_used_param)
         self.status_panel.set_ctrl_mode_param(self.ctrl_mode_param)
         self.status_panel.set_posi_ctrl_speed_param(self.posi_ctrl_speed_param)
         self.status_panel.set_pres_controller_selector_param(self.pres_controller_selector_param)
         self.status_panel.set_warn_bitmap_param(self.warn_bitmap_param)
-        self.status_panel.set_err_bitmap_param(self.err_bitmap_param)
+        self.status_panel.set_err_bitmap_param(self.err_bitmap_param)        
 
         # position panel param 연결
         self.posi_panel.set_actual_posi_param(self.act_posi_param)
@@ -416,7 +429,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         WinManager().show_window(win_class=ParamWin, win_name=None, win_id="ParamWin_System.Statistics", parent=self, is_modal=False, paths=["System.Statistics"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_sys_service(self):
-        WinManager().show_window(win_class=ParamWin, win_name=None, win_id="ParamWin_System.Services", parent=self, is_modal=False, paths=["System.Services"], filter_param_paths=[], is_editblock_win=False, label_width=210)
+        WinManager().show_window(win_class=ParamWin, win_name=None, win_id="ParamWin_System.Services", parent=self, is_modal=False, paths=["System.Services"], filter_param_paths=["System.Services.Test Mode Used"], is_editblock_win=False, label_width=210)
 
     def on_clicked_valve_basic(self):
         WinManager().show_window(win_class=ParamWin, win_name=None, win_id="ParamWin_Valve.Basic", parent=self, is_modal=False, paths=["Valve.Basic"], filter_param_paths=[], is_editblock_win=False, label_width=210)
@@ -448,79 +461,107 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         WinManager().show_window(win_class=ParamWin, win_name="Pressure Control", win_id="ParamWin_Pressure Control", parent=self, is_modal=False, paths=["Pressure Control.Basic", "Pressure Control.General Settings"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_pres_ctrl_controller_setting(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamPresCtrlWin, win_name="Pressure Control", win_id="ParamWin_Pressure Control", parent=self, is_modal=False, paths=["Pressure Control.Controller 1", "Pressure Control.Controller 2", "Pressure Control.Controller 3", "Pressure Control.Controller 4"], filter_param_paths=[], is_editblock_win=False, label_width=210, folder_max_width=350)
 
     def on_clicked_learn(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn.Basic", win_id="ParamWin_Adaptive Learn.Basic", parent=self, is_modal=False, paths=["Adaptive Learn.Basic"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_learn_bank1_setting(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn.Learn Bank 1", win_id="ParamWin_Adaptive Learn.Learn Bank 1", parent=self, is_modal=False, paths=["Adaptive Learn.Learn Bank 1"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_learn_bank2_setting(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn.Learn Bank 2", win_id="ParamWin_Adaptive Learn.Learn Bank 2", parent=self, is_modal=False, paths=["Adaptive Learn.Learn Bank 2"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_learn_bank3_setting(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn.Learn Bank 3", win_id="ParamWin_Adaptive Learn.Learn Bank 3", parent=self, is_modal=False, paths=["Adaptive Learn.Learn Bank 3"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_learn_bank4_setting(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn.Learn Bank 4", win_id="ParamWin_Adaptive Learn.Learn Bank 4", parent=self, is_modal=False, paths=["Adaptive Learn.Learn Bank 4"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
-    def on_clicked_learn_list_setting(self):
-        show_not_ready(self)
+    def on_clicked_learn_list1_setting(self):
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn List 1", win_id="ParamWin_Adaptive Learn List 1", parent=self, is_modal=False, paths=["Adaptive Learn List 1"], filter_param_paths=[], is_editblock_win=False, label_width=210, folder_max_width=350)
+
+    def on_clicked_learn_list2_setting(self):
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn List 2", win_id="ParamWin_Adaptive Learn List 2", parent=self, is_modal=False, paths=["Adaptive Learn List 2"], filter_param_paths=[], is_editblock_win=False, label_width=210, folder_max_width=350)
+
+    def on_clicked_learn_list3_setting(self):
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn List 3", win_id="ParamWin_Adaptive Learn List 3", parent=self, is_modal=False, paths=["Adaptive Learn List 3"], filter_param_paths=[], is_editblock_win=False, label_width=210, folder_max_width=350)
+
+    def on_clicked_learn_list4_setting(self):
+        WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn List 4", win_id="ParamWin_Adaptive Learn List 4", parent=self, is_modal=False, paths=["Adaptive Learn List 4"], filter_param_paths=[], is_editblock_win=False, label_width=210, folder_max_width=350)
 
     def on_clicked_pfo_setting(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Power Fail Option", win_id="ParamWin_Power Fail Option", parent=self, is_modal=False, paths=["Power Fail Option"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_iface_pwr_io(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Power Connector IO", win_id="ParamWin_Power Connector IO", parent=self, is_modal=False, paths=["Power Connector IO"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_iface_dnet(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamIfaceDentWin, win_name="Interface DeviceNet", win_id="ParamWin_Interface DeviceNet", parent=self, is_modal=False, paths=["Interface DeviceNet"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_iface_ethercat(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamIfaceEtherCatWin, win_name="Interface EtherCAT", win_id="ParamWin_Interface EtherCAT", parent=self, is_modal=False, paths=["Interface EtherCAT.Basic", "Interface.Scaling", "Interface EtherCAT.Scaling", "Interface EtherCAT.Range", "Interface EtherCAT.Connection Loss Reaction"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
-    def on_clicked_iface_trace(self):
-        show_not_ready(self)
+    def on_clicked_cluster_setting(self):
+        if self.user_iface_param.value is None:
+            return
+        elif self.firmware_version_param.value is None:
+            return
 
-    def on_clicked_cluster_master(self):
-        show_not_ready(self)
+        filter_param_paths = []
+        if self.user_iface_param.value is p_enum.SysUserInterfaceEnum.CLUSTER_SLAVE.value:
+            filter_param_paths.append("Cluster.Settings.Number of Valves")
+        else:
+            filter_param_paths.append("Cluster.Settings.Cluster Address")
 
-    def on_clicked_cluster_monitor(self):
-        show_not_ready(self)
+        # 펌웨어 버전 비교는 hex 코드 기준 (예: "6.5.5" -> 0x655)
+        firmware_code = firmware_util.to_version_code(self.firmware_version_param.value)
+        if firmware_code is None:
+            return  # 형식이 예상과 다르면 버전 미확인으로 보고 열지 않는다
+
+        if firmware_code < 0x623:
+            filter_param_paths.append("Cluster.Settings.Baud Rate V2")
+        else:
+            filter_param_paths.append("Cluster.Settings.Baud Rate V1")
+
+        WinManager().show_window(win_class=ParamWin, win_name="Cluster.Settings", win_id="ParamWin_Cluster.Settings", parent=self, is_modal=False, paths=["Cluster.Settings"], filter_param_paths=filter_param_paths, is_editblock_win=False, label_width=210)
 
     def on_clicked_compound_compound1(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Compound Commands.User Interface.Compound Commands 1", win_id="ParamWin_Compound Commands.User Interface.Compound Commands 1", parent=self, is_modal=False, paths=["Compound Commands.User Interface.Compound Commands 1"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_compound_compound2(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Compound Commands.User Interface.Compound Commands 2", win_id="ParamWin_Compound Commands.User Interface.Compound Commands 2", parent=self, is_modal=False, paths=["Compound Commands.User Interface.Compound Commands 2"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_compound_compound3(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Compound Commands.User Interface.Compound Commands 3", win_id="ParamWin_Compound Commands.User Interface.Compound Commands 3", parent=self, is_modal=False, paths=["Compound Commands.User Interface.Compound Commands 3"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_compound_compound4(self):
-        show_not_ready(self)
-
-    def on_clicked_advanced_backup(self):
-        show_not_ready(self)
-
-    def on_clicked_advanced_restore(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Compound Commands.User Interface.Compound Commands 4", win_id="ParamWin_Compound Commands.User Interface.Compound Commands 4", parent=self, is_modal=False, paths=["Compound Commands.User Interface.Compound Commands 4"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_advanced_legacy(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="Legacy Parameters", win_id="ParamWin_Legacy Parameters", parent=self, is_modal=False, paths=["Legacy Parameters"], filter_param_paths=[], is_editblock_win=False, label_width=310)
 
-    def on_clicked_analysis_sensor(self):
-        show_not_ready(self)
+    def on_clicked_advanced_backup(self):
+        WinManager().show_window(win_class=BackupWin, win_name="Backup", win_id="ParamWin_Backup", parent=self, is_modal=False, is_fu_backup = False)
+
+    def on_clicked_advanced_restore(self):
+        WinManager().show_window(win_class=RestoreWin, win_name="Restore", win_id="ParamWin_Restore", parent=self, is_modal=False)
 
     def on_clicked_analysis_chart(self):
-        show_not_ready(self)
+        # 분석 윈도우는 스냅샷 복사본만 다루므로 여러 개 띄워도 안전하다
+        # — WinManager(단일 창 관리)를 거치지 않고 직접 생성한다.
+        # 스냅샷이 없어도 창은 연다 — Open CSV 로 저장된 기록을 볼 수 있다
+        win = ChartAnalysisWin(parent=self)
+        win.setAttribute(Qt.WA_DeleteOnClose)
 
-    def on_clicked_analysis_terminal(self):
-        show_not_ready(self)
+        snapshot = self.chart_panel.get_capture_snapshot()
+        if snapshot is not None:
+            win.set_capture_data(**snapshot)
 
-    def on_clicked_fac_adc_calib(self):
-        show_not_ready(self)
+        win.show()
+
+    def on_clicked_analysis_sensor(self):
+        show_not_ready(self)     
 
     def on_clicked_fac_firmware_update(self):
         show_not_ready(self)
@@ -529,6 +570,18 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         show_not_ready(self)
 
     def on_clicked_help_about(self):
+        show_not_ready(self)        
+
+    def on_clicked_cluster_monitor(self):
+        show_not_ready(self)
+
+    def on_clicked_iface_trace(self):
+        show_not_ready(self)
+
+    def on_clicked_analysis_terminal(self):
+        show_not_ready(self)
+
+    def on_clicked_fac_adc_calib(self):
         show_not_ready(self)
 
     '''
@@ -563,7 +616,9 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.ctrl_panel.set_ctrl_mode_value(self.ctrl_mode_param.value)
 
     def handle_changed_user_iface_param(self):
-        pass
+        # 인터페이스별 메뉴 구성(DNET 계열 -> dnet, ETHERCAT -> ethercat,
+        # 그 외/None -> 공통 항목만)은 툴바의 set_iface() 가 소유한다
+        self.main_top_toolbar.set_iface(self.user_iface_param.value)
 
     def handle_compound_data(self):
         data_list = self.compound_worker.pop_all_data()

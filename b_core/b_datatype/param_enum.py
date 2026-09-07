@@ -554,7 +554,7 @@ class RS232NetworkEnum(DescriptionEnum):
 
 class RS232ParityBitEnum(DescriptionEnum):
     NONE = (0, "None")
-    ODD = (1, "Even")
+    ODD  = (1, "Even")
     EVEN = (2, "Odd")
 
 class RS232StopBitEnum(DescriptionEnum):
@@ -566,23 +566,23 @@ class RS232TopologyEnum(DescriptionEnum):
     HALF_DUPLEX = (1, "Half Duplex")
 
 class RS232PositionUnitEnum(DescriptionEnum):
-    ZERO_TO_1 = (0, "0-1")
-    ZERO_TO_10 = (1, "0-10")
-    ZERO_TO_90 = (2, "0-90")
-    ZERO_TO_100 = (3, "0-100")
-    ZERO_TO_1000 = (4, "0-1000")
-    ZERO_TO_10000 = (5, "0-10000")
+    ZERO_TO_1      = (0, "0-1")
+    ZERO_TO_10     = (1, "0-10")
+    ZERO_TO_90     = (2, "0-90")
+    ZERO_TO_100    = (3, "0-100")
+    ZERO_TO_1000   = (4, "0-1000")
+    ZERO_TO_10000  = (5, "0-10000")
     ZERO_TO_100000 = (6, "0-100000")
-    USER_SPECIFIC = (7, "User specific")
+    USER_SPECIFIC  = (7, "User specific")
 
 class RS232PressureUnitEnum(DescriptionEnum):
-    PA = (0, "Pa")
-    KPA = (1, "kPa")
-    BAR = (2, "bar")
-    MBAR = (3, "mbar")
-    TORR = (4, "Torr")
-    MTORR = (5, "mTorr")
-    PSI = (6, "psi")
+    PA            = (0, "Pa")
+    KPA           = (1, "kPa")
+    BAR           = (2, "bar")
+    MBAR          = (3, "mbar")
+    TORR          = (4, "Torr")
+    MTORR         = (5, "mTorr")
+    PSI           = (6, "psi")
     USER_SPECIFIC = (7, "User specific")
 
 class DeviceNetDevTypeEnum(DescriptionEnum):

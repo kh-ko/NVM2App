@@ -97,7 +97,7 @@ class ParameterThread(QObject):
 
     @Slot(str, object)
     def process_single_read(self, packet: str, param):
-        response, err_type = ServicePort().request_string(packet, None)
+        response, err_type = ServicePort().request_string(packet)
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(self.ERROR_DELAY_MS)
 
@@ -105,7 +105,7 @@ class ParameterThread(QObject):
 
     @Slot(str, str)
     def process_raw_write(self, tag: str, packet: str):
-        response, err_type = ServicePort().request_string(packet, None)
+        response, err_type = ServicePort().request_string(packet)
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(self.ERROR_DELAY_MS)
 

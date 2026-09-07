@@ -120,14 +120,20 @@ class MainToolBar(BaseToolBar):
         self.action_learn_bank2_setting = QAction("Learn Bank 2 Settings", self)
         self.action_learn_bank3_setting = QAction("Learn Bank 3 Settings", self)
         self.action_learn_bank4_setting = QAction("Learn Bank 4 Settings", self)
-        self.action_learn_list_setting = QAction("Learn List Settings", self)
+        self.action_learn_list1_setting = QAction("Learn List 1 Settings", self)
+        self.action_learn_list2_setting = QAction("Learn List 2 Settings", self)
+        self.action_learn_list3_setting = QAction("Learn List 3 Settings", self)
+        self.action_learn_list4_setting = QAction("Learn List 4 Settings", self)
         self.learn_btn, self.learn_menu = self._add_menu_button("Learn", [
             self.action_learn,
             self.action_learn_bank1_setting,
             self.action_learn_bank2_setting,
             self.action_learn_bank3_setting,
             self.action_learn_bank4_setting,
-            self.action_learn_list_setting,
+            self.action_learn_list1_setting,
+            self.action_learn_list2_setting,
+            self.action_learn_list3_setting,
+            self.action_learn_list4_setting,
         ])
 
         # Power Fail Options
@@ -147,10 +153,10 @@ class MainToolBar(BaseToolBar):
         ])
 
         # Cluster
-        self.action_cluster_master = QAction("Master Settings", self)
+        self.action_cluster_setting = QAction("Settings", self)
         self.action_cluster_monitor = QAction("Cluster Monitor", self)
         self.cluster_btn, self.cluster_menu = self._add_menu_button("Cluster", [
-            self.action_cluster_master,
+            self.action_cluster_setting,
             self.action_cluster_monitor,
         ])
 

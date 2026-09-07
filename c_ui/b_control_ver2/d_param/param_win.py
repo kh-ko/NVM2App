@@ -3,14 +3,18 @@ import json
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (QFileDialog, QMainWindow, QMessageBox,
-                               QScrollArea, QVBoxLayout, QWidget)
+                               QScrollArea, QVBoxLayout, QWidget, QApplication)
 
 from b_core.b_datatype.general_enum import ParamAccType
 from b_core.b_datatype.parameter import Parameter
+from b_core.b_datatype.param_enum import EtherCATDataTypeEnum, PresCtrlSelEnum
+from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.parameter_manager import ParamManager
+from b_core.f_helper import eds_file_helper, ethercat_xml_file_helper
 from b_core.d_dal.service_port import ServicePort
-from b_core.e_worker_ver2.parameter_run_worker import ParameterRunWorker
+from b_core.e_worker_ver2.parameter_run_worker import ParameterRunWorker, StartResult
 
+from c_ui.b_control_ver2.a_theme import tokens
 from c_ui.b_control_ver2.b_base.toolbars import BaseToolBar
 from c_ui.b_control_ver2.b_base.statusbars import BaseStatusBar
 from c_ui.b_control_ver2.b_base.containers import BaseFlowLayout
@@ -19,7 +23,96 @@ from c_ui.b_control_ver2.d_param.param_values import ParamWriteOnlyEnumValueWidg
 
 from c_ui.c_window_ver2.win_manager import WinManager
 from c_ui.c_window_ver2.log_view_win import LogViewWin
-from c_ui.c_window_ver2.param_worker_win_mixin import ParamWorkerWinMixin
+from c_ui.c_window_ver2.x_message.param_result_message_box import (
+    ask_local_switch, show_param_refresh_warning, show_param_write_warning)
+from c_ui.c_window_ver2.x_message.wait_message_box import show_busy_wait_message_box
+
+"""ParameterRunWorker 를 소유한 윈도우 공통 동작 믹스인.
+
+MainWin / ParamWin 등 param_worker 를 가진 창마다 문자 단위로 복사되던
+쓰기 정책(Local 전환 확인 재시도) / refresh / 연결·SN 상태바 처리를 한곳으로
+모은다. 앞으로 만들 설정 창들도 이 믹스인을 상속하면 된다.
+
+사용 조건 — 호스트 클래스가 준비해야 하는 속성:
+- self.param_worker : ParameterRunWorker
+- self.statusbar    : BaseStatusBar (라벨 0 = 연결 정보, 라벨 1 = SN)
+- self.sn_param     : Parameter (System.Identification.Serial Number)
+
+연결 끊김 시 추가 동작(예: MainWin 의 compound 폴링 중지)이 필요한 창은
+handle_changed_connection_info 를 오버라이드해 super() 호출 전후로 수행한다.
+"""
+class ParamWorkerWinMixin:
+
+    _reboot_wait_box = None  # 재부팅 대기 중일 때만 인스턴스에 박스 참조가 얹힌다
+
+    def single_param_write(self, param, value):
+        self.multiple_param_write([(param, value)])
+
+    def multiple_param_write(self, pairs: list):
+        result = self.param_worker.write(pairs)
+
+        # Local 전환 후 재시도 여부는 윈도우가 결정한다 (x_message 는 표시 전용)
+        if result == StartResult.NEED_LOCAL_SWITCH:
+            if not ask_local_switch(self):
+                return
+            result = self.param_worker.write(pairs, switch_to_local=True)
+
+        show_param_write_warning(self, result)
+
+    def start_param_refresh(self):
+        result = self.param_worker.refresh()
+        show_param_refresh_warning(self, result)
+
+    def handle_changed_connection_info(self, info: str):
+        is_connected = bool(info)
+        self.statusbar.set_connected(is_connected)
+        self.statusbar.set_label_text(0, info if info else "Disconnected")
+
+        if is_connected:
+            self.start_param_refresh()
+        else:
+            # 연결이 끊겼으므로 모든 동작을 중지하고 idle 로 — REBOOT 대기만 예외
+            self.param_worker.handle_disconnected()
+
+    def handle_changed_sn_param(self):
+        self.statusbar.set_label_text(1, f"SN:{self.sn_param.value}" if self.sn_param.value is not None else "SN:-")
+
+    def handle_changed_param_worker_progress(self, progress: int):
+        self.statusbar.set_progress(progress)
+
+    def handle_started_reboot(self):
+        # 재부팅 유발 param 쓰기 후 워커가 SN probe 폴링을 시작했다 —
+        # 재연결까지 무한 진행 표시로 이 창 입력을 막는다 (닫기는 이 창 몫).
+        # 재부팅 중 다른 동작은 금지이므로 취소는 없고, 완전 잠김 방지용
+        # 비상구로 App 종료 버튼만 둔다
+        if self._reboot_wait_box is not None:
+            return
+
+        self._reboot_wait_box = show_busy_wait_message_box(
+            self, "Reboot",
+            "The device is rebooting.\nWaiting for reconnection...",
+            quit_text="Quit App")
+        self._reboot_wait_box.quit_button.clicked.connect(self.on_clicked_quit_app)
+
+    def handle_finished_reboot(self, is_success: bool):
+        # True = 재부팅 후 통신 복구 (재연결 refresh 는 connect_info_changed 경유)
+        if self._reboot_wait_box is not None:
+            box = self._reboot_wait_box
+            self._reboot_wait_box = None
+            box.accept()
+
+    def on_clicked_quit_app(self):
+        # 재부팅 대기 중 완전 잠김 방지용 비상구 — 앱 전체를 종료한다.
+        # [주의] busy 다이얼로그는 닫기 거부(reject 무시)로 만들어져 있어,
+        # 떠 있는 채로 quit() 하면 Qt6 가 '닫히지 않는 창'으로 보고 종료
+        # 요청을 중단한다 (실측) — 반드시 먼저 accept() 로 닫고 종료한다.
+        # (워커들의 cleanup 은 aboutToQuit 연결로 수행된다)
+        if self._reboot_wait_box is not None:
+            box = self._reboot_wait_box
+            self._reboot_wait_box = None
+            box.accept()
+
+        QApplication.quit()
 
 class ParamWin(ParamWorkerWinMixin, QMainWindow):
     def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None):
@@ -99,6 +192,8 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         if folder_max_width is not None and len(self.folder_widgets) >= 2:
             self.content_layout.set_item_width(folder_max_width)
 
+        self.additional_param_settings()
+
         for folder_widget in self.folder_widgets:
             for param_widget in folder_widget.widgets:
                 if param_widget.param.acc == ParamAccType.RO:
@@ -153,6 +248,15 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         self.svc_port.connect_info_changed.connect(self.handle_changed_connection_info)
         self.handle_changed_connection_info(self.svc_port.connect_info)
 
+    # 특수 param window일 경우 따로 설정할 param이 있다면 이 메서드를 override
+    def additional_param_settings(self):
+        pass
+
+    # Load File 이 항목을 위젯에 적용하기 직전 훅 — 파일 내용에 따라 창 상태
+    # (예: EtherCAT 창의 Advanced Range 모드)를 맞춰야 하는 창이 override 한다
+    def before_apply_loaded_items(self, loaded_items):
+        pass
+
     def closeEvent(self, event: QCloseEvent):
         # WA_DeleteOnClose 로 파괴되기 전에 워커 스레드를 명시적으로 정리한다.
         # 워커의 destroyed->cleanup 안전망은 창의 자식으로 파괴될 때 동작하지
@@ -169,12 +273,14 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         # 백업 대상: RW + nor_backup param 만 (ver1 과 동일 기준).
         # 값은 위젯의 export_backup_value() 로 뽑는다 — 컨버터 위젯은 이 훅을
         # 오버라이드해 표시 단위 그대로 저장한다. 파일 스키마는 ver1 과 호환.
+        # 숨겨진 위젯은 제외한다 — 숨김 = 현재 창 모드가 다루지 않는 항목
+        # (예: EtherCAT 창의 Advanced Range 전환)
         data_to_save = []
 
         for folder_widget in self.folder_widgets:
             for param_widget in folder_widget.widgets:
                 param = param_widget.param
-                if param.acc == ParamAccType.RW and param.is_nor_backup:
+                if param.acc == ParamAccType.RW and param.is_nor_backup and param_widget.isVisible():
                     item = {
                         "path": param.path,
                         "name": param.name,
@@ -238,6 +344,10 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
                                 "Invalid file format. The selected file is not a valid parameter file.")
             return
 
+        # 적용 전에 창이 파일 내용에 맞춰 상태(모드 등)를 조정할 기회 —
+        # 아래의 visible 필터가 이 조정 결과를 따라가므로 반드시 적용 전이어야 한다
+        self.before_apply_loaded_items(loaded_data)
+
         # (id, index) -> 위젯 매핑 (RW 만 — save 와 동일 기준)
         widget_map = {}
         for folder_widget in self.folder_widgets:
@@ -255,6 +365,9 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
             param_widget = widget_map.get((item["id"], item["index"]))
             if param_widget is None:
                 continue  # 이 창에 없는 param 항목은 무시 (부분 백업 파일 허용)
+
+            if not param_widget.isVisible():
+                continue  # 숨겨진(현재 모드가 다루지 않는) 항목도 무시 — save 와 대칭
 
             try:
                 param_widget.import_backup_value(item["value"], item.get("unit"))
@@ -317,3 +430,140 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
 
     # 재부팅 대기 다이얼로그(handle_started_reboot / handle_finished_reboot /
     # on_clicked_quit_app)는 ParamWorkerWinMixin 이 제공한다
+
+class ParamPresCtrlWin(ParamWin):
+    def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None):
+
+        super().__init__(parent=parent, win_name = win_name, paths = paths, filter_param_paths = filter_param_paths, is_editblock_win=is_editblock_win, label_width=label_width, folder_max_width=folder_max_width)
+
+    def additional_param_settings(self):
+        self.controller_selector_used_param = self.param_manager.get_by_full_path("Pressure Control.Basic.Controller Selector Used")
+        self.param_worker.add_read_param_ptr(self.controller_selector_used_param)
+        self.controller_selector_used_param.sig_value_changed.connect(self.handle_changed_controller_selector_used)
+
+    def handle_changed_controller_selector_used(self):
+        used_controller = self.controller_selector_used_param.value
+
+        # self.content_layout 의 자식들의 테두리 색생을 상황에 맞춰서 변경해야된다.
+        # 예 used_controller 가 1 이면 self.content_layout 첫번째 자식(folder_widget)만 선택 색상으로 되고, 나머지는 원래 테두리 색상이 되어야 한다.
+
+        used_index = None
+        if used_controller is not None:
+            index = used_controller - PresCtrlSelEnum.CONTROLLER_1.value
+            if 0 <= index < len(self.folder_widgets):
+                used_index = index
+
+        t = tokens()
+        for index, folder_widget in enumerate(self.folder_widgets):
+            folder_widget.set_colors(border=t.selection_text if index == used_index else t.border)
+
+class ParamIfaceDentWin(ParamWin):
+    def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None):
+
+        super().__init__(parent=parent, win_name = win_name, paths = paths, filter_param_paths = filter_param_paths, is_editblock_win=is_editblock_win, label_width=label_width, folder_max_width=folder_max_width)
+        self.toolbar.add_action("Create EDS", self.on_clicked_create_eds)
+
+    def additional_param_settings(self):
+        # EDS 생성(Param16)에 쓰이는 클러스터 param — 이 창의 폴더 밖이므로 직접 읽기 등록
+        self.param_worker.add_read_param_ptr(self.param_manager.get_by_full_path("Cluster.Settings.Number of Valves"))
+
+    def on_clicked_create_eds(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save EDS File", "", "EDS Files (*.eds);;All Files (*)")
+        if not file_path:
+            return
+
+        try:
+            eds_file_helper.create_eds_file(file_path)
+        except Exception as e:
+            AppLogManager().get_logger(self.win_name).error(f"EDS 파일 생성 실패: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to create EDS file.\nError details: {e}")
+            return
+
+        QMessageBox.information(self, "Success", "EDS file has been created successfully.")
+
+class ParamIfaceEtherCatWin(ParamWin):
+    def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None):
+
+        super().__init__(parent=parent, win_name = win_name, paths = paths, filter_param_paths = filter_param_paths, is_editblock_win=is_editblock_win, label_width=label_width, folder_max_width=folder_max_width)
+        self.toolbar.add_action("Create XML", self.on_clicked_create_xml)
+        self.action_advanced_range = self.toolbar.add_action("Enable Advanced Range", self.on_clicked_toggle_advanced_range)
+
+        # 초기 모드: Basic — Scaling 폴더 숨김, Range 전체 표시
+        self._apply_advanced_range_mode(False)
+
+    def additional_param_settings(self):
+        # Range 폴더들의 Data type 위젯 수집 — 프로토콜상 param 은 폴더별로
+        # 따로지만 UI 에서는 하나의 값으로 일괄 운용한다. 경로/이름은 바뀔 수
+        # 있으므로 전용 enum(EtherCATDataTypeEnum) 사용 여부로 걸러낸다
+        self.data_type_widgets = [pw
+                                  for fw in self.folder_widgets
+                                  for pw in fw.widgets
+                                  if pw.param.ref_list is EtherCATDataTypeEnum]
+
+        for pw in self.data_type_widgets:
+            pw.sig_edited_by_user.connect(self.handle_edited_data_type)
+
+        # Advanced Range 모드 전환 대상 — Scaling 폴더 전체(EtherCAT 전용 +
+        # 공용 Interface.Scaling)와, Range 폴더의 Data type 을 제외한
+        # 나머지(= Data Value 들)
+        self.scaling_folder_widgets = [fw for fw in self.folder_widgets
+                                       if fw.folder_path.startswith(("Interface EtherCAT.Scaling", "Interface.Scaling"))]
+        self.range_data_value_widgets = [pw
+                                         for fw in self.folder_widgets
+                                         for pw in fw.widgets
+                                         if pw.param.path.startswith("Interface EtherCAT.Range")
+                                         and pw.param.ref_list is not EtherCATDataTypeEnum]
+
+    def handle_edited_data_type(self, edited_widget):
+        value = edited_widget.get_value()
+        for pw in self.data_type_widgets:
+            if pw is not edited_widget:
+                pw.set_value(value)   # 코드 할당 -> dirty, Apply 가 일괄로 쓴다
+
+    def _apply_advanced_range_mode(self, is_advanced: bool):
+        """Advanced: Scaling 폴더 표시 + Range 의 Data Value 숨김 / Basic: 반대.
+
+        숨겨지는 쪽의 RW 편집은 원복한다 — Apply 는 dirty 기준으로 동작하므로
+        (visible 무관), 숨은 편집이 장비로 새어 나가면 안 된다"""
+        self.is_advanced_range = is_advanced
+
+        hidden_widgets = (self.range_data_value_widgets if is_advanced
+                          else [pw for fw in self.scaling_folder_widgets for pw in fw.widgets])
+        for pw in hidden_widgets:
+            if pw.param.acc != ParamAccType.RO:
+                pw.handle_param_value_changed()  # set_value(param.value) + commit — dirty 원복
+
+        for fw in self.scaling_folder_widgets:
+            fw.setVisible(is_advanced)
+        for pw in self.range_data_value_widgets:
+            pw.setVisible(not is_advanced)
+
+        self.action_advanced_range.setText("Disable Advanced Range" if is_advanced else "Enable Advanced Range")
+
+    def on_clicked_toggle_advanced_range(self):
+        self._apply_advanced_range_mode(not self.is_advanced_range)
+
+    def before_apply_loaded_items(self, loaded_items):
+        # 파일에 Scaling 항목이 있으면 Advanced, 없으면 Basic 으로 맞춘 뒤 적용 —
+        # 이후의 visible 필터가 반대편(숨겨진) 항목을 자동으로 걸러낸다
+        scaling_keys = {(pw.param.id, str(pw.param.index))
+                        for fw in self.scaling_folder_widgets
+                        for pw in fw.widgets}
+        has_scaling = any(isinstance(item, dict)
+                          and (item.get("id"), item.get("index")) in scaling_keys
+                          for item in loaded_items)
+        self._apply_advanced_range_mode(has_scaling)
+
+    def on_clicked_create_xml(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save XML File", "", "XML Files (*.xml);;All Files (*)")
+        if not file_path:
+            return
+
+        try:
+            ethercat_xml_file_helper.create_xml_file(file_path)
+        except Exception as e:
+            AppLogManager().get_logger(self.win_name).error(f"XML 파일 생성 실패: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to create XML file.\nError details: {e}")
+            return
+
+        QMessageBox.information(self, "Success", "XML file has been created successfully.")       

@@ -1,4 +1,3 @@
-import time
 import serial
 from PySide6.QtCore import QCoreApplication, QObject, Signal, QMutex, QRecursiveMutex, QMutexLocker
 
@@ -27,8 +26,6 @@ class ServicePort(QObject):
 
         self._initialized = True
         self._log = AppLogManager().get_logger("ServicePort", is_global=True)
-        self._is_trace_mode = False
-        self.trace_buffer = []
         self.serial_port: serial.Serial | None = None
         self._connect_info : str = ""
         self._termination_chars = b"\r\n" # 기본값
@@ -71,20 +68,7 @@ class ServicePort(QObject):
                 return
             self.connect_info_changed.emit(info)
 
-    def set_trace_mode(self, mode: bool):
-        with QMutexLocker(self._mutex):
-            self._is_trace_mode = mode
-            self.trace_buffer.clear()
-
-    def get_trace_buffer(self) -> list[str]:
-        with QMutexLocker(self._mutex):
-            data = list(self.trace_buffer)
-            self.trace_buffer.clear()
-            return data
-
     def open(self,  port_name: str, baudrate: int, data_bits: int, parity: int, stop_bits: int, termination: int) -> bool:
-        self.set_trace_mode(False)
-
         with QMutexLocker(self._mutex):
             self.port_name = port_name
             self.baudrate = baudrate
@@ -136,19 +120,19 @@ class ServicePort(QObject):
 
         self._flush_connect_signals()
 
-    def request_string(self, command: str, nv1_check: str = None) -> tuple[str | None, SvcPortErrType]:
+    def request_string(self, command: str) -> tuple[str | None, SvcPortErrType]:
         cmd_bytes = command.encode('utf-8')
-        return self.request(cmd_bytes, nv1_check)
+        return self.request(cmd_bytes)
 
-    def request(self, command: bytes, nv1_check: str = None) -> tuple[str | None, SvcPortErrType]:
+    def request(self, command: bytes) -> tuple[str | None, SvcPortErrType]:
         with QMutexLocker(self._mutex):
-            result = self._request_locked(command, nv1_check)
+            result = self._request_locked(command)
 
         # 통신 오류로 포트가 닫힌 경우의 connect_info 변경 시그널 발화
         self._flush_connect_signals()
         return result
 
-    def _request_locked(self, command: bytes, nv1_check: str = None) -> tuple[str | None, SvcPortErrType]:
+    def _request_locked(self, command: bytes) -> tuple[str | None, SvcPortErrType]:
         if self.serial_port is None or not self.serial_port.is_open:
             return None, SvcPortErrType.OPEN_ERROR
 
@@ -158,34 +142,7 @@ class ServicePort(QObject):
             self.serial_port.write(full_command)
             self.serial_port.flush()
 
-            if self._is_trace_mode:
-                start_time = time.perf_counter()
-
-                while (time.perf_counter() - start_time) < 1:
-                    response_bytes = self.serial_port.read_until(self._termination_chars)
-
-                    if not response_bytes:
-                        break
-                    elif nv1_check and response_bytes.startswith(nv1_check.encode('utf-8')):
-                        break
-                    elif nv1_check and response_bytes.startswith(b"E:"):
-                        break
-                    elif not nv1_check and response_bytes.startswith(b"p:"):
-                        break
-                    elif self._is_trace_mode:
-                        # 터미네이터 없이 끊긴(타임아웃 부분 수신) 라인은 그대로 보존
-                        if response_bytes.endswith(self._termination_chars):
-                            raw_payload = response_bytes[:-len(self._termination_chars)]
-                        else:
-                            raw_payload = response_bytes
-                        response_bytes = None
-                        try:
-                            if len(self.trace_buffer) < 200:
-                                self.trace_buffer.append(raw_payload.decode('utf-8'))
-                        except UnicodeDecodeError:
-                            pass
-            else:
-                response_bytes = self.serial_port.read_until(self._termination_chars)
+            response_bytes = self.serial_port.read_until(self._termination_chars)
 
             if not response_bytes:
                 return None, SvcPortErrType.READ_TIMEOUT_ERROR

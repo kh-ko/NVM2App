@@ -128,15 +128,21 @@ class ParamReadOnlyMultipleEnumValueWidget(ParamWidget, ReadOnlyMultipleEnumValu
 class ParamReadOnlyHexValueWidget(ParamWidget, ReadOnlyTextValueWidget):
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
         label_text = self._resolve_param(param_full_path, force_label_text)
+
+        # 0 패딩 폭은 스키마 max 의 hex 자릿수 — 예: max 255(0xFF) -> 2자리,
+        # 15 -> "0x0F". max 미지정이면 0(패딩 없음). _bind_param() 이 캐시 값을
+        # 즉시 주입하므로 그 전에 계산해 둔다
+        self._hex_digits = len(f"{int(self.param.max_value):X}") if self.param.max_value is not None else 0
+
         super().__init__(label_text=label_text, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
-        self._bind_param() 
+        self._bind_param()
 
     def set_value(self, value):
         hex_str = None
 
         if value is not None:
             try:
-                hex_str = f"0x{value:X}"
+                hex_str = f"0x{value:0{self._hex_digits}X}"
             except Exception:
                 pass
 
@@ -165,6 +171,8 @@ class ParamReadWriteHexValueWidget(ParamWidget, ReadWriteHexValueWidget):
         # 값이 있으면 bind 가 즉시 값을 주입하는데, 기본 범위로 클램프되면 안 된다
         if self.param.min_value is not None and self.param.max_value is not None:
             self.set_range(self.param.min_value, self.param.max_value)
+            # 0 패딩 폭은 max 의 hex 자릿수 — 예: max 255(0xFF) -> 2자리, 15 -> "0F"
+            self.set_digits(len(f"{int(self.param.max_value):X}"))
 
         self._bind_param()
 
@@ -220,6 +228,20 @@ class ParamReadWriteScaleValueWidget(ParamWidget, ReadWriteScaleValueWidget):
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
         label_text = self._resolve_param(param_full_path, force_label_text)
         super().__init__(label_text=label_text, scale=100.0, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
+
+        # SCALE param 의 스키마 min/max 는 표시 범위 기준(예: 0~100(%)) —
+        # set_range 계약도 표시값이므로 그대로 적용한다.
+        # [주의] 범위 설정은 _bind_param() 전에 — 창 생성 시점에 param 에 캐시된
+        # 값이 있으면 bind 가 즉시 값을 주입하는데, 기본 범위로 클램프되면 안 된다
+        if self.param.min_value is not None and self.param.max_value is not None:
+            self.set_range(self.param.min_value, self.param.max_value)
+
+        self._bind_param()
+
+class ParamReadWriteIFaceGainValueWidget(ParamWidget, ReadWriteScaleValueWidget):
+    def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
+        label_text = self._resolve_param(param_full_path, force_label_text)
+        super().__init__(label_text=label_text, scale=10000.0, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
 
         # SCALE param 의 스키마 min/max 는 표시 범위 기준(예: 0~100(%)) —
         # set_range 계약도 표시값이므로 그대로 적용한다.

@@ -11,7 +11,8 @@ from c_ui.b_control_ver2.d_param.param_values import (ParamWriteOnlyButtonValueW
                                                     ParamReadOnlyEnumValueWidget, ParamReadOnlyMultipleEnumValueWidget, ParamReadOnlyPosiValueWidget,
                                                     ParamReadWritePosiValueWidget, ParamReadOnlyPresValueWidget, ParamWriteOnlyEnumValueWidget,
                                                     ParamReadWritePresValueWidget, ParamReadOnlyScaleValueWidget, ParamReadWriteScaleValueWidget,
-                                                    ParamReadWriteBitmapValueWidget, ParamReadOnlyPresSlopeValueWidget, ParamReadWritePresSlopeValueWidget)
+                                                    ParamReadWriteBitmapValueWidget, ParamReadOnlyPresSlopeValueWidget, ParamReadWritePresSlopeValueWidget,
+                                                    ParamReadOnlyHexValueWidget, ParamReadWriteIFaceGainValueWidget)
 
 class ParamFolderWidget(PanelWidget):
     def __init__(self, force_title : str = None, folder_path: str = None, filter_param_paths : List[str] = None, params : List = None, label_width = 210, parent=None):
@@ -21,6 +22,7 @@ class ParamFolderWidget(PanelWidget):
             title = folder_path
         super().__init__(title=title, parent=parent)
 
+        self.folder_path = folder_path  # 창 레벨에서 폴더를 선별할 때 쓴다
         self.widgets = []
 
         # params 를 직접 받으면 재스캔 없이 사용한다 — ParamWin 처럼 여러 폴더를
@@ -60,7 +62,7 @@ class ParamFolderWidget(PanelWidget):
                     pass
             elif param.display_type == ParamDisplayType.HEX:
                 if param.acc == ParamAccType.RO:
-                    pass
+                    component = ParamReadOnlyHexValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False)
                 elif param.acc == ParamAccType.RW:
                     component = ParamReadWriteHexValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False)
                 elif param.acc == ParamAccType.WO:
@@ -119,6 +121,13 @@ class ParamFolderWidget(PanelWidget):
                     component = ParamReadOnlyScaleValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False)
                 elif param.acc == ParamAccType.RW:
                     component = ParamReadWriteScaleValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False)
+                elif param.acc == ParamAccType.WO:
+                    pass
+            elif param.display_type == ParamDisplayType.IFACE_GAIN:
+                if param.acc == ParamAccType.RO:
+                    pass
+                elif param.acc == ParamAccType.RW:
+                    component = ParamReadWriteIFaceGainValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False)
                 elif param.acc == ParamAccType.WO:
                     pass
             elif param.display_type == ParamDisplayType.PRESS_SLOPE:

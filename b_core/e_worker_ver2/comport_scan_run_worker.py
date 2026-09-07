@@ -62,15 +62,17 @@ class PortScanThread(QThread):
                     bytesize=data_bits,
                     parity=parity,
                     stopbits=stop_bits,
-                    timeout=0.1  # 읽기 타임아웃 100ms 설정
+                    timeout=0.1,        # 읽기 타임아웃 100ms
+                    write_timeout=0.1,  # 쓰기 타임아웃 100ms — 기본값 None 이면 write() 가 무한 대기할 수 있음
                 ) as ser:
 
-                    # Send
+                    # Send (write_timeout 초과 시 SerialTimeoutException — SerialException 의 하위 클래스라 아래에서 잡힘)
                     ser.write(b"i:83\r\n")
                     ser.flush()  # 전송 완료 대기 (waitForBytesWritten 대체)
 
                     # Read: 종료 문자열이 오거나 100ms 타임아웃이 발생할 때까지 대기
-                    buffer = ser.read_until(self._termination_chars)
+                    # size 제한: 종료 문자 없이 계속 바이트를 뿜는 장치가 물려 있으면 read_until 이 끝나지 않으므로 상한을 둔다
+                    buffer = ser.read_until(self._termination_chars, size=256)
                     
                     # 수신된 데이터가 있으면 디코딩, 없으면 빈 문자열
                     response_data = buffer.decode('utf-8', errors='ignore').strip() if buffer else ""

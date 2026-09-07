@@ -48,7 +48,6 @@ from c_ui.b_control_ver2.b_base.inputs import BaseCheckBox
 from c_ui.b_control_ver2.b_base.labels import BaseLabel
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.c_values.read_write_values import ReadWriteEnumValueWidget, ReadWriteFloatValueWidget
-from c_ui.c_window_ver2.c_analysis.chart_analysis_win import ChartAnalysisWin
 
 # 보관 샘플 수 — 최악 20ms 간격 기준으로도 최대 시간창(10min)을 채울 수 있는 크기.
 # 넘치면 오래된 샘플부터 밀려난다.
@@ -292,9 +291,8 @@ class MainChartPanel(PanelWidget):
         self._record_timer.setInterval(1000)
         self._record_timer.timeout.connect(self.handle_record_timer_timeout)
 
-        # Capture 버튼 — 현재 화면에 표시된 구간을 스냅샷해 분석 윈도우를 연다
+        # Capture 버튼 — 클릭 처리는 MainWin 담당 (스냅샷은 get_capture_snapshot 제공)
         self.capture_btn = BaseButton("Capture", icons.GLYPH_CAPTURE)
-        self.capture_btn.clicked.connect(self.on_clicked_capture)
 
         row = QHBoxLayout()
         row.setContentsMargins(0, 5, 0, 5)  # 시각 라벨 행과 살짝 띄운다
@@ -515,18 +513,18 @@ class MainChartPanel(PanelWidget):
 
         QMessageBox.information(self, "Record", f"Recorded data saved to:\n{target}")
 
-    def on_clicked_capture(self):
-        # 캡처 = 현재 X 시간창에 표시 중인 구간의 스냅샷 (복사본 — 이후 실시간
-        # 갱신과 무관). 분석 윈도우는 스냅샷만 다루므로 여러 개 띄워도 안전하다.
+    def get_capture_snapshot(self):
+        """현재 X 시간창에 표시 중인 구간의 스냅샷 (복사본 — 이후 실시간 갱신과 무관).
+
+        키는 ChartAnalysisWin.set_capture_data 의 키워드 인자와 일치한다.
+        데이터가 없으면 None.
+        """
         visible = self._visible_slice()
         if visible is None:
-            QMessageBox.information(self, "Capture", "No data to capture.")
-            return
+            return None
 
         vis_start, end, _ = visible
-        win = ChartAnalysisWin(parent=self.window())
-        win.setAttribute(Qt.WA_DeleteOnClose)
-        win.set_capture_data(
+        return dict(
             t0_ms=self._t0_ms,
             times=self._buf[_ROW_TIME, vis_start:end].copy(),
             posi_act=self._buf[_ROW_POSI_ACT, vis_start:end].copy(),
@@ -534,7 +532,6 @@ class MainChartPanel(PanelWidget):
             pres_act=self._buf[_ROW_PRES_ACT, vis_start:end].copy(),
             pres_tgt=self._buf[_ROW_PRES_TGT, vis_start:end].copy(),
             pres_unit=self.local_setting.pres_unit)  # SensUnitEnum 값 — 창이 단위 변환에 사용
-        win.show()
 
     def handle_record_timer_timeout(self):
         if self._recorder is None:

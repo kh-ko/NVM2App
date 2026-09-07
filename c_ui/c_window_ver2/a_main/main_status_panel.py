@@ -17,8 +17,14 @@ class MainStatusPanel(ScrolledPanelWidget):
         self._pres_controller_selector_param = None
         self._warn_bitmap_param = None
         self._err_bitmap_param = None
+        self._test_mode_used_param = None
         self._warn_list: List[Tuple[int, BaseButton]] = []
         self._err_list: List[Tuple[int, BaseButton]] = []
+        
+    def set_test_mode_used_param(self, param):
+        self._test_mode_used_param = param
+        widget = ParamReadOnlyEnumValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text = "Test Mode Used", label_width = 180)
+        self.add_widget(widget)
 
     def set_ctrl_mode_param(self, param):
         self._ctrl_mode_param = param

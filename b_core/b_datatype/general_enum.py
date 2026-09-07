@@ -8,7 +8,6 @@ class ParamAccType(Enum):
     WO = auto()
     
 class ParamDisplayType(Enum):
-    NV1_GROUP = auto()
     ENUM      = auto()
     TEXT      = auto()
     NUMBER    = auto()
@@ -29,7 +28,6 @@ class ParamDisplayType(Enum):
     ENUM_36   = auto()
 
 PARAM_DISPLAY_TYPE_MAP = {
-    "nv1_group": ParamDisplayType.NV1_GROUP,
     "enum": ParamDisplayType.ENUM,
     "btn": ParamDisplayType.BTN,
     "bitmap": ParamDisplayType.BITMAP,
