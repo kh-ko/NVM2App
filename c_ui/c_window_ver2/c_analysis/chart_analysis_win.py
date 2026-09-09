@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QHBoxLayout, QHea
                                QVBoxLayout, QWidget)
 
 from b_core.b_datatype import param_enum as p_enum
+from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper
 
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
@@ -111,7 +112,9 @@ class ChartAnalysisWin(QMainWindow):
         self._series = {name: np.empty(0) for name in _SERIES}          # 표시 단위 기준
         self._pres_canonical = {name: np.empty(0) for name in _PRES_SERIES}
         self._start_epoch_ms = None
-        self._display_unit = _CANONICAL_UNIT
+        # 표시 단위 초기값은 사용자 로컬 설정 — 메인 차트 패널의 캡처 스냅샷도
+        # 같은 값을 쓰므로 데이터 유무와 무관하게 일관된다 (저장은 항상 캐노니컬)
+        self._display_unit = LocalSettingManager().pres_unit
 
         self.toolbar = BaseToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
@@ -132,6 +135,11 @@ class ChartAnalysisWin(QMainWindow):
         # 계산된다 — 최소 폭을 명시하지 않으면 stretch 없는 배치에서 콤보가 사라진다
         self.pres_unit_widget.setMinimumWidth(240)
         self.pres_unit_widget.sig_edited_by_user.connect(self.on_edited_pres_unit)
+        # 데이터 없이 열린 창(스냅샷 없음 / CSV 로드 전)에서도 콤보가 내부 상태
+        # _display_unit(로컬 설정 단위)을 보이도록 초기화 — 비워 두면 placeholder
+        # "Unknown" 이 표시되어 내부 상태와 불일치한다
+        self.pres_unit_widget.set_value(self._display_unit)
+        self.pres_unit_widget.commit()
 
         info_row = QHBoxLayout()
         info_row.setContentsMargins(0, 0, 0, 0)

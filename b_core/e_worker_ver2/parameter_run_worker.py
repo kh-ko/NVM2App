@@ -440,6 +440,12 @@ class ParameterRunWorker(QObject):
                                      svc.parity, svc.stop_bits, svc.termination)
         svc.close()
 
+        # 진행 중이던 쓰기 시퀀스는 여기서 명시적으로 정리한다.
+        # close() 의 끊김 시그널은 큐 배달이라 REBOOT 진입 후에 도착하고,
+        # handle_disconnected 는 REBOOT 를 무시하므로 (의도된 동작) 시퀀스 정리를
+        # 시그널 경로에 기대면 안 된다.
+        self._stop_all()
+
         self._state = _WorkerState.REBOOT
         self.sig_reboot_started.emit()
         self.reboot_timer.start(self.REBOOT_TICK_MS)

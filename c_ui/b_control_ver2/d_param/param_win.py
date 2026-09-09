@@ -115,7 +115,7 @@ class ParamWorkerWinMixin:
         QApplication.quit()
 
 class ParamWin(ParamWorkerWinMixin, QMainWindow):
-    def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None):
+    def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None, monitor_tick: int = 100):
         super().__init__(parent)
         self.resize(750, 450)
 
@@ -163,7 +163,7 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         '''
         self.param_manager = ParamManager()
 
-        self.param_worker = ParameterRunWorker(self, log_source=self.win_name)
+        self.param_worker = ParameterRunWorker(self, log_source=self.win_name, monitor_tick=monitor_tick)
         self.param_worker.sig_finish_refresh.connect(self.handle_finished_refresh)
         self.param_worker.sig_reboot_started.connect(self.handle_started_reboot)
         self.param_worker.sig_reboot_finished.connect(self.handle_finished_reboot)

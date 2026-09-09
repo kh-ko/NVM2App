@@ -5,7 +5,7 @@
 - 모든 로그를 하루 1파일(logs/app_YYYY-MM-DD.log)로 저장한다. 보존 30일
   (시작 시 기한 지난 파일 자동 삭제). 배포 후 문제 발생 시
   "로그 폴더를 보내주세요" 워크플로우를 지원한다.
-- 레벨 없음. 대신 카테고리(INFO / TX / RX / ERROR)로 분류하며
+- 레벨 없음. 대신 카테고리(INFO / WARN / TX / RX / ERROR)로 분류하며
   UI(LogViewWin)가 카테고리별 색상으로 표시한다.
 - sig_logged 로 실시간 배포(윈도우별 LogView 구독),
   snapshot() 으로 뷰가 열릴 때 최근분(링버퍼)을 백필한다.
@@ -40,6 +40,7 @@ from b_core.a_define import file_folder_path as path_def
 
 class LogCategory(Enum):
     INFO = "INFO"
+    WARN = "WARN"
     TX = "TX"
     RX = "RX"
     ERROR = "ERROR"
@@ -70,6 +71,9 @@ class ScopedLogger:
 
     def info(self, message: str) -> None:
         self._manager.log(LogCategory.INFO, self._source, message, self._is_global)
+
+    def warning(self, message: str) -> None:
+        self._manager.log(LogCategory.WARN, self._source, message, self._is_global)
 
     def tx(self, message: str) -> None:
         self._manager.log(LogCategory.TX, self._source, message, self._is_global)
@@ -128,7 +132,7 @@ class AppLogManager(QObject):
             self._ring.append(entry)
             print(entry.to_line())
 
-        self.sig_logged.emit(entry)
+        #self.sig_logged.emit(entry)
 
     def snapshot(self, sources: set[str] | None = None) -> list[LogEntry]:
         """최근 로그(링버퍼) 복사본 반환 — 뷰 창이 열릴 때 백필용 (비파괴).

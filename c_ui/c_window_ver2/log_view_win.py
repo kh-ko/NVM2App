@@ -1,7 +1,7 @@
 """로그 실시간 뷰 창.
 
 AppLogManager 의 링버퍼를 백필한 뒤 sig_logged 를 구독해 실시간 표시한다.
-카테고리별 색상: TX=파랑, RX=초록, ERROR=빨강, 그 외=기본 글자색 (log_* 토큰).
+카테고리별 색상: TX=파랑, RX=초록, WARN=주황, ERROR=빨강, 그 외=기본 글자색.
 
 sources 로 표시할 로그 출처를 제한할 수 있다 — 각 윈도우가 자기 컴포넌트
 구성으로 열어 '현재 윈도우의 동작' 만 확인하는 용도. None 이면 전체 표시.
@@ -43,6 +43,7 @@ class LogViewWin(QMainWindow):
         self._category_colors = {
             LogCategory.TX: QColor(t.log_tx),
             LogCategory.RX: QColor(t.log_rx),
+            LogCategory.WARN: QColor(t.warning),
             LogCategory.ERROR: QColor(t.log_error),
         }
         self._default_color = QColor(t.text)

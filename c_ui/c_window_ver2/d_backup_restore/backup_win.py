@@ -5,7 +5,7 @@ from b_core.b_datatype.general_enum import ParamAccType, SvcPortErrType
 from b_core.b_datatype.parameter import Parameter
 from b_core.b_datatype.param_enum import SysUserInterfaceEnum
 from b_core.c_manager.app_log_manager import AppLogManager
-from b_core.f_helper import firmware_util
+from b_core.f_helper import backup_file_helper, firmware_util
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
 from c_ui.b_control_ver2.d_param.param_win import ParamWin
 
@@ -196,8 +196,7 @@ class BackupWin(ParamWin):
                 is_checked = param.is_fu_backup if self.is_fu_backup else True
                 item.setCheckState(0, Qt.CheckState.Checked if is_checked else Qt.CheckState.Unchecked)
 
-            for index in range(self.tree.topLevelItemCount()):
-                self._recompute_folder_check_state(self.tree.topLevelItem(index))
+            self.tree.recompute_all_folder_check_states()
         finally:
             self._updating_checks = False
 
@@ -212,50 +211,12 @@ class BackupWin(ParamWin):
         self._updating_checks = True
         try:
             if item.childCount() > 0:
-                self._set_subtree_check_state(item, item.checkState(0))
-            self._update_ancestor_check_states(item.parent())
+                self.tree.set_subtree_check_state(item, item.checkState(0))
+            self.tree.update_ancestor_check_states(item.parent())
         finally:
             self._updating_checks = False
 
         self.tree.viewport().update()
-
-    def _set_subtree_check_state(self, item: QTreeWidgetItem, state: Qt.CheckState):
-        for index in range(item.childCount()):
-            child = item.child(index)
-            child.setCheckState(0, state)
-            self._set_subtree_check_state(child, state)
-
-    def _folder_state_from_children(self, item: QTreeWidgetItem) -> Qt.CheckState:
-        has_checked = has_unchecked = False
-        for index in range(item.childCount()):
-            state = item.child(index).checkState(0)
-            if state == Qt.CheckState.PartiallyChecked:
-                has_checked = has_unchecked = True
-            elif state == Qt.CheckState.Checked:
-                has_checked = True
-            else:
-                has_unchecked = True
-
-        if has_checked and has_unchecked:
-            return Qt.CheckState.PartiallyChecked
-        return Qt.CheckState.Checked if has_checked else Qt.CheckState.Unchecked
-
-    def _update_ancestor_check_states(self, item: QTreeWidgetItem | None):
-        while item is not None:
-            item.setCheckState(0, self._folder_state_from_children(item))
-            item = item.parent()
-
-    def _recompute_folder_check_state(self, item: QTreeWidgetItem) -> Qt.CheckState:
-        # 하위 폴더부터 확정한 뒤 자신을 계산한다 (후위 순회)
-        if item.childCount() == 0:
-            return item.checkState(0)
-
-        for index in range(item.childCount()):
-            self._recompute_folder_check_state(item.child(index))
-
-        state = self._folder_state_from_children(item)
-        item.setCheckState(0, state)
-        return state
 
     def _get_checked_params(self) -> list[Parameter]:
         # _item_by_param 은 param 목록(스키마) 순서를 유지한다
@@ -352,7 +313,13 @@ class BackupWin(ParamWin):
             return
 
         try:
-            file_data = "\n".join(self.backup_contents)
+            # 헤더에 저장 시점 장비 정보를 기록한다 — 복원(RestoreWin)이 현재
+            # 장비와 비교해 다른 장비/인터페이스 파일 복원을 경고하는 근거
+            firmware_value = self.firmware_version_param.value if self.firmware_version_param is not None else None
+            user_iface_value = self.user_iface_param.value if self.user_iface_param is not None else None
+            header = backup_file_helper.build_header(firmware_value, user_iface_value)
+
+            file_data = "\n".join([header] + self.backup_contents)
 
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(file_data)

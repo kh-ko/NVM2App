@@ -1,4 +1,3 @@
-
 from typing import NamedTuple
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
@@ -29,6 +28,7 @@ from c_ui.c_window_ver2.x_localsetting.local_posi_setting_win import LocalPosiSe
 from c_ui.c_window_ver2.x_localsetting.local_pres_setting_win import LocalPresSettingWin
 from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
+from c_ui.c_window_ver2.c_analysis.sensor_analysis_win import SensorAnalysisWin
 
 from c_ui.c_window_ver2.log_view_win import LogViewWin
 from c_ui.c_window_ver2.x_message.connection_message_box import ask_disconnect
@@ -366,7 +366,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
     사용자 시그널에 대한 슬롯
     '''
     def on_clicked_sys_warning_error(self):
-        WinManager().show_window(win_class=ParamWin, win_name=None, win_id=["ParamWin_System.Warning/Error"], parent=self, is_modal=False, path="System.Warning/Error", filter_param_paths=[], is_editblock_win=False, label_width=210)
+        WinManager().show_window(win_class=ParamWin, win_name=None, win_id="ParamWin_System.Warning/Error", parent=self, is_modal=False, paths=["System.Warning/Error"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_open_btn(self):
         self.single_param_write(self.ctrl_mode_param, f"{p_enum.ControlModeEnum.OPEN.value}")
@@ -378,8 +378,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.single_param_write(self.ctrl_mode_param, f"{p_enum.ControlModeEnum.HOLD.value}")
 
     def on_clicked_learn_btn(self):
-        # lean window 띄우도록 해야된다
-        pass
+        self.on_clicked_learn()
 
     def on_posi_setting_edit_clicked(self):
         WinManager().show_window(win_class=LocalPosiSettingWin, parent=self)
@@ -458,10 +457,10 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         WinManager().show_window(win_class=ParamWin, win_name="Position Control", win_id="ParamWin_Position Control", parent=self, is_modal=False, paths=["Position Control"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_pres_ctrl_gen_setting(self):
-        WinManager().show_window(win_class=ParamWin, win_name="Pressure Control", win_id="ParamWin_Pressure Control", parent=self, is_modal=False, paths=["Pressure Control.Basic", "Pressure Control.General Settings"], filter_param_paths=[], is_editblock_win=False, label_width=210)
+        WinManager().show_window(win_class=ParamWin, win_name="Pressure Control General Settings", win_id="ParamWin_Pressure Control General Settings", parent=self, is_modal=False, paths=["Pressure Control.Basic", "Pressure Control.General Settings"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_pres_ctrl_controller_setting(self):
-        WinManager().show_window(win_class=ParamPresCtrlWin, win_name="Pressure Control", win_id="ParamWin_Pressure Control", parent=self, is_modal=False, paths=["Pressure Control.Controller 1", "Pressure Control.Controller 2", "Pressure Control.Controller 3", "Pressure Control.Controller 4"], filter_param_paths=[], is_editblock_win=False, label_width=210, folder_max_width=350)
+        WinManager().show_window(win_class=ParamPresCtrlWin, win_name="Pressure Control Controller Settings", win_id="ParamWin_Pressure Control Controller Settings", parent=self, is_modal=False, paths=["Pressure Control.Controller 1", "Pressure Control.Controller 2", "Pressure Control.Controller 3", "Pressure Control.Controller 4"], filter_param_paths=[], is_editblock_win=False, label_width=210, folder_max_width=350)
 
     def on_clicked_learn(self):
         WinManager().show_window(win_class=ParamWin, win_name="Adaptive Learn.Basic", win_id="ParamWin_Adaptive Learn.Basic", parent=self, is_modal=False, paths=["Adaptive Learn.Basic"], filter_param_paths=[], is_editblock_win=False, label_width=210)
@@ -561,28 +560,30 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         win.show()
 
     def on_clicked_analysis_sensor(self):
-        show_not_ready(self)     
+        WinManager().show_window(win_class=SensorAnalysisWin, win_name="Sensor Analysis", win_id="ParamWin_SensorAnalysis", parent=self, is_modal=False)
+
+    def on_clicked_iface_trace(self):
+        show_not_ready(self)
 
     def on_clicked_fac_firmware_update(self):
         show_not_ready(self)
 
     def on_clicked_help_update(self):
-        show_not_ready(self)
-
-    def on_clicked_help_about(self):
-        show_not_ready(self)        
+        show_not_ready(self)       
 
     def on_clicked_cluster_monitor(self):
         show_not_ready(self)
 
-    def on_clicked_iface_trace(self):
+    def on_clicked_fac_adc_calib(self):
         show_not_ready(self)
+
+    def on_clicked_help_about(self):
+        show_not_ready(self) 
 
     def on_clicked_analysis_terminal(self):
         show_not_ready(self)
 
-    def on_clicked_fac_adc_calib(self):
-        show_not_ready(self)
+
 
     '''
     시스템 시그널에 대한 슬롯

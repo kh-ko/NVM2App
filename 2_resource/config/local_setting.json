@@ -1,5 +1,5 @@
 {
-    "pres_unit": 4,
+    "pres_unit": 3,
     "posi_decimal_places": 2,
     "pres_decimal_places": 2,
     "posi_setpoint01": 0.51,
@@ -21,7 +21,7 @@
     "posi_chart_range_custom_max": 0.11,
     "pres_chart_enable_actual": true,
     "pres_chart_enable_target": true,
-    "pres_chart_range_mode": 0,
+    "pres_chart_range_mode": 1,
     "pres_chart_range_custom_min": -0.2,
     "pres_chart_range_custom_max": 0.0,
     "chart_x_window_sec": 30
