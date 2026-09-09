@@ -567,9 +567,6 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
     def on_clicked_analysis_sensor(self):
         WinManager().show_window(win_class=SensorAnalysisWin, win_name="Sensor Analysis", win_id="ParamWin_SensorAnalysis", parent=self, is_modal=False)
 
-    def on_clicked_iface_trace(self):
-        show_not_ready(self)
-
     def on_clicked_fac_firmware_update(self):
         # 흐름: (연결 중) 백업 질문 -> BackupWin(FU 모드) -> 닫힐 때 백업 파일 경로와 함께
         # 펌웨어 업데이트 창. 업데이트 창이나 FU 백업 창이 이미 떠 있으면 앞으로만 가져온다
@@ -606,6 +603,9 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         show_not_ready(self)
 
     def on_clicked_fac_adc_calib(self):
+        show_not_ready(self)
+
+    def on_clicked_iface_trace(self):
         show_not_ready(self)
 
     def on_clicked_help_about(self):
