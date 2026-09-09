@@ -249,27 +249,28 @@ def show_rs232_reboot_guide(parent) -> None:
                path_def.ASSET_FU_GUIDE_5_IMG_FILE)
 
 
-def ask_restore_factory_params(parent, has_backup_file: bool) -> bool:
-    """업데이트 후 공장 파라미터 복원 여부 — 답만 반환.
+def ask_factory_reset(parent, has_backup_file: bool) -> bool:
+    """업데이트 후 공장 초기화(장비 param 'Restore Factory Parameters' 쓰기) 여부 — 답만 반환.
 
-    Restore 를 고르면 공장 초기화(재부팅) 뒤에 백업 복원 창이 이어서 열린다는
-    것을 함께 안내한다 (백업 파일 유무에 따라 문구가 다르다)."""
+    용어는 'Factory Reset' 으로 통일한다 — 이어서 열리는 복원 창(RestoreWin)의
+    Restore 버튼과 혼동되지 않게 하기 위함. 공장 초기화(재부팅) 뒤에 백업 복원
+    창이 열린다는 것도 함께 안내한다 (백업 파일 유무에 따라 문구가 다르다)."""
     if has_backup_file:
-        follow_up = ("Afterwards (Restore or Skip), the Restore window will open with the backup file "
+        follow_up = ("Afterwards (Factory Reset or Skip), the Restore window will open with the backup file "
                      "saved before the update.")
     else:
-        follow_up = "After that, the Restore window will open (no backup file was saved before the update)."
+        follow_up = "(No backup file was saved before the update, so no Restore window will open afterwards.)"
 
     box = QMessageBox(parent)
-    box.setWindowTitle("Restore Factory Parameters")
+    box.setWindowTitle("Factory Reset")
     box.setText("Firmware update is completed and the device has reconnected.\n\n"
-                "Restore factory parameters now?\n"
+                "Reset the device parameters to factory defaults now?\n"
                 "(The device will reboot once more.)\n\n"
                 f"{follow_up}")
-    btn_restore = box.addButton("Restore", QMessageBox.ButtonRole.AcceptRole)
+    btn_reset = box.addButton("Factory Reset", QMessageBox.ButtonRole.AcceptRole)
     box.addButton("Skip", QMessageBox.ButtonRole.RejectRole)
     box.exec()
-    return box.clickedButton() == btn_restore
+    return box.clickedButton() == btn_reset
 
 
 def ask_backup_before_update(parent) -> bool:

@@ -11,10 +11,12 @@
      -> CPU1 -> CPU2 -> (USB: 자동 리부트)      ... 진행바 갱신
   -> 성공: (RS232) 정상 부팅 복귀 안내 2장
      -> 업데이트 전 연결이 있었으면 ParameterRunWorker.start_reboot_wait() 로
-        재부팅 완료(SN 응답)까지 대기 -> 재연결 refresh 완료 -> 공장 파라미터 복원 질문
-        -> 복원이면 WO param 쓰기 (reconnect param 이라 워커가 한 번 더 재부팅 대기)
-        -> 재연결 후 RestoreWin(FU 모드) 을 연다 — 업데이트 전 저장한 백업 파일이
-           있으면(backup_file_path) 자동 로드, 없으면 빈 복원 창
+        재부팅 완료(SN 응답)까지 대기 -> 재연결 refresh 완료 -> 공장 초기화(Factory Reset) 질문
+        -> 초기화면 WO param 'Restore Factory Parameters' 쓰기 (reconnect param 이라
+           워커가 한 번 더 재부팅 대기). UI 용어는 'Factory Reset' — 이어서 열리는
+           RestoreWin 의 Restore 버튼과 혼동을 피하기 위함
+        -> 재연결 후, 업데이트 전 저장한 백업 파일(backup_file_path)이 있을 때만
+           RestoreWin(FU 모드) 을 열어 자동 로드한다. 백업이 없으면 완료 안내로 끝난다
         -> 공장 초기화를 Skip 해도 백업 파일이 있으면 RestoreWin 을 연다 (사용자 요청)
   -> 실패: 오류 메시지, 진행바는 실패 지점에서 멈춘 채 유지
 
@@ -68,8 +70,8 @@ from c_ui.b_control_ver2.d_param.param_win import ParamWin
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
 from c_ui.c_window_ver2.win_manager import WinManager
 from c_ui.c_window_ver2.x_message.firmware_update_message_box import (
-    ask_abort_update, ask_adapter_type, ask_com_port, ask_network_version,
-    ask_restore_factory_params, ask_update_method, show_rs232_boot_mode_guide,
+    ask_abort_update, ask_adapter_type, ask_com_port, ask_factory_reset,
+    ask_network_version, ask_update_method, show_rs232_boot_mode_guide,
     show_rs232_reboot_guide)
 from c_ui.c_window_ver2.x_message.param_result_message_box import show_param_write_warning
 from c_ui.c_window_ver2.x_message.wait_message_box import (show_busy_wait_message_box,
@@ -89,7 +91,7 @@ class _Stage(Enum):
     LISTING     = auto()  # FTP 버전 목록 조회 중 (대기 박스)
     WRITING     = auto()  # 펌웨어 쓰기 스레드 실행 중
     WAIT_REBOOT = auto()  # 쓰기 완료 -> 장비 재부팅/재연결 대기 (param_worker REBOOT)
-    RESTORING   = auto()  # 공장 파라미터 복원 쓰기 -> 재부팅/재연결 대기
+    FACTORY_RESET = auto()  # 공장 초기화 param 쓰기 -> 재부팅/재연결 대기
 
 
 class _InfoRow(QWidget):
@@ -461,7 +463,7 @@ class FactoryFirmwareUpdateWin(ParamWin):
     def handle_finished_reboot(self, is_success: bool):
         super().handle_finished_reboot(is_success)  # 대기 박스 닫기
 
-        if is_success or self._stage not in (_Stage.WAIT_REBOOT, _Stage.RESTORING):
+        if is_success or self._stage not in (_Stage.WAIT_REBOOT, _Stage.FACTORY_RESET):
             return
 
         # 취소됨 — 포트는 닫힌 채(단선과 동일). 나머지 절차는 사용자가 수동으로
@@ -478,13 +480,13 @@ class FactoryFirmwareUpdateWin(ParamWin):
             self._log.info("[Reconnected] device is back after firmware update")
 
             has_backup = self._backup_file_path is not None
-            if self.restore_factory_param is not None and ask_restore_factory_params(self, has_backup):
+            if self.restore_factory_param is not None and ask_factory_reset(self, has_backup):
                 param = self.restore_factory_param
                 result = self.param_worker.write([(param, param.btn_str_value)])
                 if result == StartResult.OK:
                     # reconnect param 이므로 워커가 쓰기 후 재부팅 대기로 들어간다
-                    self._log.info("[Restore] factory parameters restore requested")
-                    self._set_stage(_Stage.RESTORING)
+                    self._log.info("[Factory Reset] requested")
+                    self._set_stage(_Stage.FACTORY_RESET)
                     return
                 show_param_write_warning(self, result)
 
@@ -498,14 +500,18 @@ class FactoryFirmwareUpdateWin(ParamWin):
             else:
                 QMessageBox.information(self, "Firmware Update", "Firmware update is completed.")
 
-        elif self._stage == _Stage.RESTORING:
-            # 공장 초기화 재부팅 후 재연결 확인 — 이어서 백업 복원 창을 연다
-            self._log.info("[Restore] factory parameters restored — device reconnected")
+        elif self._stage == _Stage.FACTORY_RESET:
+            # 공장 초기화 재부팅 후 재연결 확인 — 백업 파일이 있을 때만 복원 창을 연다
+            self._log.info("[Factory Reset] completed — device reconnected")
             self._set_stage(_Stage.IDLE)
-            QMessageBox.information(self, "Firmware Update",
-                                    "Firmware update and factory parameter restore are completed.\n\n"
-                                    "The Restore window will open to restore the parameter backup.")
-            self._open_restore_win()
+            if self._backup_file_path is not None:
+                QMessageBox.information(self, "Firmware Update",
+                                        "Firmware update and factory reset are completed.\n\n"
+                                        "The Restore window will open to restore the parameter backup.")
+                self._open_restore_win()
+            else:
+                QMessageBox.information(self, "Firmware Update",
+                                        "Firmware update and factory reset are completed.")
 
     def _open_restore_win(self):
         # 부모는 MainWin — 이 창을 닫아도 복원 창은 남아야 한다.
