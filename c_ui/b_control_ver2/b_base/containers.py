@@ -205,7 +205,10 @@ class ScrolledPanelWidget(PanelWidget):
     재배치한다. add_widget() 등 사용법은 PanelWidget 과 동일하다."""
 
     def __init__(self, title, is_big_title = False, btn_icon=None, btn_text=None, parent=None):
-        super().__init__(title, is_big_title, btn_icon, btn_text, parent)
+        # 키워드로 넘긴다 — PanelWidget 시그니처는 (title, is_big_title, btn_icon, fit,
+        # btn_text, parent) 라 위치 인자로 넘기면 btn_text 가 fit 자리에 들어간다
+        super().__init__(title=title, is_big_title=is_big_title, btn_icon=btn_icon,
+                         btn_text=btn_text, parent=parent)
 
         # 부모가 넣은 content_widget 과 하단 stretch 를 빼낸다
         self.main_layout.removeWidget(self.content_widget)

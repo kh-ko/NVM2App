@@ -130,9 +130,26 @@ class AppLogManager(QObject):
         with self._lock:
             self._write_file(entry)
             self._ring.append(entry)
-            print(entry.to_line())
+            self._print_console(entry.to_line())
 
         self.sig_logged.emit(entry)
+
+    @staticmethod
+    def _print_console(line: str) -> None:
+        """콘솔 에코. 콘솔 인코딩(cp949 등)이 표현 못 하는 문자(—, 장비 응답의
+        임의 바이트 등)는 '?' 로 바꿔 찍는다 — 로그 한 줄 때문에 호출측이
+        UnicodeEncodeError 로 죽으면 안 된다. 콘솔이 없으면(--noconsole) 건너뛴다."""
+        stream = sys.stdout
+        if stream is None:
+            return
+        try:
+            print(line, file=stream)
+        except UnicodeEncodeError:
+            encoding = getattr(stream, "encoding", None) or "utf-8"
+            safe = line.encode(encoding, errors="replace").decode(encoding, errors="replace")
+            print(safe, file=stream)
+        except (OSError, ValueError):
+            pass  # 닫힌 스트림 등 — 파일/링버퍼 기록은 이미 끝났다
 
     def snapshot(self, sources: set[str] | None = None) -> list[LogEntry]:
         """최근 로그(링버퍼) 복사본 반환 — 뷰 창이 열릴 때 백필용 (비파괴).

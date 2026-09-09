@@ -1,10 +1,9 @@
 """펌웨어 FTP 저장소 접근 (UI 무관 순수 함수 — f_helper 규칙).
 
 ver1 은 FTP 호스트/계정/경로가 윈도우 클래스 상수와 메서드 본문에 두 벌로
-하드코딩되어 있었다. ver2 는 이 모듈이 단일 출처다:
-- 설정은 2_resource/config/ftp_connection.json 에서 읽는다. 파일에 없는 키는
-  ver1 값(DEFAULT_SETTING)으로 채운다 — 현재 배포 파일에는 FTP_HOST/FTP_PORT
-  만 있으므로 계정/경로를 바꾸려면 FTP_USER/FTP_PASS/FTP_PATH 키를 추가한다.
+하드코딩되어 있었다. ver2 는 접속 정보/설정 파일 읽기를 ftp_helper 가 맡고,
+이 모듈은 펌웨어 저장소의 경로 규칙과 파일 전송만 안다:
+- 저장소 경로는 ftp_connection.json 의 FTP_PATH 키 (없으면 DEFAULT_PATH).
 - 저장소 파일 규칙 (ver1 과 동일):
     {FTP_PATH}/version.txt                                   버전 목록 (한 줄에 하나)
     {FTP_PATH}/{ver}/VALVE_CPU1_{ver}_FLASH.txt              RS232 어댑터용 CPU1 앱
@@ -17,75 +16,27 @@ ver1 은 FTP 호스트/계정/경로가 윈도우 클래스 상수와 메서드 
 실패는 예외(ftplib.all_errors / OSError)로 전파하며 호출측이 메시지로 바꾼다.
 """
 
-import ftplib
 import io
-import json
 import os
-from typing import Callable, NamedTuple
 
-from b_core.a_define import file_folder_path as path_def
+from b_core.f_helper import ftp_helper
+from b_core.f_helper.ftp_helper import FtpSetting, ProgressCallback
 
-
-class FtpSetting(NamedTuple):
-    host: str
-    port: int
-    user: str
-    password: str
-    path: str
-
-
-DEFAULT_SETTING = FtpSetting(
-    host="121.175.173.236",
-    port=10021,
-    user="novasen",
-    password="nova1002",
-    path="/HDD1/FIRMWARE/VALVE/BASIC",
-)
+PATH_KEY = "FTP_PATH"
+DEFAULT_PATH = "/HDD1/FIRMWARE/VALVE/BASIC"
 
 VERSION_FILE = "version.txt"
-CONNECT_TIMEOUT_S = 10.0
-
-# (다운로드 누적 바이트, 전체 바이트) — 전체를 알 수 없으면 0
-ProgressCallback = Callable[[int, int], None]
 
 
 def load_setting() -> FtpSetting:
-    """ftp_connection.json 을 읽어 FtpSetting 반환. 파일이 없거나 형식이
-    깨졌으면 DEFAULT_SETTING — 없는 키만 기본값으로 보충한다."""
-    try:
-        with open(path_def.RSRC_FTP_SETTING_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return DEFAULT_SETTING
-
-    if not isinstance(data, dict):
-        return DEFAULT_SETTING
-
-    try:
-        port = int(data.get("FTP_PORT", DEFAULT_SETTING.port))
-    except (TypeError, ValueError):
-        port = DEFAULT_SETTING.port
-
-    return FtpSetting(
-        host=str(data.get("FTP_HOST", DEFAULT_SETTING.host)),
-        port=port,
-        user=str(data.get("FTP_USER", DEFAULT_SETTING.user)),
-        password=str(data.get("FTP_PASS", DEFAULT_SETTING.password)),
-        path=str(data.get("FTP_PATH", DEFAULT_SETTING.path)),
-    )
-
-
-def _connect(setting: FtpSetting) -> ftplib.FTP:
-    ftp = ftplib.FTP()
-    ftp.connect(setting.host, setting.port, timeout=CONNECT_TIMEOUT_S)
-    ftp.login(setting.user, setting.password)
-    return ftp
+    """펌웨어 저장소용 FtpSetting (접속 정보 공통 + FTP_PATH)."""
+    return ftp_helper.load_setting(PATH_KEY, DEFAULT_PATH)
 
 
 def fetch_version_list(setting: FtpSetting) -> list[str]:
     """version.txt 의 버전 문자열 목록 (빈 줄 제외, 파일 순서 유지)."""
     buffer = io.BytesIO()
-    with _connect(setting) as ftp:
+    with ftp_helper.connect(setting) as ftp:
         ftp.cwd(setting.path)
         ftp.retrbinary(f"RETR {VERSION_FILE}", buffer.write)
 
@@ -118,19 +69,12 @@ def download_firmware_files(setting: FtpSetting, version: str, is_rs232_adapter:
     for _, dest in targets:
         os.makedirs(os.path.dirname(dest), exist_ok=True)
 
-    with _connect(setting) as ftp:
+    with ftp_helper.connect(setting) as ftp:
         ftp.voidcmd("TYPE I")  # SIZE/RETR 을 바이너리 모드로
 
-        total = 0
-        for remote, _ in targets:
-            try:
-                size = ftp.size(remote)
-            except ftplib.all_errors:
-                size = None
-            if size is None:
-                total = 0
-                break
-            total += size
+        # 두 파일 중 하나라도 크기를 모르면 전체 미상(0)
+        sizes = [ftp_helper.remote_size(ftp, remote) for remote, _ in targets]
+        total = sum(sizes) if all(sizes) else 0
 
         done = 0
         for remote, dest in targets:

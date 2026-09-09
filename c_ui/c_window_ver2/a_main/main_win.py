@@ -30,6 +30,7 @@ from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
 from c_ui.c_window_ver2.c_analysis.sensor_analysis_win import SensorAnalysisWin
 from c_ui.c_window_ver2.g_factory.factory_firmware_update_win import FactoryFirmwareUpdateWin
+from c_ui.c_window_ver2.h_help.help_nvm_update_win import HelpNvmUpdateWin
 
 from c_ui.c_window_ver2.log_view_win import LogViewWin
 from c_ui.c_window_ver2.x_message.connection_message_box import ask_disconnect
@@ -597,7 +598,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         WinManager().show_window(win_class=FactoryFirmwareUpdateWin, win_name="Firmware Update", win_id=_FU_UPDATE_WIN_ID, parent=self, is_modal=False, backup_file_path=backup_file_path)
 
     def on_clicked_help_update(self):
-        show_not_ready(self)       
+        WinManager().show_window(win_class=HelpNvmUpdateWin, win_name="Application Update", win_id="ParamWin_ApplicationUpdate", parent=self, is_modal=False)
 
     def on_clicked_cluster_monitor(self):
         show_not_ready(self)
