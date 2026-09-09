@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QTreeWidgetItem
 
 from b_core.b_datatype import param_enum as p_enum
@@ -21,6 +21,11 @@ class RestoreWin(ParamWin):
     - 항목 실패는 RETRY_MAX 회 재시도 후 로그에 남기고 계속 진행, 완료 시
       실패 목록을 요약 표시한다
     - 검증은 쓰기 응답(p:0001...) 확인만 — read-back 은 하지 않는다
+
+    is_fu_restore=True (펌웨어 업데이트 후 복원 모드):
+    - initial_file_path 가 있으면 창이 뜬 직후 그 파일을 자동 로드한다
+    - 헤더의 장비 정보 비교(펌웨어 버전 불일치 경고)를 건너뛴다 — 업데이트로
+      버전이 달라진 것이 정상이므로 (로그에만 남긴다)
     """
 
     # handle_changed_connection_info 오버라이드가 super().__init__() 중에도
@@ -29,8 +34,10 @@ class RestoreWin(ParamWin):
 
     RETRY_MAX = 3  # 항목당 실패 재시도 횟수
 
-    def __init__(self, parent=None, win_name = None):
+    def __init__(self, parent=None, win_name = None, is_fu_restore = False, initial_file_path = None):
         super().__init__(parent=parent, win_name = win_name, paths = [], filter_param_paths = [], is_editblock_win=False, label_width=210, folder_max_width=None)
+        self.is_fu_restore = is_fu_restore
+        self._initial_file_path = initial_file_path
         self.loaded_items: list[tuple[Parameter, str]] = []   # 파일 순서의 (param, 쓰기 패킷)
         self.restore_jobs: list[tuple[Parameter, str]] = []   # 실행 스냅샷 (Local 전환 포함)
         self.failed_items: list[str] = []
@@ -63,6 +70,10 @@ class RestoreWin(ParamWin):
         self.setCentralWidget(self.tree)
         self.content_widget = self.tree
 
+        # 자동 로드는 창이 표시된 뒤에 — 로드 결과 메시지 박스가 창 위에 뜨게 한다
+        if self._initial_file_path:
+            QTimer.singleShot(0, self.load_initial_file)
+
     def additional_param_settings(self):
         # 헤더(파일 저장 시점 장비 정보)와 비교할 현재 값들을 refresh 로 읽어온다
         # (이 창에는 param 위젯이 없으므로 직접 등록)
@@ -89,6 +100,17 @@ class RestoreWin(ParamWin):
         if not file_path:
             return
 
+        self.load_backup_file(file_path)
+
+    def load_initial_file(self):
+        self._log.info(f"[FU Restore]: auto-loading backup file {self._initial_file_path}")
+        self.load_backup_file(self._initial_file_path)
+
+    def load_backup_file(self, file_path: str):
+        """백업 파일을 읽어 복원 트리를 구성한다 (Load File 버튼과 자동 로드의 공통 경로)."""
+        if self._is_restore_running:
+            return
+
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 lines = f.read().splitlines()
@@ -98,10 +120,14 @@ class RestoreWin(ParamWin):
             return
 
         # 헤더가 있으면 현재 장비 정보와 비교 — 다르면 진행 여부를 묻는다.
-        # 헤더 없는 파일(구버전 형식)도 허용하되, 장비 일치 확인이 불가함을 알린다
+        # 헤더 없는 파일(구버전 형식)도 허용하되, 장비 일치 확인이 불가함을 알린다.
+        # FU 복원은 펌웨어 버전이 달라진 것이 정상이므로 비교를 건너뛴다
         header = backup_file_helper.parse_header(lines[0]) if lines else None
-        if header is not None and not self._confirm_header(header):
-            return
+        if header is not None:
+            if self.is_fu_restore:
+                self._log.info(f"[Load]: device check skipped (firmware update flow), file header = {header}")
+            elif not self._confirm_header(header):
+                return
 
         if header is None:
             self._log.warning("[Load]: file has no header — device match cannot be verified")

@@ -1,4 +1,7 @@
-from PySide6.QtCore import Qt
+from datetime import datetime
+
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QTreeWidgetItem
 
 from b_core.b_datatype.general_enum import ParamAccType, SvcPortErrType
@@ -8,6 +11,8 @@ from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.f_helper import backup_file_helper, firmware_util
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
 from c_ui.b_control_ver2.d_param.param_win import ParamWin
+from c_ui.c_window_ver2.x_message.firmware_update_message_box import (NoBackupChoice,
+                                                                       ask_close_without_backup)
 
 # 사용자 인터페이스 값에 따라 트리에 포함할 Interface 폴더 판정용
 _DEVICENET_IFACE_VALUES = {SysUserInterfaceEnum.DEVICENET.value,
@@ -20,14 +25,28 @@ _RS232_IFACE_VALUES = {SysUserInterfaceEnum.RS232.value,
 
 
 class BackupWin(ParamWin):
+    """파라미터 백업 창.
 
-    # handle_changed_connection_info 오버라이드가 super().__init__() 중에도
-    # 호출되므로 (미연결 상태로 창을 열 때) 클래스 기본값으로 존재해야 한다
+    is_fu_backup=True (펌웨어 업데이트 전 백업 모드):
+    - 기본 체크 대상이 fu_backup param 으로 바뀐다
+    - 파일 저장이 끝나면 창을 스스로 닫는다 (다음 단계인 펌웨어 업데이트로 바로 이어진다)
+    - 파일을 저장하지 않고 닫으면 [백업 없이 진행 / 창 유지 / 업데이트 취소] 를 묻는다
+    - 닫힐 때 sig_fu_backup_closed(진행 여부, 저장 파일 경로) 를 낸다 — MainWin 이
+      받아 펌웨어 업데이트 창을 띄운다 (경로가 "" 이면 백업 없음)
+    """
+
+    sig_fu_backup_closed = Signal(bool, str)  # FU 모드 전용: (continue_update, saved_file_path)
+
+    # handle_changed_connection_info / closeEvent 오버라이드가 super().__init__() 중에도
+    # 호출될 수 있으므로 클래스 기본값으로 존재해야 한다
     _is_backup_running = False
+    is_fu_backup = False
+    _fu_saved_file = None
 
     def __init__(self, parent=None, win_name = None, is_fu_backup = False):
         super().__init__(parent=parent, win_name = win_name, paths = [], filter_param_paths = [], is_editblock_win=False, label_width=210, folder_max_width=None)
         self.is_fu_backup = is_fu_backup
+        self._fu_saved_file = None  # FU 모드에서 저장된 백업 파일 경로
         self.backup_params = []
         self.backup_contents = []
 
@@ -302,10 +321,17 @@ class BackupWin(ParamWin):
         self.statusbar.set_progress(0)
 
     def save_backup_to_file(self):
+        # FU 모드는 파일명을 제안한다 — 업데이트 후 복원 창이 이 파일을 자동 로드하므로
+        # 어떤 장비의 어느 시점 백업인지 이름만으로 알 수 있게 한다
+        default_name = ""
+        if self.is_fu_backup:
+            sn = self.sn_param.value if self.sn_param is not None and self.sn_param.value is not None else "unknown"
+            default_name = f"fu_backup_{sn}_{datetime.now():%Y%m%d_%H%M%S}.txt"
+
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Save Backup File",
-            "",
+            default_name,
             "Text Files (*.txt);;All Files (*)")
 
         if not file_path:
@@ -329,4 +355,31 @@ class BackupWin(ParamWin):
             return
 
         self._log.info(f"[File Saved]: Successfully saved to {file_path}")
+
+        if self.is_fu_backup:
+            # 저장 완료 = FU 백업 단계 끝. 창을 닫으면 closeEvent 가 경로와 함께 알린다
+            self._fu_saved_file = file_path
+            QMessageBox.information(self, "Success",
+                                    "Backup file saved successfully.\n"
+                                    "The Firmware Update window will open next.")
+            self.close()
+            return
+
         QMessageBox.information(self, "Success", "Backup file saved successfully.")
+
+    def closeEvent(self, event: QCloseEvent):
+        if self.is_fu_backup:
+            if self._fu_saved_file is None:
+                choice = ask_close_without_backup(self)
+                if choice == NoBackupChoice.STAY:
+                    event.ignore()
+                    return
+                continue_update = choice == NoBackupChoice.CONTINUE
+                self._log.info("[FU Backup]: closed without backup file — "
+                               + ("continue to firmware update" if continue_update else "firmware update cancelled"))
+            else:
+                continue_update = True
+
+            self.sig_fu_backup_closed.emit(continue_update, self._fu_saved_file or "")
+
+        super().closeEvent(event)  # param_worker.cleanup()

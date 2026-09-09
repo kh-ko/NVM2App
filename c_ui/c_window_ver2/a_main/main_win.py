@@ -29,10 +29,15 @@ from c_ui.c_window_ver2.x_localsetting.local_pres_setting_win import LocalPresSe
 from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
 from c_ui.c_window_ver2.c_analysis.sensor_analysis_win import SensorAnalysisWin
+from c_ui.c_window_ver2.g_factory.factory_firmware_update_win import FactoryFirmwareUpdateWin
 
 from c_ui.c_window_ver2.log_view_win import LogViewWin
 from c_ui.c_window_ver2.x_message.connection_message_box import ask_disconnect
+from c_ui.c_window_ver2.x_message.firmware_update_message_box import ask_backup_before_update
 from c_ui.c_window_ver2.x_message.not_ready_message_box import show_not_ready
+
+_FU_BACKUP_WIN_ID = "ParamWin_FirmwareBackup"
+_FU_UPDATE_WIN_ID = "ParamWin_FirmwareUpdate"
 
 class CompoundData(NamedTuple):
     timestamp: int
@@ -566,7 +571,33 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         show_not_ready(self)
 
     def on_clicked_fac_firmware_update(self):
-        show_not_ready(self)
+        # 흐름: (연결 중) 백업 질문 -> BackupWin(FU 모드) -> 닫힐 때 백업 파일 경로와 함께
+        # 펌웨어 업데이트 창. 업데이트 창이나 FU 백업 창이 이미 떠 있으면 앞으로만 가져온다
+        win_manager = WinManager()
+
+        if _FU_UPDATE_WIN_ID in win_manager.windows:
+            self._show_firmware_update_win(None)
+            return
+
+        if _FU_BACKUP_WIN_ID in win_manager.windows:
+            win_manager.show_window(win_class=BackupWin, win_id=_FU_BACKUP_WIN_ID, parent=self)
+            return
+
+        if self.svc_port.connect_info and ask_backup_before_update(self):
+            backup_win = win_manager.show_window(win_class=BackupWin, win_name="Firmware Backup", win_id=_FU_BACKUP_WIN_ID, parent=self, is_modal=False, is_fu_backup=True)
+            # 수신자(MainWin)가 영구 창이라 바운드 메서드 연결이 안전하다. 큐 연결 —
+            # 백업 창의 closeEvent 가 끝난 뒤에 다음 창을 띄운다
+            backup_win.sig_fu_backup_closed.connect(self.handle_closed_fu_backup_win, Qt.QueuedConnection)
+            return
+
+        self._show_firmware_update_win(None)
+
+    def handle_closed_fu_backup_win(self, continue_update: bool, backup_file_path: str):
+        if continue_update:
+            self._show_firmware_update_win(backup_file_path or None)
+
+    def _show_firmware_update_win(self, backup_file_path: str | None):
+        WinManager().show_window(win_class=FactoryFirmwareUpdateWin, win_name="Firmware Update", win_id=_FU_UPDATE_WIN_ID, parent=self, is_modal=False, backup_file_path=backup_file_path)
 
     def on_clicked_help_update(self):
         show_not_ready(self)       

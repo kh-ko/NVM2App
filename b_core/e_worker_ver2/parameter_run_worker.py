@@ -423,22 +423,44 @@ class ParameterRunWorker(QObject):
         self._stop_all()
         self.sig_reboot_finished.emit(False)
 
-    def _start_reboot(self):
+    def start_reboot_wait(self, port_setting: tuple) -> bool:
+        """워커 밖의 요인(펌웨어 업데이트 등)으로 장비가 재부팅될 때 재부팅 대기를
+        외부에서 시작한다. 이후 흐름은 reconnect param 쓰기에 의한 재부팅과 같다
+        (sig_reboot_started -> SN probe 폴링 -> 응답 시 ServicePort.open ->
+        sig_reboot_finished(True) -> 재연결 refresh 는 윈도우 경로).
+
+        port_setting: 재연결에 쓸 (port_name, baudrate, data_bits, parity,
+        stop_bits, termination) — 호출측이 ServicePort 를 닫기 전에 스냅샷해 둔
+        값. ServicePort 가 아직 열려 있으면 여기서 닫는다 (probe 는 임시 raw
+        serial 연결로만 수행하므로 같은 포트가 열려 있으면 안 된다).
+        이미 재부팅 대기 중이면 False."""
+        if self._state == _WorkerState.REBOOT:
+            return False
+
+        ServicePort().close()
+        return self._start_reboot(port_setting)
+
+    def _start_reboot(self, port_setting: tuple | None = None) -> bool:
+        """port_setting 이 None 이면(쓰기 경로) 현재 ServicePort 설정을 백업한 뒤
+        닫는다. 주어지면(외부 시작 경로) 그 값을 재연결에 쓴다."""
         sn = ParamManager().get_by_full_path("System.Identification.Serial Number")
         if sn is None:
             self._log.error("reboot: Serial Number param not found — abort")
             self._stop_all()
             self.sig_reboot_finished.emit(False)
-            return
+            return False
 
         self._reboot_probe_packet = f"p:0B{sn.id}{sn.index:02X}"
 
-        # 포트 설정을 백업한 뒤 닫는다. 재부팅 대기 동안 ServicePort 는 닫힌 채
-        # 유지되고, 확인은 임시 raw serial 연결(probe)로만 수행한다.
-        svc = ServicePort()
-        self._reboot_port_setting = (svc.port_name, svc.baudrate, svc.data_bits,
-                                     svc.parity, svc.stop_bits, svc.termination)
-        svc.close()
+        if port_setting is None:
+            # 포트 설정을 백업한 뒤 닫는다. 재부팅 대기 동안 ServicePort 는 닫힌 채
+            # 유지되고, 확인은 임시 raw serial 연결(probe)로만 수행한다.
+            svc = ServicePort()
+            port_setting = (svc.port_name, svc.baudrate, svc.data_bits,
+                            svc.parity, svc.stop_bits, svc.termination)
+            svc.close()
+
+        self._reboot_port_setting = port_setting
 
         # 진행 중이던 쓰기 시퀀스는 여기서 명시적으로 정리한다.
         # close() 의 끊김 시그널은 큐 배달이라 REBOOT 진입 후에 도착하고,
@@ -449,6 +471,7 @@ class ParameterRunWorker(QObject):
         self._state = _WorkerState.REBOOT
         self.sig_reboot_started.emit()
         self.reboot_timer.start(self.REBOOT_TICK_MS)
+        return True
 
     def _on_timeout_reboot(self):
         if self._state != _WorkerState.REBOOT:

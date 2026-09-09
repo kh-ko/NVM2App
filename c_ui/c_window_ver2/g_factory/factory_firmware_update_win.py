@@ -1,682 +1,529 @@
-'''
-########################
-ver 1 코드  
-########################
+"""Factory >> Firmware Update 창 (ver1 FactoryFirmwareUpdateWin 재작성).
 
-from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QListView
-from PySide6.QtCore import QAbstractListModel
-from b_core.e_worker.firmware_write_worker import FirmwarePhase
-from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QProgressBar
-from b_core.c_manager.parameter_manager import ParamManager
-import ftplib
+동작 흐름 (ver1 과 동일한 사용자 절차):
+  Update 클릭
+  -> 출처 선택 [Network / Local Files]
+     (Network 면 워커가 FTP 버전 목록을 가져오는 동안 대기 박스 -> 버전 선택)
+  -> 어댑터 선택 [RS232 / USB] -> COM 포트 선택
+  -> 재연결용 ServicePort 설정 스냅샷 후 ServicePort 닫기 (워커가 같은 포트를 직접 연다)
+  -> (RS232) 부트모드 진입 안내 3장
+  -> FirmwareRunWorker.start_write(): (다운로드) -> 파일 로드 -> (USB: 핀/부트모드)
+     -> CPU1 -> CPU2 -> (USB: 자동 리부트)      ... 진행바 갱신
+  -> 성공: (RS232) 정상 부팅 복귀 안내 2장
+     -> 업데이트 전 연결이 있었으면 ParameterRunWorker.start_reboot_wait() 로
+        재부팅 완료(SN 응답)까지 대기 -> 재연결 refresh 완료 -> 공장 파라미터 복원 질문
+        -> 복원이면 WO param 쓰기 (reconnect param 이라 워커가 한 번 더 재부팅 대기)
+        -> 재연결 후 RestoreWin(FU 모드) 을 연다 — 업데이트 전 저장한 백업 파일이
+           있으면(backup_file_path) 자동 로드, 없으면 빈 복원 창
+        -> 공장 초기화를 Skip 해도 백업 파일이 있으면 RestoreWin 을 연다 (사용자 요청)
+  -> 실패: 오류 메시지, 진행바는 실패 지점에서 멈춘 채 유지
+
+백업 파일 경로는 MainWin 이 넘긴다: Firmware Update 메뉴 -> (연결 중이면) 백업
+질문 -> BackupWin(FU 모드) -> 닫힐 때 경로와 함께 이 창을 띄운다.
+
+GUI 표시 정책: 사용자에게 보이는 것은 [Update Method / Adapter Type / COM Port]
+와 진행바 하나뿐이다. 워커의 세부 단계(커널/소거/검증...)는 GUI 에 노출하지
+않는다 — 단계 이름이 보이면 문의가 늘어난다 (사용자 요청). 세부 단계와 결과는
+LogView 에만 기록된다. 진행바는 이번 작업에서 수행될 단계 수로 영역을 균등
+분할하고, 진행률이 있는 단계(다운로드/커널/앱/검증)는 그 구간 안을 채운다.
+재연결 대기가 마지막 구간이므로 장비가 돌아와야 100% 가 된다.
+
+ver1 에서 달라진 점:
+- 선택 도중 취소 시 창을 닫지 않고 IDLE 로 돌아온다 (ver1 은 self.close()).
+  COM 포트 선택 전에는 ServicePort 를 닫지 않는다 (ver1 은 취소해도 닫힌 채 남았다).
+- FTP 조회/다운로드가 UI 스레드에서 사라졌다 — 워커 시그널 + 대기 박스.
+- 진행 로그(MyConsoleList)는 LogView(상태바 Log View 버튼)로 대체. 워커/창 모두
+  log_source = win_name 이라 한 뷰에 모인다. 바이트 단위 [Progress] 로그는 없앴다.
+- 실행 중 창 닫기/Abort: 확인 후 워커 중단 + 종료 대기 (ver1 은 실행 중 닫으면
+  QThread 파괴 크래시).
+- 재부팅 대기 박스에 Cancel 을 둔다 — RS232 어댑터에서 사용자가 스위치/리셋을
+  놓치면 장비가 영영 응답하지 않으므로 앱 종료 외의 탈출구가 필요하다.
+  취소하면 포트는 닫힌 채(단선과 동일)이고 Connection > Connect 로 재연결한다.
+- 창 상단에 System.Identification.Firmware 폴더 카드를 둔다 — 업데이트 전후의
+  Firmware Version 을 같은 창에서 확인하고, 재연결 refresh 완료 시그널의
+  근거(읽기 param)가 된다.
+- 본문은 항상 활성 상태다 — ParamWin 기본(첫 refresh 완료까지 잠금)은 미연결
+  상태에서 창을 열면 본문이 영영 잠긴 채 남는다. 이 창의 본문은 표시 전용이라
+  잠글 이유가 없다 (ver1 도 content_widget.setEnabled(True) 를 명시했다).
+"""
+
 import os
-import io
-import serial
-import serial.tools.list_ports
+from enum import Enum, auto
 
-from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDialog, QFrame
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import QHBoxLayout, QMessageBox, QWidget
 
-from b_core.a_define.file_folder_path import ASSET_RS232_IMG_FILE, ASSET_USB_IMG_FILE, ASSET_FU_GUIDE_1_IMG_FILE, ASSET_FU_GUIDE_2_IMG_FILE, ASSET_FU_GUIDE_3_IMG_FILE, ASSET_FU_GUIDE_4_IMG_FILE, ASSET_FU_GUIDE_5_IMG_FILE, RSRC_TEMP_PATH, RSRC_KERNEL_CPU1_FILE, RSRC_KERNEL_CPU2_FILE, RSRC_APP_CPU1_FILE, RSRC_APP_CPU2_FILE, RSRC_APP_CPU1_NEW_FILE, RSRC_APP_CPU2_NEW_FILE
-from b_core.b_datatype.general_enum import LogType
-from b_core.d_dal.service_port import ServicePort
-from b_core.e_worker.firmware_write_worker import FirmwareWriterWorker
+from b_core.a_define import file_folder_path as path_def
+from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.e_worker_ver2.firmware_run_worker import (AdapterType, FirmwarePhase,
+                                                      FirmwareRunWorker, FirmwareSource,
+                                                      FirmwareWriteJob, list_com_port_names)
+from b_core.e_worker_ver2.parameter_run_worker import StartResult
 
-from c_ui.b_control_packet.base.base_combobox import BaseComboBox
-from c_ui.b_control_packet.controls.my_value_label_check import MyValueLabelCheck
-from c_ui.b_control_packet.base.base_button import BaseButton
-from c_ui.b_control_packet.controls.my_label import MyLabel
-from c_ui.b_control_packet.controls.my_consolelist import MyConsoleList
-from c_ui.b_control_packet.param_container.param_setting_win import ParamSettingWin
+from c_ui.b_control_ver2.b_base.containers import PanelWidget
+from c_ui.b_control_ver2.b_base.labels import CheckLabel
+from c_ui.b_control_ver2.b_base.statusbars import BaseProgressBar
+from c_ui.b_control_ver2.d_param.param_win import ParamWin
+
+from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
+from c_ui.c_window_ver2.win_manager import WinManager
+from c_ui.c_window_ver2.x_message.firmware_update_message_box import (
+    ask_abort_update, ask_adapter_type, ask_com_port, ask_network_version,
+    ask_restore_factory_params, ask_update_method, show_rs232_boot_mode_guide,
+    show_rs232_reboot_guide)
+from c_ui.c_window_ver2.x_message.param_result_message_box import show_param_write_warning
+from c_ui.c_window_ver2.x_message.wait_message_box import (show_busy_wait_message_box,
+                                                           show_wait_message_box)
+
+# 어댑터/출처에 따라 수행되지 않는 단계 — 진행바 분할 계산에서 제외한다
+_USB_ONLY_PHASES = (FirmwarePhase.SET_EEPROM_IO_PIN, FirmwarePhase.SET_BOOT_MODE,
+                    FirmwarePhase.AUTO_REBOOT)
+_NETWORK_ONLY_PHASES = (FirmwarePhase.DOWNLOAD,)
+
+# 쓰기 완료 후 장비 재부팅/재연결 대기 — 진행바의 마지막 구간 (워커 단계가 아니다)
+_STEP_RECONNECT = "reconnect"
 
 
-AUTOBAUD_CHAR   = 0x41        # 'A' : 부트ROM 오토보 감지용 문자
-SCI8_KEY        = (0xAA, 0x08)  # SCI 8bit 부트 스트림 키값(0x08AA, LSB 우선)
-ECHO_TIMEOUT_S  = 2.0         # 바이트 에코 대기 타임아웃
-AUTOBAUD_RETRY  = 10          # 오토보 재시도 횟수
-        
-class SelectNetworkFirmwareDialog(QDialog):
-    FTP_HOST = "121.175.173.236"
-    FTP_PORT = 10021
-    FTP_USER = "novasen"
-    FTP_PASS = "nova1002"
-    FTP_PATH = "/HDD1/FIRMWARE/VALVE/BASIC"
-    VERSION_FILE = "version.txt"
+class _Stage(Enum):
+    IDLE        = auto()
+    LISTING     = auto()  # FTP 버전 목록 조회 중 (대기 박스)
+    WRITING     = auto()  # 펌웨어 쓰기 스레드 실행 중
+    WAIT_REBOOT = auto()  # 쓰기 완료 -> 장비 재부팅/재연결 대기 (param_worker REBOOT)
+    RESTORING   = auto()  # 공장 파라미터 복원 쓰기 -> 재부팅/재연결 대기
 
-    def __init__(self, parent=None):
+
+class _InfoRow(QWidget):
+    """[체크 아이콘 + 문구] 한 행 — 선택 결과 표시용."""
+
+    def __init__(self, text: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Select Network Firmware Version")
-        self.setFixedSize(520, 350)
-        self.selected_version = None
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        self.check = CheckLabel(text)
+        row.addWidget(self.check, 1)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+    def set_text(self, text: str):
+        self.check.setText(text)
 
-        self.lbl_guide_text = MyLabel("Select firmware version from network repository", self)
-        self.lbl_guide_text.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.lbl_guide_text.setWordWrap(True)
-        layout.addWidget(self.lbl_guide_text)
-
-        self.version_combo = BaseComboBox(self)
-        layout.addWidget(self.version_combo)
-        layout.addStretch()
-
-        btn_layout = QHBoxLayout()
-        btn_ok = BaseButton("OK", self)
-        btn_ok.setFixedWidth(100)
-        btn_ok.clicked.connect(self.on_select)
-
-        btn_cancel = BaseButton("Cancel", self)
-        btn_cancel.setFixedWidth(100)
-        btn_cancel.clicked.connect(self.reject)
-
-        btn_layout.addStretch()
-        btn_layout.addWidget(btn_ok)
-        btn_layout.setSpacing(10)
-        btn_layout.addWidget(btn_cancel)
-        btn_layout.addStretch()
-
-        layout.addLayout(btn_layout)
-
-        QTimer.singleShot(0, self.load_versions)
+    def set_checked(self, checked: bool):
+        self.check.set_checked(checked)
 
 
-    def load_versions(self):
-        try:
-            ftp = ftplib.FTP()
-            ftp.connect(self.FTP_HOST, self.FTP_PORT, timeout=10)
-            ftp.login(self.FTP_USER, self.FTP_PASS)
-            ftp.cwd(self.FTP_PATH)
+class _ProgressRow(QWidget):
+    """[체크 아이콘 + 문구 + 전체 진행바] 한 행 — 업데이트 전체 진행 표시용."""
 
-            buffer = io.BytesIO()
-            ftp.retrbinary(f"RETR {self.VERSION_FILE}", buffer.write)
-            ftp.quit()
-
-            buffer.seek(0)
-            lines = buffer.getvalue().decode('utf-8', errors='ignore').splitlines()
-
-            versions = [line.strip() for line in lines if line.strip()]
-
-            if not versions:
-                QMessageBox.warning(self, "Warning", "No firmware version list found on the server.")
-                self.accept()
-                return
-
-            for ver in versions:
-                self.version_combo.addItem(ver, ver)
-
-        except Exception as e:
-            QMessageBox.critical(self, "FTP Error", f"Failed to fetch firmware versions from FTP:\n{str(e)}")
-            self.accept()
-
-    def on_select(self):
-        self.selected_version = self.version_combo.currentData(role=Qt.UserRole)
-        if not self.selected_version:
-            self.selected_version = self.version_combo.currentText()
-        self.accept()
-
-class SelectPortDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, text: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Select COM Port")
-        self.setFixedSize(520, 350)
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(10)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+        self.check = CheckLabel(text)
+        row.addWidget(self.check)
 
-        self.lbl_guide_text = MyLabel("Select the COM port connected to the valve", self)
-        self.lbl_guide_text.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.lbl_guide_text.setWordWrap(True)
-        layout.addWidget(self.lbl_guide_text)
+        self.progress = BaseProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        self.progress.setFixedHeight(18)
+        row.addWidget(self.progress, 1)
 
-        used_svc_port = ServicePort().get_port_name()
-        self.port_combo = BaseComboBox(self)
+    def set_value(self, percent: int):
+        self.progress.setValue(max(0, min(100, percent)))
 
-        if used_svc_port:
-            self.port_combo.addItem(f"Connected Port : {used_svc_port}", used_svc_port)
+    def set_checked(self, checked: bool):
+        self.check.set_checked(checked)
+        if checked:
+            self.progress.setValue(100)
 
-        available_ports = serial.tools.list_ports.comports()
-        port_names = [port.device for port in available_ports]
+    def reset(self):
+        self.check.set_checked(False)
+        self.progress.setValue(0)
 
-        for port_name in port_names :
-            if port_name != used_svc_port:
-                self.port_combo.addItem(port_name, port_name)
 
-        layout.addWidget(self.port_combo)
-        layout.addStretch()
+class FactoryFirmwareUpdateWin(ParamWin):
 
-        # 3. 하단 OK 버튼
-        btn_layout = QHBoxLayout()
-        self.select_port = None
+    # 오버라이드 핸들러가 super().__init__() 중에도 호출될 수 있으므로 클래스 기본값
+    _stage = _Stage.IDLE
+    _wait_box = None
+    content_widget = None
 
-        btn_ok = BaseButton("OK", self)
-        btn_ok.setFixedWidth(100)
-        btn_ok.clicked.connect(self.on_select)
-        btn_ok.clicked.connect(self.accept)
-
-        btn_layout.addStretch()
-        btn_layout.addWidget(btn_ok)
-        btn_layout.addStretch()
-
-        layout.addLayout(btn_layout)
-
-    def on_select(self):
-        self.select_port = self.port_combo.currentData(role = Qt.UserRole)
-        self.accept()
-
-class GuideDialog(QDialog):
-    def __init__(self, guide_str, guide_img_path, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Firmware Update Guide")
-        self.setFixedSize(520, 350)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-
-        # 1. 상단 안내 메시지
-        self.lbl_guide_text = MyLabel(guide_str, self)
-        self.lbl_guide_text.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.lbl_guide_text.setWordWrap(True)
-        layout.addWidget(self.lbl_guide_text)
-
-        # 2. 안내 이미지
-        self.lbl_img = QLabel(self)
-        pix_guide = QPixmap(guide_img_path)
-        if not pix_guide.isNull():
-            self.lbl_img.setPixmap(pix_guide.scaled(480, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        self.lbl_img.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.lbl_img, 1)
-
-        # 3. 하단 OK 버튼
-        btn_layout = QHBoxLayout()
-        btn_ok = BaseButton("OK", self)
-        btn_ok.setFixedWidth(100)
-        btn_ok.clicked.connect(self.accept)
-
-        btn_layout.addStretch()
-        btn_layout.addWidget(btn_ok)
-        btn_layout.addStretch()
-
-        layout.addLayout(btn_layout)
-
-class SelectServicePortTypeDialog(QDialog):
-    """
-    서비스 포트 (RS232 / USB) 선택을 위한 커스텀 다이얼로그
-    (상단에 이미지를 크게 표시하고 아래에 선택 버튼 배치)
-    """
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Select Service Port Type")
-        self.setFixedSize(520, 300)
-        self.selected_port = None
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(25, 20, 25, 20)
-        layout.setSpacing(15)
-
-        lbl_title = MyLabel("Please select the service port type.")
-        lbl_title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(lbl_title)
-
-        content_layout = QHBoxLayout()
-        content_layout.setSpacing(25)
-
-        # ---------------- RS232 카드 ----------------
-        rs232_card = QFrame(self)
-        rs232_card.setFrameShape(QFrame.StyledPanel)
-        rs232_layout = QVBoxLayout(rs232_card)
-        rs232_layout.setContentsMargins(15, 15, 15, 15)
-        rs232_layout.setSpacing(15)
-
-        lbl_rs232_img = QLabel(self)
-        pix_rs232 = QPixmap(ASSET_RS232_IMG_FILE)
-        lbl_rs232_img.setPixmap(pix_rs232.scaled(160, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        lbl_rs232_img.setAlignment(Qt.AlignCenter)
-
-        btn_rs232 = BaseButton("RS232", self)
-        btn_rs232.setFixedHeight(40)
-        btn_rs232.clicked.connect(lambda: self.on_select("RS232"))
-
-        rs232_layout.addWidget(lbl_rs232_img)
-        rs232_layout.addWidget(btn_rs232)
-
-        # ---------------- USB 카드 ----------------
-        usb_card = QFrame(self)
-        usb_card.setFrameShape(QFrame.StyledPanel)
-        usb_layout = QVBoxLayout(usb_card)
-        usb_layout.setContentsMargins(15, 15, 15, 15)
-        usb_layout.setSpacing(15)
-
-        lbl_usb_img = QLabel(self)
-        pix_usb = QPixmap(ASSET_USB_IMG_FILE)
-        lbl_usb_img.setPixmap(pix_usb.scaled(160, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        lbl_usb_img.setAlignment(Qt.AlignCenter)
-
-        btn_usb = BaseButton("USB", self)
-        btn_usb.setFixedHeight(40)
-        btn_usb.clicked.connect(lambda: self.on_select("USB"))
-
-        usb_layout.addWidget(lbl_usb_img)
-        usb_layout.addWidget(btn_usb)
-
-        content_layout.addWidget(rs232_card)
-        content_layout.addWidget(usb_card)
-
-        layout.addLayout(content_layout)
-        layout.addStretch()
-
-    def on_select(self, port_type: str):
-        self.selected_port = port_type
-        self.accept()
-
-class FactoryFirmwareUpdateWin(ParamSettingWin):
-    sig_finished_firmware_update = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, parent=None, win_name=None, backup_file_path: str | None = None):
+        # 상단 폴더 카드 = Firmware ID/Version/Interface Version (RO) — 읽기 param 이
+        # 등록되어 재연결 refresh 가 EMPTY 가 아니게 되고 sig_finish_refresh 가 온다.
+        # 모니터링 주기는 1초 — 버전 문자열을 100ms 마다 읽을 이유가 없다
+        super().__init__(parent=parent, win_name=win_name, paths=["System.Identification.Firmware"],
+                         filter_param_paths=[], is_editblock_win=False, label_width=210,
+                         folder_max_width=None, monitor_tick=1000)
         self.setWindowTitle("Factory >> Firmware Update")
-        self.resize(750, 650)
+        self.resize(750, 450)
 
-        self.is_network_update = False
-        self.is_rs232_svc_port = False
-        self.service_port_name = None
-        self.network_firmware_verion = None
-        self.is_updating = False
+        self._log = AppLogManager().get_logger(self.win_name)
+        self._job: FirmwareWriteJob | None = None
+        self._saved_port_setting: tuple | None = None  # 업데이트 전 ServicePort 설정 (재연결용)
 
-        self.lbl_update_method = MyValueLabelCheck("Update Method : None")
-        self.content_layout.addWidget(self.lbl_update_method)
-        self.lbl_service_port_type = MyValueLabelCheck("Service Port Type : None")
-        self.content_layout.addWidget( self.lbl_service_port_type)
-        self.lbl_service_port_name = MyValueLabelCheck("Service Port Name : None")
-        self.content_layout.addWidget( self.lbl_service_port_name)
-        self.lbl_ready_firmware = MyValueLabelCheck("Ready Firmware")
-        self.content_layout.addWidget( self.lbl_ready_firmware)
+        # 업데이트 전 저장한 백업 파일 — 공장 초기화 후 RestoreWin 이 자동 로드한다.
+        # 파일이 사라졌으면(이동/삭제) 없는 것으로 취급한다
+        if backup_file_path and os.path.isfile(backup_file_path):
+            self._backup_file_path = backup_file_path
+        else:
+            self._backup_file_path = None
+            if backup_file_path:
+                self._log.warning(f"[Backup File] not found — ignored: {backup_file_path}")
 
-        self.layout_kernel_cpu1 = QHBoxLayout()
-        self.lbl_kernel_cpu1 = MyValueLabelCheck("Write CPU1 Kernel")
-        self.layout_kernel_cpu1.addWidget(self.lbl_kernel_cpu1,1)
-        self.progress_kernel_cpu1 = QProgressBar()
-        self.progress_kernel_cpu1.setRange(0, 100)  
-        self.layout_kernel_cpu1.addWidget(self.progress_kernel_cpu1,1)
-        self.content_layout.addLayout( self.layout_kernel_cpu1)
-        
-        self.lbl_erase_cpu1 = MyValueLabelCheck("Erase CPU1")
-        self.content_layout.addWidget(self.lbl_erase_cpu1)
+        # 진행바 분할: 이번 작업에서 수행될 단계 목록과 현재 위치
+        self._steps: list = []
+        self._step_index = 0
 
-        self.layout_app_cpu1 = QHBoxLayout()
-        self.lbl_app_cpu1 = MyValueLabelCheck("Write CPU1 Firmware Binary")
-        self.layout_app_cpu1.addWidget(self.lbl_app_cpu1,1)
-        self.progress_app_cpu1 = QProgressBar()
-        self.progress_app_cpu1.setRange(0, 100)  
-        self.layout_app_cpu1.addWidget(self.progress_app_cpu1,1)
-        self.content_layout.addLayout( self.layout_app_cpu1)
-
-        self.layout_verify_cpu1 = QHBoxLayout()
-        self.lbl_verify_cpu1 = MyValueLabelCheck("Verify CPU1")
-        self.layout_verify_cpu1.addWidget(self.lbl_verify_cpu1,1)
-        self.progress_verify_cpu1 = QProgressBar()
-        self.progress_verify_cpu1.setRange(0, 100)  
-        self.layout_verify_cpu1.addWidget(self.progress_verify_cpu1,1)
-        self.content_layout.addLayout( self.layout_verify_cpu1)
-
-        self.lbl_reset_cpu1 = MyValueLabelCheck("Reset CPU1")
-        self.content_layout.addWidget(self.lbl_reset_cpu1)
-
-        self.layout_kernel_cpu2 = QHBoxLayout()
-        self.lbl_kernel_cpu2 = MyValueLabelCheck("Write CPU2 Kernel")
-        self.layout_kernel_cpu2.addWidget(self.lbl_kernel_cpu2,1)
-        self.progress_kernel_cpu2 = QProgressBar()
-        self.progress_kernel_cpu2.setRange(0, 100)  
-        self.layout_kernel_cpu2.addWidget(self.progress_kernel_cpu2,1)
-        self.content_layout.addLayout( self.layout_kernel_cpu2)
-
-        self.lbl_erase_cpu2 = MyValueLabelCheck("Erase CPU2")
-        self.content_layout.addWidget(self.lbl_erase_cpu2)
-
-        self.layout_app_cpu2 = QHBoxLayout()
-        self.lbl_app_cpu2 = MyValueLabelCheck("Write CPU2 Firmware Binary")
-        self.layout_app_cpu2.addWidget(self.lbl_app_cpu2,1)
-        self.progress_app_cpu2 = QProgressBar()
-        self.progress_app_cpu2.setRange(0, 100)  
-        self.layout_app_cpu2.addWidget(self.progress_app_cpu2,1)
-        self.content_layout.addLayout( self.layout_app_cpu2)
-
-        self.layout_verify_cpu2 = QHBoxLayout()
-        self.lbl_verify_cpu2 = MyValueLabelCheck("Verify CPU2")
-        self.layout_verify_cpu2.addWidget(self.lbl_verify_cpu2,1)
-        self.progress_verify_cpu2 = QProgressBar()
-        self.progress_verify_cpu2.setRange(0, 100)  
-        self.layout_verify_cpu2.addWidget(self.progress_verify_cpu2,1)
-        self.content_layout.addLayout( self.layout_verify_cpu2)
-
-        self.lbl_reset_cpu2 = MyValueLabelCheck("Reset CPU2")
-        self.content_layout.addWidget( self.lbl_reset_cpu2)
-
-        self.content_layout.addStretch()
-
-        self.log_list_widget = MyConsoleList(max_rows=10000, parent=self)
-        self.content_layout.addWidget(self.log_list_widget, 1)
-
-        self.init_toolbar()
         self.toolbar.remove_action("Refresh")
         self.toolbar.add_action("Update", self.on_clicked_update)
-        self.init_end()
+        self.toolbar.add_action("Abort", self.on_clicked_abort)
+        self.toolbar.set_action_enabled("Abort", False)
 
-        self.content_widget.setEnabled(True)
+        self.fw_worker = FirmwareRunWorker(self, log_source=self.win_name)
+        self.fw_worker.sig_version_list_finished.connect(self.handle_version_list_finished)
+        self.fw_worker.sig_write_phase_changed.connect(self.handle_write_phase_changed)
+        self.fw_worker.sig_write_progress_changed.connect(self.handle_write_progress_changed)
+        self.fw_worker.sig_write_finished.connect(self.handle_write_finished)
 
-        self.used_port_name   = ServicePort().port_name
-        self.used_baudrate    = ServicePort().baudrate
-        self.used_data_bits   = ServicePort().data_bits
-        self.used_parity      = ServicePort().parity
-        self.used_stop_bits   = ServicePort().stop_bits
-        self.used_termination = ServicePort().termination
+        self._build_body()
+        self.content_widget.setEnabled(True)  # 모듈 주석 '본문은 항상 활성' 참고
 
-        self.log_list_widget.add_log(LogType.INFO, "[Firmware Update Windows]")
+    def additional_param_settings(self):
+        # WO 버튼 param — 업데이트 후 복원 질문에 Restore 를 고르면 쓴다 (reconnect param)
+        self.restore_factory_param = self.param_manager.get_by_full_path("System.Services.Restore Factory Parameters")
 
+    # ------------------------------------------------------------ GUI 구성
+    def _build_body(self):
+        """폴더 카드(ParamWin) 아래에 [선택 결과 3행 + 전체 진행바] 패널을 덧붙인다."""
+        panel = PanelWidget(title="Firmware Update")
+
+        # 백업 파일 행은 MainWin 의 백업 단계 결과라 이 창에서는 바뀌지 않는다
+        if self._backup_file_path is not None:
+            self.row_backup = _InfoRow(f"Backup File : {os.path.basename(self._backup_file_path)}")
+            self.row_backup.set_checked(True)
+        else:
+            self.row_backup = _InfoRow("Backup File : (none)")
+
+        self.row_method = _InfoRow("Update Method : -")
+        self.row_adapter = _InfoRow("Adapter Type : -")
+        self.row_port = _InfoRow("COM Port : -")
+        self.row_progress = _ProgressRow("Progress")
+
+        for row in (self.row_backup, self.row_method, self.row_adapter, self.row_port, self.row_progress):
+            panel.add_widget(row)
+
+        self.content_layout.addWidget(panel)
+
+    def _reset_body(self):
+        self.row_method.set_text("Update Method : -")
+        self.row_adapter.set_text("Adapter Type : -")
+        self.row_port.set_text("COM Port : -")
+        for row in (self.row_method, self.row_adapter, self.row_port):
+            row.set_checked(False)
+        self.row_progress.reset()
+        self._steps = []
+        self._step_index = 0
+
+    def _set_stage(self, stage: _Stage):
+        self._stage = stage
+        self.toolbar.set_action_enabled("Update", stage == _Stage.IDLE)
+        self.toolbar.set_action_enabled("Abort", stage == _Stage.WRITING)
+
+    def _close_wait_box(self):
+        if self._wait_box is not None:
+            box = self._wait_box
+            self._wait_box = None
+            box.accept()
+
+    def handle_changed_working(self, working: bool):
+        # 본문은 표시 전용 — 워커 동작 여부와 무관하게 항상 활성 (모듈 주석 참고)
+        if self.content_widget is not None:
+            self.content_widget.setEnabled(True)
+
+    # ------------------------------------------------------------ 진행바 분할
+    @staticmethod
+    def _build_steps(job: FirmwareWriteJob, has_reconnect: bool) -> list:
+        """이번 작업에서 수행될 단계 목록 (FirmwarePhase 정의 순서 = 실행 순서)."""
+        steps = []
+        for phase in FirmwarePhase:
+            if phase in _USB_ONLY_PHASES and job.adapter_type != AdapterType.USB:
+                continue
+            if phase in _NETWORK_ONLY_PHASES and job.network_version is None:
+                continue
+            steps.append(phase)
+        if has_reconnect:
+            steps.append(_STEP_RECONNECT)
+        return steps
+
+    def _update_progress(self, fraction: float):
+        """현재 단계 구간(1/단계수) 안을 fraction(0~1)만큼 채운 전체 백분율."""
+        if not self._steps:
+            return
+        fraction = max(0.0, min(1.0, fraction))
+        percent = int((self._step_index + fraction) / len(self._steps) * 100)
+        self.row_progress.set_value(percent)
+
+    # ------------------------------------------------------------ 사용자 액션
     def on_clicked_update(self):
-        self.toolbar.set_action_enabled("Update", False)
-
-        if self.start_selection_flow() == False:
+        if self._stage != _Stage.IDLE:
             return
 
-        ftp_host = "121.175.173.236"
-        ftp_port = 10021
-        ftp_user = "novasen"
-        ftp_pwd = "nova1002"
+        source = ask_update_method(self)
+        if source is None:
+            return
 
-        os.makedirs(RSRC_TEMP_PATH, exist_ok=True)
+        self._reset_body()
 
-        if self.is_rs232_svc_port:
-            local_cpu1_path = RSRC_APP_CPU1_FILE
-            local_cpu2_path = RSRC_APP_CPU2_FILE
+        if source == FirmwareSource.NETWORK:
+            # 버전 목록은 워커가 가져온다 — 결과는 handle_version_list_finished 로
+            self._set_stage(_Stage.LISTING)
+            self._wait_box = show_wait_message_box(self, "Firmware Update",
+                                                   "Fetching the firmware version list from FTP...")
+            if not self.fw_worker.start_version_list():
+                self._close_wait_box()
+                self._set_stage(_Stage.IDLE)
+            return
+
+        self.row_method.set_text("Update Method : Local Files")
+        self.row_method.set_checked(True)
+        self._continue_selection(network_version=None)
+
+    def on_clicked_abort(self):
+        if self._stage != _Stage.WRITING:
+            return
+        if ask_abort_update(self):
+            self.fw_worker.abort()  # 결과는 handle_write_finished(False, ...) 로
+
+    def on_clicked_cancel_reboot_wait(self):
+        # 재부팅 대기 취소 — 워커가 sig_reboot_finished(False) 를 내고 포트는 닫힌 채 남는다
+        self.param_worker.cancel_reboot()
+
+    # ------------------------------------------------------------ 선택 흐름
+    def handle_version_list_finished(self, ok: bool, versions: list, msg: str):
+        if self._stage != _Stage.LISTING:
+            return
+
+        self._close_wait_box()
+
+        if not ok:
+            QMessageBox.critical(self, "FTP Error", msg)
+            self._set_stage(_Stage.IDLE)
+            return
+
+        if not versions:
+            QMessageBox.warning(self, "Warning", "No firmware version list found on the server.")
+            self._set_stage(_Stage.IDLE)
+            return
+
+        version = ask_network_version(self, versions)
+        if version is None:
+            self._cancel_selection()
+            return
+
+        self.row_method.set_text(f"Update Method : Network ({version})")
+        self.row_method.set_checked(True)
+        self._continue_selection(network_version=version)
+
+    def _continue_selection(self, network_version: str | None):
+        """출처가 정해진 뒤의 공통 절차: 어댑터 -> 포트 -> 파일 검사 -> 포트 닫기 -> 쓰기 시작."""
+        adapter_type = ask_adapter_type(self)
+        if adapter_type is None:
+            self._cancel_selection()
+            return
+        self.row_adapter.set_text(f"Adapter Type : {adapter_type.name}")
+        self.row_adapter.set_checked(True)
+
+        port_name = ask_com_port(self, list_com_port_names(), self.svc_port.get_port_name())
+        if port_name is None:
+            self._cancel_selection()
+            return
+        self.row_port.set_text(f"COM Port : {port_name}")
+        self.row_port.set_checked(True)
+
+        is_network = network_version is not None
+
+        # 앱 파일은 어댑터 종류별로 다르다 (FTP 파일명 규칙과 동일). 커널은 공통
+        if adapter_type == AdapterType.RS232:
+            flash_cpu1, flash_cpu2 = path_def.RSRC_APP_CPU1_FILE, path_def.RSRC_APP_CPU2_FILE
         else:
-            local_cpu1_path = RSRC_APP_CPU1_NEW_FILE
-            local_cpu2_path = RSRC_APP_CPU2_NEW_FILE
+            flash_cpu1, flash_cpu2 = path_def.RSRC_APP_CPU1_NEW_FILE, path_def.RSRC_APP_CPU2_NEW_FILE
 
-        if self.is_network_update:
-            if not self.network_firmware_verion:
-                msg = "Firmware version is not selected."
-                QMessageBox.warning(self, "Warning", msg)
-                self.set_error(msg)
-                return
+        job = FirmwareWriteJob(adapter_type=adapter_type, port_name=port_name,
+                               kernel_cpu1=path_def.RSRC_KERNEL_CPU1_FILE,
+                               kernel_cpu2=path_def.RSRC_KERNEL_CPU2_FILE,
+                               flash_cpu1=flash_cpu1, flash_cpu2=flash_cpu2,
+                               network_version=network_version)
 
-            if self.is_rs232_svc_port:
-                ftp_cpu1_file = f"/HDD1/FIRMWARE/VALVE/BASIC/{self.network_firmware_verion}/VALVE_CPU1_{self.network_firmware_verion}_FLASH.txt"
-                ftp_cpu2_file = f"/HDD1/FIRMWARE/VALVE/BASIC/{self.network_firmware_verion}/VALVE_CPU2_{self.network_firmware_verion}_FLASH.txt"
-            else:
-                ftp_cpu1_file = f"/HDD1/FIRMWARE/VALVE/BASIC/{self.network_firmware_verion}/VALVE_CPU1_{self.network_firmware_verion}_FLASH_NEW.txt"
-                ftp_cpu2_file = f"/HDD1/FIRMWARE/VALVE/BASIC/{self.network_firmware_verion}/VALVE_CPU2_{self.network_firmware_verion}_FLASH_NEW.txt"
+        # 로컬 파일 사전 검사 — Network 모드의 앱 파일은 다운로드가 만들므로 커널만 본다
+        required = {"CPU1 Kernel": job.kernel_cpu1, "CPU2 Kernel": job.kernel_cpu2}
+        if not is_network:
+            required["CPU1 Firmware"] = job.flash_cpu1
+            required["CPU2 Firmware"] = job.flash_cpu2
 
-            try:
-                ftp = ftplib.FTP()
-                ftp.connect(ftp_host, ftp_port, timeout=10)
-                ftp.login(ftp_user, ftp_pwd)
-
-                with open(local_cpu1_path, "wb") as f:
-                    ftp.retrbinary(f"RETR {ftp_cpu1_file}", f.write)
-
-                with open(local_cpu2_path, "wb") as f:
-                    ftp.retrbinary(f"RETR {ftp_cpu2_file}", f.write)
-
-                ftp.quit()
-
-                self.lbl_ready_firmware.set_value(True)
-            except Exception as e:
-                msg = f"Failed to download firmware files from FTP:\n{str(e)}"
-                QMessageBox.critical(self, "FTP Error", msg)
-                self.set_error(msg)
-                return
-        else:
-            self.lbl_ready_firmware.set_value(True)
-
-        self.start_firmware_writer(RSRC_KERNEL_CPU1_FILE, RSRC_KERNEL_CPU2_FILE, local_cpu1_path, local_cpu2_path)
-
-    def start_selection_flow(self)->bool:
-        # 업데이트 방식 선택
-        update_method = self.select_update_method()
-
-        if update_method is None:
-            self.close()
-            return False
-
-        self.is_network_update = update_method == "Network"
-
-        if self.is_network_update:
-            self.network_firmware_verion = self.select_network_firmware_bin()
-            if self.network_firmware_verion:
-                self.lbl_update_method.set_text(f"Update Method : Network({self.network_firmware_verion})")
-            else:
-                self.close()
-                return False
-        else:
-            self.lbl_update_method.set_text(f"Update Method : Embeded Files")
-
-        self.lbl_update_method.set_value(True)
-
-        # 서비스 포트 커넥터 타입 선택
-        service_port_type = self.select_service_port_typ()
-        self.lbl_service_port_type.set_text(f"Service Port Type : {service_port_type}")
-        if service_port_type is None:
-            self.close()
-            return False
-
-        self.lbl_service_port_type.set_value(True)
-        self.is_rs232_svc_port = service_port_type == "RS232"
-
-        self.service_port_name = self.select_port()
-        self.lbl_service_port_name.set_text(f"Service Port Name : {self.service_port_name}")
-        self.lbl_service_port_name.set_value(True)
-
-        ServicePort().close()
-
-        if service_port_type == "RS232":
-            self.guide_rs232_port_setting()
-
-        return True
-
-    def select_update_method(self) -> str | None:
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle("Select Firmware Update Method")
-        msg_box.setText("Please select the firmware update method.")
-
-        btn_network = msg_box.addButton("From Network", QMessageBox.AcceptRole)
-        btn_embedded = msg_box.addButton("From Files", QMessageBox.AcceptRole)
-
-        msg_box.exec()
-
-        clicked = msg_box.clickedButton()
-        if clicked == btn_network:
-            return "Network"
-        elif clicked == btn_embedded:
-            return "File"
-        return None     
-
-    def select_service_port_typ(self) -> str | None:
-        dialog = SelectServicePortTypeDialog(self)
-        if dialog.exec() == QDialog.Accepted:
-            return dialog.selected_port
-        return None
-
-    def guide_rs232_port_setting(self):
-        guide_dlg = GuideDialog("1(1/3). Connect the update adapter to the valve's service port", ASSET_FU_GUIDE_1_IMG_FILE,self)
-        guide_dlg.exec()
-        guide_dlg = GuideDialog("2(2/3). Set the boot mode switch to 'up'", ASSET_FU_GUIDE_2_IMG_FILE,self)
-        guide_dlg.exec()
-        guide_dlg = GuideDialog("3(3/3). Click the reset button<br>(if the value version is older then 'R006', turn the power and on.)", ASSET_FU_GUIDE_3_IMG_FILE,self)
-        guide_dlg.exec()
-
-    def select_port(self) -> str | None:
-        select_port_dlg = SelectPortDialog(self)
-
-        select_port_dlg.exec()
-        return select_port_dlg.select_port
-
-    def select_network_firmware_bin(self) -> str | None:
-        dlg = SelectNetworkFirmwareDialog(self)
-        if dlg.exec() == QDialog.Accepted:
-            return dlg.selected_version
-        return None
-
-    def start_firmware_writer(self, kernel_cpu1, kernel_cpu2, flash_cpu1, flash_cpu2):
-        # ---------- 파일 유효성 검사 ----------
-        files = {
-            "CPU1 Kernel"  : kernel_cpu1,
-            "CPU2 Kernel"  : kernel_cpu2,
-            "CPU1 Firmware": flash_cpu1,
-            "CPU2 Firmware": flash_cpu2,
-        }
-        missing = [name for name, path in files.items()
-                   if not path or not os.path.isfile(path)]
+        missing = [name for name, file_path in required.items() if not os.path.isfile(file_path)]
         if missing:
-            msg = "Firmware file(s) not found:\n - " + "\n - ".join(missing)
+            msg = "Firmware file(s) not found in 2_resource/temp:\n - " + "\n - ".join(missing)
+            self._log.error(f"[Cancelled] {msg}")
             QMessageBox.warning(self, "Warning", msg)
-            self.set_error(msg)
+            self._cancel_selection()
             return
 
-        if not self.service_port_name:
-            msg = "Service port is not selected."
-            QMessageBox.warning(self, "Warning", msg)
-            self.set_error(msg)
-            return
-
-        # ---------- 진행률 다이얼로그 + 워커 스레드 ----------
-        # 워커 내부 시퀀스(C++ ValveFirmwareUpgradeWorker 와 동일):
-        #   CPU1: 커널 → 소거 → DFU → 검증 → 리셋(CPU2부트)
-        #   CPU2: 커널 → 소거 → DFU → 검증 → 리셋
-        self._fw_worker = FirmwareWriterWorker(
-            self.is_rs232_svc_port,
-            self.service_port_name,
-            kernel_cpu1, kernel_cpu2, flash_cpu1, flash_cpu2)
-
-        self._fw_worker.sig_phase.connect(self.set_phase)
-        self._fw_worker.sig_progress.connect(self.set_progress)
-        self._fw_worker.sig_log.connect(self.set_log)
-        #self._fw_worker.sig_error.connect(self.set_error)
-        self._fw_worker.sig_finished.connect(self.handle_firmware_writer_finished)
-
-        self._fw_worker.start()
-
-    def handle_firmware_writer_finished(self, ok: bool, msg: str):
-        self._fw_worker.wait(3000)      # 스레드 정리
-
-        if ok:
-            if self.is_rs232_svc_port:
-                guide_dlg = GuideDialog("1(1/2). Set the boot mode switch back to 'down'", ASSET_FU_GUIDE_4_IMG_FILE,self)
-                guide_dlg.exec()
-                guide_dlg = GuideDialog("2(2/2).  Click the reset button<br>(if the value version is older then 'R006', turn the power and on.)", ASSET_FU_GUIDE_5_IMG_FILE,self)
-                guide_dlg.exec()
-
-            self.start_wait_for_reboot()
+        # 재연결용 설정 스냅샷은 닫기 전에 — close() 가 ServicePort 의 설정을 지운다.
+        # 업데이트 전 미연결이면 None (완료 후 재부팅 대기 없이 끝낸다)
+        svc = self.svc_port
+        if svc.connect_info:
+            self._saved_port_setting = (svc.port_name, svc.baudrate, svc.data_bits,
+                                        svc.parity, svc.stop_bits, svc.termination)
         else:
-            QMessageBox.critical(self, "Firmware Update Failed", msg)
-            self.set_error(f"Firmware Update Failed : {msg}")
+            self._saved_port_setting = None
 
-        self.is_updating = False
+        # 워커가 같은 COM 포트를 직접 열므로 ServicePort 는 여기서 닫는다 —
+        # 끊김 시그널은 ParamWin 의 공통 처리(상태바/param_worker 중지)가 받는다
+        svc.close()
 
-    def start_wait_for_reboot(self):
-        if self.used_port_name == None or self.used_port_name == "":
-            self.sig_finished_firmware_update.emit()
-            self.close()
+        if adapter_type == AdapterType.RS232:
+            show_rs232_boot_mode_guide(self)
+
+        self._job = job
+        self._steps = self._build_steps(job, has_reconnect=self._saved_port_setting is not None)
+        self._step_index = 0
+        self.row_progress.reset()
+
+        self._set_stage(_Stage.WRITING)
+        if not self.fw_worker.start_write(job):
+            self._log.error("[Cancelled] firmware worker is busy")
+            self._set_stage(_Stage.IDLE)
+
+    def _cancel_selection(self):
+        self._log.info("[Cancelled] firmware update selection cancelled by user")
+        self._set_stage(_Stage.IDLE)
+
+    # ------------------------------------------------------------ 쓰기 진행/완료
+    def handle_write_phase_changed(self, phase: FirmwarePhase):
+        if phase in self._steps:
+            self._step_index = self._steps.index(phase)
+            self._update_progress(0.0)
+
+    def handle_write_progress_changed(self, phase: FirmwarePhase, done: int, total: int):
+        # 현재 단계의 진행률만 반영한다 (늦게 도착한 이전 단계 시그널 무시)
+        if total > 0 and self._steps and self._steps[self._step_index] == phase:
+            self._update_progress(done / total)
+
+    def handle_write_finished(self, ok: bool, msg: str):
+        if self._stage != _Stage.WRITING:
             return
 
-        ServicePort().open(self.used_port_name, self.used_baudrate, self.used_data_bits, self.used_parity, self.used_stop_bits, self.used_termination)
-        self.param_worker.reboot()
-        self.param_worker.sig_reboot_check_result.connect(self.finish_reboot)
+        if not ok:
+            # 진행바는 실패 지점에 멈춘 채 둔다 — 세부 사유는 메시지와 LogView 로
+            self._set_stage(_Stage.IDLE)
+            QMessageBox.critical(self, "Firmware Update Failed", msg)
+            return
 
-    def finish_reboot(self):
-        self.param_worker.sig_reboot_check_result.disconnect(self.finish_reboot)
+        if self._job is not None and self._job.adapter_type == AdapterType.RS232:
+            show_rs232_reboot_guide(self)
 
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle("Restore Factory Parameters")
-        msg_box.setText("Restore factory parameters?")
+        if self._saved_port_setting is None:
+            self.row_progress.set_checked(True)
+            self._set_stage(_Stage.IDLE)
+            QMessageBox.information(self, "Firmware Update",
+                                    "Firmware update is completed.\n\n"
+                                    "The service port was not connected before the update — "
+                                    "reconnect the device via Connection > Connect.")
+            return
 
-        btn_restore = msg_box.addButton("Restore", QMessageBox.AcceptRole)
-        btn_skip = msg_box.addButton("Skip", QMessageBox.AcceptRole)
+        # 마지막 구간 = 재연결 대기. 장비 재부팅 -> SN 응답 확인 -> ServicePort 재연결
+        # -> refresh 는 param_worker 몫. 대기 박스는 handle_started_reboot,
+        # 완료 후 절차는 handle_finished_refresh
+        if _STEP_RECONNECT in self._steps:
+            self._step_index = self._steps.index(_STEP_RECONNECT)
+            self._update_progress(0.0)
 
-        msg_box.exec()
-        if msg_box.clickedButton() == btn_restore:
-            self.log_list_widget.add_log(LogType.INFO, "Restore")
-            self.param_worker.sig_reboot_check_result.connect(self.finish_restore_factory_params)
-            restore_factory_param = self.param_worker.add_write_param("System.Services.Restore Factory Parameters")
-            restore_factory_param.write_str_value = restore_factory_param.btn_str_value
-            self.param_worker.write()
-        elif msg_box.clickedButton() == btn_skip:
-            self.log_list_widget.add_log(LogType.INFO, "Skip")
-            self.close()
+        self._set_stage(_Stage.WAIT_REBOOT)
+        if not self.param_worker.start_reboot_wait(self._saved_port_setting):
+            self._log.error("[Reboot Wait] could not start (worker busy)")
+            self._set_stage(_Stage.IDLE)
+            QMessageBox.warning(self, "Warning",
+                                "Firmware update is completed, but the reconnection wait could not start.\n"
+                                "Reconnect the device via Connection > Connect.")
 
-    def finish_restore_factory_params(self):
-        self.close()        
+    # ------------------------------------------------------------ 재부팅 대기 / 재연결
+    def handle_started_reboot(self):
+        # 믹스인의 박스(App 종료만 가능) 대신 Cancel 이 있는 박스 — 모듈 주석 참고
+        if self._reboot_wait_box is not None:
+            return
 
-    def set_phase(self, phase:FirmwarePhase):
-        self.log_list_widget.add_log(LogType.INFO, f"[Phase] {phase.value}")
+        self._reboot_wait_box = show_busy_wait_message_box(
+            self, "Reboot",
+            "The device is rebooting.\nWaiting for reconnection...",
+            quit_text="Cancel")
+        self._reboot_wait_box.quit_button.clicked.connect(self.on_clicked_cancel_reboot_wait)
 
-        if phase == FirmwarePhase.CPU1_KERNEL_DN:
-            self.progress_kernel_cpu1.setRange(0, 0)
-            self.lbl_kernel_cpu1.set_value(True)
-        elif phase == FirmwarePhase.CPU1_ERASE:
-            self.lbl_erase_cpu1.set_value(True)
-        elif phase == FirmwarePhase.CPU1_APP_DN:
-            self.progress_app_cpu1.setRange(0, 0)
-            self.lbl_app_cpu1.set_value(True)
-        elif phase == FirmwarePhase.CPU1_VERIFY:
-            self.progress_verify_cpu1.setRange(0, 0)
-            self.lbl_verify_cpu1.set_value(True)
-        elif phase == FirmwarePhase.CPU1_RESET:
-            self.lbl_reset_cpu1.set_value(True)
-        elif phase == FirmwarePhase.CPU2_KERNEL_DN:
-            self.progress_kernel_cpu2.setRange(0, 0)
-            self.lbl_kernel_cpu2.set_value(True)
-        elif phase == FirmwarePhase.CPU2_ERASE:
-            self.lbl_erase_cpu2.set_value(True)
-        elif phase == FirmwarePhase.CPU2_APP_DN:
-            self.progress_app_cpu2.setRange(0, 0)
-            self.lbl_app_cpu2.set_value(True)
-        elif phase == FirmwarePhase.CPU2_VERIFY:
-            self.progress_verify_cpu2.setRange(0, 0)
-            self.lbl_verify_cpu2.set_value(True)
-        elif phase == FirmwarePhase.CPU2_RESET:
-            self.lbl_reset_cpu2.set_value(True)
+    def handle_finished_reboot(self, is_success: bool):
+        super().handle_finished_reboot(is_success)  # 대기 박스 닫기
 
-    def set_progress(self, phase:FirmwarePhase, sent: int, total: int):
-        value = int(sent * 100 / total) if total else 0
+        if is_success or self._stage not in (_Stage.WAIT_REBOOT, _Stage.RESTORING):
+            return
 
-        if phase == FirmwarePhase.CPU1_KERNEL_DN:
-            self.progress_kernel_cpu1.setRange(0, 100)
-            self.progress_kernel_cpu1.setValue(value)
-        elif phase == FirmwarePhase.CPU1_APP_DN:
-            self.progress_app_cpu1.setRange(0, 100)
-            self.progress_app_cpu1.setValue(value)
-        elif phase == FirmwarePhase.CPU1_VERIFY:
-            self.progress_verify_cpu1.setRange(0, 100)
-            self.progress_verify_cpu1.setValue(value)
-        elif phase == FirmwarePhase.CPU2_KERNEL_DN:
-            self.progress_kernel_cpu2.setRange(0, 100)
-            self.progress_kernel_cpu2.setValue(value)
-        elif phase == FirmwarePhase.CPU2_APP_DN:
-            self.progress_app_cpu2.setRange(0, 100)
-            self.progress_app_cpu2.setValue(value)
-        elif phase == FirmwarePhase.CPU2_VERIFY:
-            self.progress_verify_cpu2.setRange(0, 100)
-            self.progress_verify_cpu2.setValue(value)
+        # 취소됨 — 포트는 닫힌 채(단선과 동일). 나머지 절차는 사용자가 수동으로
+        self._log.warning("[Reboot Wait] cancelled by user — reconnect manually")
+        self._set_stage(_Stage.IDLE)
+        QMessageBox.information(self, "Reboot Wait Cancelled",
+                                "Reconnection wait was cancelled.\n"
+                                "Reconnect the device via Connection > Connect after it has rebooted.")
 
-        self.log_list_widget.add_log(LogType.INFO, f"[Progress] {value}%")
+    def handle_finished_refresh(self):
+        # 재연결 refresh 완료 = 새 펌웨어로 부팅한 장비와 통신 확인
+        if self._stage == _Stage.WAIT_REBOOT:
+            self.row_progress.set_checked(True)
+            self._log.info("[Reconnected] device is back after firmware update")
 
-    def set_log(self, msg: str):
-        self.log_list_widget.add_log(LogType.INFO, msg)
-        pass
+            has_backup = self._backup_file_path is not None
+            if self.restore_factory_param is not None and ask_restore_factory_params(self, has_backup):
+                param = self.restore_factory_param
+                result = self.param_worker.write([(param, param.btn_str_value)])
+                if result == StartResult.OK:
+                    # reconnect param 이므로 워커가 쓰기 후 재부팅 대기로 들어간다
+                    self._log.info("[Restore] factory parameters restore requested")
+                    self._set_stage(_Stage.RESTORING)
+                    return
+                show_param_write_warning(self, result)
 
-    def set_error(self, msg: str):
-        self.log_list_widget.add_log(LogType.ERROR, msg)
-        self.progress_kernel_cpu1.setRange(0, 100)
-        self.progress_app_cpu1.setRange(0, 100)
-        self.progress_verify_cpu1.setRange(0, 100)
-        self.progress_kernel_cpu2.setRange(0, 100)
-        self.progress_app_cpu2.setRange(0, 100)
-        self.progress_verify_cpu2.setRange(0, 100)
-'''
+            # 공장 초기화를 건너뛰어도(또는 쓰기 시작 실패) 백업 파일이 있으면 복원 창은 연다
+            self._set_stage(_Stage.IDLE)
+            if has_backup:
+                QMessageBox.information(self, "Firmware Update",
+                                        "Firmware update is completed.\n\n"
+                                        "The Restore window will open with the backup file saved before the update.")
+                self._open_restore_win()
+            else:
+                QMessageBox.information(self, "Firmware Update", "Firmware update is completed.")
+
+        elif self._stage == _Stage.RESTORING:
+            # 공장 초기화 재부팅 후 재연결 확인 — 이어서 백업 복원 창을 연다
+            self._log.info("[Restore] factory parameters restored — device reconnected")
+            self._set_stage(_Stage.IDLE)
+            QMessageBox.information(self, "Firmware Update",
+                                    "Firmware update and factory parameter restore are completed.\n\n"
+                                    "The Restore window will open to restore the parameter backup.")
+            self._open_restore_win()
+
+    def _open_restore_win(self):
+        # 부모는 MainWin — 이 창을 닫아도 복원 창은 남아야 한다.
+        # win_id 를 일반 Restore 창과 분리해 기존 창이 재사용(파일 미로드)되는 것을 막는다
+        WinManager().show_window(win_class=RestoreWin, win_name="Firmware Restore",
+                                 win_id="ParamWin_FirmwareRestore", parent=self.parent(),
+                                 is_modal=False, is_fu_restore=True,
+                                 initial_file_path=self._backup_file_path)
+
+    # ------------------------------------------------------------ 종료
+    def closeEvent(self, event: QCloseEvent):
+        if self.fw_worker.is_running:
+            if not ask_abort_update(self):
+                event.ignore()
+                return
+            self.fw_worker.abort()
+
+        # 실행 중 QThread 파괴 = 앱 abort — 중단 완료까지 기다린 뒤 닫는다
+        self.fw_worker.cleanup()
+        self._close_wait_box()
+        super().closeEvent(event)  # param_worker.cleanup()

@@ -132,7 +132,7 @@ class AppLogManager(QObject):
             self._ring.append(entry)
             print(entry.to_line())
 
-        #self.sig_logged.emit(entry)
+        self.sig_logged.emit(entry)
 
     def snapshot(self, sources: set[str] | None = None) -> list[LogEntry]:
         """최근 로그(링버퍼) 복사본 반환 — 뷰 창이 열릴 때 백필용 (비파괴).
