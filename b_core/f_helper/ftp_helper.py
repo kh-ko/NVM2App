@@ -5,12 +5,12 @@ FTP 서버/계정을 쓰고 저장소 경로만 다르다. 접속 정보와 설�
 모듈이 단일 출처이고, 각 저장소 모듈은 자기 경로 키만 넘겨 load_setting() 을
 호출한다:
 
-    firmware : load_setting("FTP_PATH",     "/HDD1/FIRMWARE/VALVE/BASIC")
-    app      : load_setting("FTP_APP_PATH", "/HDD1/NVM2App")
+    firmware : load_setting("FTP_FIRMWARE_PATH", "/HDD1/FIRMWARE/VALVE/BASIC")
+    app      : load_setting("FTP_APP_PATH",      "/HDD1/NVM2App")
 
 설정 파일 2_resource/config/ftp_connection.json 의 키:
     FTP_HOST / FTP_PORT / FTP_USER / FTP_PASS   접속 정보 (공통)
-    FTP_PATH / FTP_APP_PATH ...                 저장소별 경로
+    FTP_FIRMWARE_PATH / FTP_APP_PATH            저장소별 경로
 파일에 없는 키는 ver1 하드코딩 값(DEFAULT_CONNECTION)으로 채운다 — 현재 배포
 파일에는 FTP_HOST/FTP_PORT 만 있다.
 

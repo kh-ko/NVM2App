@@ -7,8 +7,8 @@ ver1 HelpNvmUpdateWin 은 FTP 접속 상수, version_info.txt 파싱, zip 다운
 저장소 (접속 정보는 ftp_helper 공통, 경로는 ftp_connection.json 의 FTP_APP_PATH):
     {FTP_APP_PATH}/version_info.txt        릴리스 노트 (아래 형식)
     {FTP_APP_PATH}/binary/{version}.zip    배포 zip — build.bat 산출물 NVM2App 폴더의
-                                           내용물 (NVM2App.exe + 2_resource). 폴더째
-                                           압축한 zip(루트에 폴더 하나)도 허용한다.
+                                           내용물 (NVM2App.exe + _internal + 2_resource).
+                                           폴더째 압축한 zip(루트에 폴더 하나)도 허용한다.
 version_info.txt 형식 (ver1 과 동일, 최신이 위):
     [VER : 20260616-v0.0.2]
     1. 수정 내용 ...
@@ -20,7 +20,8 @@ version_info.txt 형식 (ver1 과 동일, 최신이 위):
 설치 절차 — 실행 중인 exe 는 스스로 덮어쓸 수 없으므로 배치 스크립트에 위임한다:
     (워커)  download_package -> extract_package
     (UI)    launch_installer -> 앱 종료
-    (스크립트) exe 잠금 해제 대기 -> 압축 해제본을 앱 폴더에 덮어쓰기 -> 앱 재실행 -> 임시 정리
+    (스크립트) exe 잠금 해제 대기(=앱 종료 확인) -> _internal 을 .old 로 보관 -> 덮어쓰기 복사
+               -> 성공: .old 삭제 / 실패: .old 복원 -> 앱 재실행 -> 임시 정리
 
 ver1 에서 달라진 점:
 - PRESERVED_RELATIVE_DIRS(3_log) 는 패키지에 들어 있어도 배포하지 않는다.
@@ -67,6 +68,11 @@ INSTALL_SCRIPT_NAME = "nvm2app_update.bat"
 # 업데이트가 건드리지 않는 앱 폴더 내 상대 경로 — 패키지에 들어 있어도 배포하지
 # 않는다. 사용자 결정(2026-09-09): 로그만 유지하고 2_resource 는 전부 배포본으로 덮어쓴다
 PRESERVED_RELATIVE_DIRS = ("3_log",)
+
+# PyInstaller --onedir 의 라이브러리 폴더. 새 패키지에 이 폴더가 있으면 복사 전에
+# 앱 폴더의 것을 통째로 교체한다 — 덮어쓰기만 하면 구버전에만 있던 DLL/모듈이 남는다.
+# (앱 종료 후이므로 안전. 삭제가 아니라 .old 로 이름을 바꿔 두고 복사 실패 시 되돌린다)
+PYINSTALLER_INTERNAL_DIR = "_internal"
 
 LOCK_WAIT_RETRY = 30    # 앱 종료(exe 잠금 해제) 대기 상한 — 1초 간격
 RESTART_DELAY_S = 5     # 복사 후 재실행까지 대기 (백신 스캔/디스크 동기화 — ver1 현장 조치)
@@ -331,13 +337,31 @@ pause
 exit /b 1
 
 :unlocked
+rem one-folder layout: the library folder is replaced as a whole so stale files do not
+rem survive. The app has exited here (lock test passed), so nothing holds its DLLs.
+rem It is renamed, not deleted, so a failed copy can be rolled back.
+set "OLD_INTERNAL=%APP_DIR%\\{PYINSTALLER_INTERNAL_DIR}.old"
+if exist "%OLD_INTERNAL%" rd /s /q "%OLD_INTERNAL%" >nul 2>&1
+if exist "%SRC_DIR%\\{PYINSTALLER_INTERNAL_DIR}" if exist "%APP_DIR%\\{PYINSTALLER_INTERNAL_DIR}" ren "%APP_DIR%\\{PYINSTALLER_INTERNAL_DIR}" "{PYINSTALLER_INTERNAL_DIR}.old" >nul 2>&1
+
 echo Copying files...
 "%SYS32%\\xcopy.exe" "%SRC_DIR%" "%APP_DIR%\\" /E /Y /Q /I /R >nul
-if errorlevel 1 (
-    echo [ERROR] File copy failed. Update aborted.
-    pause
-    exit /b 1
+if errorlevel 1 goto copy_failed
+
+if exist "%OLD_INTERNAL%" rd /s /q "%OLD_INTERNAL%" >nul 2>&1
+goto restart
+
+:copy_failed
+echo [ERROR] File copy failed. Restoring the previous library folder...
+if exist "%OLD_INTERNAL%" (
+    rd /s /q "%APP_DIR%\\{PYINSTALLER_INTERNAL_DIR}" >nul 2>&1
+    ren "%OLD_INTERNAL%" "{PYINSTALLER_INTERNAL_DIR}" >nul 2>&1
 )
+echo [ERROR] Update aborted. The previous version was kept.
+pause
+exit /b 1
+
+:restart
 
 echo Update completed. Restarting the application in {RESTART_DELAY_S} seconds...
 "%SYS32%\\ping.exe" -n {RESTART_DELAY_S + 1} 127.0.0.1 >nul

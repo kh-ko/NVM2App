@@ -10,5 +10,18 @@
     <file>a_assets/images/fu_guide_3.png</file>
     <file>a_assets/images/fu_guide_4.png</file>
     <file>a_assets/images/fu_guide_5.png</file>
+    <file>a_assets/licenses/qt_notice.txt</file>
+    <file>a_assets/licenses/LGPL-3.0.txt</file>
+    <file>a_assets/licenses/GPL-3.0.txt</file>
+    <file>a_assets/licenses/pyqtgraph.txt</file>
+    <file>a_assets/licenses/numpy.txt</file>
+    <file>a_assets/licenses/pyserial.txt</file>
+    <file>a_assets/licenses/pyqtdarktheme.txt</file>
+    <file>a_assets/licenses/darkdetect.txt</file>
+    <file>a_assets/licenses/ftd2xx.txt</file>
+    <file>a_assets/licenses/ftdi_d2xx_driver.txt</file>
+    <file>a_assets/licenses/d2coding.txt</file>
+    <file>a_assets/licenses/material_icons.txt</file>
+    <file>a_assets/licenses/python.txt</file>
 </qresource>
 </RCC>

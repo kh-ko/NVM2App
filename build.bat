@@ -8,12 +8,12 @@ echo ===================================================
 ::
 :: Output layout:
 ::   0_build\[YYYYMMDD]-v[version]\
-::       NVM2App\  : deploy files (NVM2App.exe + 2_resource)
+::       NVM2App\  : deploy files (NVM2App.exe + _internal\ + 2_resource)
 ::       source\   : project snapshot at build time
 ::                   (excludes .git/.venv/__pycache__/temp_build,
 ::                    0_build and 3_log are included as empty folders)
-:: app_info.py is restored to the dev version after the build.
-:: (the snapshot keeps the injected build version)
+:: app_info.py (APP_VERSION / APP_BUILD_DATE injected) is restored to the dev
+:: version after the build. (the snapshot keeps the injected values)
 
 :: 1. Check virtual environment
 if not exist ".venv" (
@@ -50,6 +50,12 @@ if %errorlevel% neq 0 goto :fail
 ::    (0_build accumulates releases - only a same-named folder is recreated)
 for /f %%i in ('python -c "from datetime import datetime; print(datetime.now().strftime('%%Y%%m%%d'))"') do set TODAY=%%i
 set "RELEASE_DIR=0_build\%TODAY%-v%USER_VERSION%"
+
+:: 5-1. Inject build date into app_info.py (shown in Help > About; dev tree keeps "")
+::      same replace rule as the version: quoted value only, count=1
+for /f %%i in ('python -c "from datetime import date; print(date.today().isoformat())"') do set TODAY_ISO=%%i
+python -c "import sys, re; fp='b_core/a_define/app_info.py'; q=chr(34); c=open(fp, encoding='utf-8').read(); c=re.sub('APP_BUILD_DATE = ' + q + '[^' + q + ']*' + q, 'APP_BUILD_DATE = ' + q + sys.argv[1] + q, c, count=1); open(fp, 'w', encoding='utf-8').write(c)" "%TODAY_ISO%"
+if %errorlevel% neq 0 goto :fail
 if exist "%RELEASE_DIR%" rd /s /q "%RELEASE_DIR%"
 mkdir "%RELEASE_DIR%\NVM2App"
 mkdir "%RELEASE_DIR%\source"
@@ -64,12 +70,22 @@ echo [2/5] Checking PyInstaller...
 python -m pip show pyinstaller > nul 2>&1
 if %errorlevel% neq 0 python -m pip install pyinstaller
 
-:: 8. Build single exe (intermediate files go to temp_build)
-::    ftd2xx.dll is embedded into the exe. At runtime dll_setup.py adds the
-::    onefile extraction dir (sys._MEIPASS) to the DLL search path.
+:: 8. Build one-folder app (intermediate files go to temp_build)
+::    --onedir is REQUIRED, not a preference: Qt/PySide6 is used under LGPL-3.0,
+::    which obliges us to let users replace the Qt DLLs. With --onefile the DLLs
+::    are packed inside the exe and cannot be replaced, so a closed-source app
+::    would not meet LGPL-3.0 section 4(d)(1). Keep the DLLs as files in _internal\.
+::    ftd2xx.dll is placed in _internal\ too. At runtime dll_setup.py adds that
+::    dir (sys._MEIPASS) to the DLL search path.
+::    Output: %RELEASE_DIR%\NVM2App\NVM2App.exe + _internal\  (PyInstaller makes
+::    the NVM2App sub-folder itself from --name, so distpath is the release dir)
 echo [3/5] Running PyInstaller build...
-python -m PyInstaller --noconsole --onefile --name NVM2App --icon="%CD%\a_assets\icons\nova_icon.ico" --add-binary "%CD%\ftd2xx.dll;." --distpath "%RELEASE_DIR%\NVM2App" --workpath "temp_build" --specpath "temp_build" "%CD%\main.py"
+python -m PyInstaller --noconsole --onedir --name NVM2App --icon="%CD%\a_assets\icons\nova_icon.ico" --add-binary "%CD%\ftd2xx.dll;." --distpath "%RELEASE_DIR%" --workpath "temp_build" --specpath "temp_build" "%CD%\main.py"
 if %errorlevel% neq 0 goto :fail
+if not exist "%RELEASE_DIR%\NVM2App\_internal" (
+    echo [ERROR] _internal folder not found - build is not one-folder layout.
+    goto :fail
+)
 
 :: 9. Copy runtime resources next to exe
 echo [4/5] Copying 2_resource to deploy folder...

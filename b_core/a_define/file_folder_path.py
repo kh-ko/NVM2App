@@ -22,6 +22,9 @@ ASSET_FU_GUIDE_5_IMG_FILE = f"{ASSET_IMG}/fu_guide_5.png"
 ASSET_RS232_IMG_FILE = f"{ASSET_IMG}/rs232_port.png"
 ASSET_USB_IMG_FILE = f"{ASSET_IMG}/usb_port.png"
 
+# 서드파티 라이선스 전문 (Help > About). 파일 목록은 third_party_info.py 가 정의한다
+ASSET_LICENSE_PATH = f"{ASSET_BASE}/licenses"
+
 
 
 # 배포파일에 폴더 형태로 추가되는 리소스파일 경로

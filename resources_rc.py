@@ -6,6 +6,7728 @@
 from PySide6 import QtCore
 
 qt_resource_data = b"\
+\x00\x00\x1d\xe4\
+ \
+                \
+  GNU LESSER GEN\
+ERAL PUBLIC LICE\
+NSE\x0a            \
+           Versi\
+on 3, 29 June 20\
+07\x0a\x0a Copyright (\
+C) 2007 Free Sof\
+tware Foundation\
+, Inc. <https://\
+fsf.org/>\x0a Every\
+one is permitted\
+ to copy and dis\
+tribute verbatim\
+ copies\x0a of this\
+ license documen\
+t, but changing \
+it is not allowe\
+d.\x0a\x0a\x0a  This vers\
+ion of the GNU L\
+esser General Pu\
+blic License inc\
+orporates\x0athe te\
+rms and conditio\
+ns of version 3 \
+of the GNU Gener\
+al Public\x0aLicens\
+e, supplemented \
+by the additiona\
+l permissions li\
+sted below.\x0a\x0a  0\
+. Additional Def\
+initions.\x0a\x0a  As \
+used herein, \x22th\
+is License\x22 refe\
+rs to version 3 \
+of the GNU Lesse\
+r\x0aGeneral Public\
+ License, and th\
+e \x22GNU GPL\x22 refe\
+rs to version 3 \
+of the GNU\x0aGener\
+al Public Licens\
+e.\x0a\x0a  \x22The Libra\
+ry\x22 refers to a \
+covered work gov\
+erned by this Li\
+cense,\x0aother tha\
+n an Application\
+ or a Combined W\
+ork as defined b\
+elow.\x0a\x0a  An \x22App\
+lication\x22 is any\
+ work that makes\
+ use of an inter\
+face provided\x0aby\
+ the Library, bu\
+t which is not o\
+therwise based o\
+n the Library.\x0aD\
+efining a subcla\
+ss of a class de\
+fined by the Lib\
+rary is deemed a\
+ mode\x0aof using a\
+n interface prov\
+ided by the Libr\
+ary.\x0a\x0a  A \x22Combi\
+ned Work\x22 is a w\
+ork produced by \
+combining or lin\
+king an\x0aApplicat\
+ion with the Lib\
+rary.  The parti\
+cular version of\
+ the Library\x0awit\
+h which the Comb\
+ined Work was ma\
+de is also calle\
+d the \x22Linked\x0aVe\
+rsion\x22.\x0a\x0a  The \x22\
+Minimal Correspo\
+nding Source\x22 fo\
+r a Combined Wor\
+k means the\x0aCorr\
+esponding Source\
+ for the Combine\
+d Work, excludin\
+g any source cod\
+e\x0afor portions o\
+f the Combined W\
+ork that, consid\
+ered in isolatio\
+n, are\x0abased on \
+the Application,\
+ and not on the \
+Linked Version.\x0a\
+\x0a  The \x22Correspo\
+nding Applicatio\
+n Code\x22 for a Co\
+mbined Work mean\
+s the\x0aobject cod\
+e and/or source \
+code for the App\
+lication, includ\
+ing any data\x0aand\
+ utility program\
+s needed for rep\
+roducing the Com\
+bined Work from \
+the\x0aApplication,\
+ but excluding t\
+he System Librar\
+ies of the Combi\
+ned Work.\x0a\x0a  1. \
+Exception to Sec\
+tion 3 of the GN\
+U GPL.\x0a\x0a  You ma\
+y convey a cover\
+ed work under se\
+ctions 3 and 4 o\
+f this License\x0aw\
+ithout being bou\
+nd by section 3 \
+of the GNU GPL.\x0a\
+\x0a  2. Conveying \
+Modified Version\
+s.\x0a\x0a  If you mod\
+ify a copy of th\
+e Library, and, \
+in your modifica\
+tions, a\x0afacilit\
+y refers to a fu\
+nction or data t\
+o be supplied by\
+ an Application\x0a\
+that uses the fa\
+cility (other th\
+an as an argumen\
+t passed when th\
+e\x0afacility is in\
+voked), then you\
+ may convey a co\
+py of the modifi\
+ed\x0aversion:\x0a\x0a   \
+a) under this Li\
+cense, provided \
+that you make a \
+good faith effor\
+t to\x0a   ensure t\
+hat, in the even\
+t an Application\
+ does not supply\
+ the\x0a   function\
+ or data, the fa\
+cility still ope\
+rates, and perfo\
+rms\x0a   whatever \
+part of its purp\
+ose remains mean\
+ingful, or\x0a\x0a   b\
+) under the GNU \
+GPL, with none o\
+f the additional\
+ permissions of\x0a\
+   this License \
+applicable to th\
+at copy.\x0a\x0a  3. O\
+bject Code Incor\
+porating Materia\
+l from Library H\
+eader Files.\x0a\x0a  \
+The object code \
+form of an Appli\
+cation may incor\
+porate material \
+from\x0aa header fi\
+le that is part \
+of the Library. \
+ You may convey \
+such object\x0acode\
+ under terms of \
+your choice, pro\
+vided that, if t\
+he incorporated\x0a\
+material is not \
+limited to numer\
+ical parameters,\
+ data structure\x0a\
+layouts and acce\
+ssors, or small \
+macros, inline f\
+unctions and tem\
+plates\x0a(ten or f\
+ewer lines in le\
+ngth), you do bo\
+th of the follow\
+ing:\x0a\x0a   a) Give\
+ prominent notic\
+e with each copy\
+ of the object c\
+ode that the\x0a   \
+Library is used \
+in it and that t\
+he Library and i\
+ts use are\x0a   co\
+vered by this Li\
+cense.\x0a\x0a   b) Ac\
+company the obje\
+ct code with a c\
+opy of the GNU G\
+PL and this lice\
+nse\x0a   document.\
+\x0a\x0a  4. Combined \
+Works.\x0a\x0a  You ma\
+y convey a Combi\
+ned Work under t\
+erms of your cho\
+ice that,\x0ataken \
+together, effect\
+ively do not res\
+trict modificati\
+on of the\x0aportio\
+ns of the Librar\
+y contained in t\
+he Combined Work\
+ and reverse\x0aeng\
+ineering for deb\
+ugging such modi\
+fications, if yo\
+u also do each o\
+f\x0athe following:\
+\x0a\x0a   a) Give pro\
+minent notice wi\
+th each copy of \
+the Combined Wor\
+k that\x0a   the Li\
+brary is used in\
+ it and that the\
+ Library and its\
+ use are\x0a   cove\
+red by this Lice\
+nse.\x0a\x0a   b) Acco\
+mpany the Combin\
+ed Work with a c\
+opy of the GNU G\
+PL and this lice\
+nse\x0a   document.\
+\x0a\x0a   c) For a Co\
+mbined Work that\
+ displays copyri\
+ght notices duri\
+ng\x0a   execution,\
+ include the cop\
+yright notice fo\
+r the Library am\
+ong\x0a   these not\
+ices, as well as\
+ a reference dir\
+ecting the user \
+to the\x0a   copies\
+ of the GNU GPL \
+and this license\
+ document.\x0a\x0a   d\
+) Do one of the \
+following:\x0a\x0a    \
+   0) Convey the\
+ Minimal Corresp\
+onding Source un\
+der the terms of\
+ this\x0a       Lic\
+ense, and the Co\
+rresponding Appl\
+ication Code in \
+a form\x0a       su\
+itable for, and \
+under terms that\
+ permit, the use\
+r to\x0a       reco\
+mbine or relink \
+the Application \
+with a modified \
+version of\x0a     \
+  the Linked Ver\
+sion to produce \
+a modified Combi\
+ned Work, in the\
+\x0a       manner s\
+pecified by sect\
+ion 6 of the GNU\
+ GPL for conveyi\
+ng\x0a       Corres\
+ponding Source.\x0a\
+\x0a       1) Use a\
+ suitable shared\
+ library mechani\
+sm for linking w\
+ith the\x0a       L\
+ibrary.  A suita\
+ble mechanism is\
+ one that (a) us\
+es at run time\x0a \
+      a copy of \
+the Library alre\
+ady present on t\
+he user's comput\
+er\x0a       system\
+, and (b) will o\
+perate properly \
+with a modified \
+version\x0a       o\
+f the Library th\
+at is interface-\
+compatible with \
+the Linked\x0a     \
+  Version.\x0a\x0a   e\
+) Provide Instal\
+lation Informati\
+on, but only if \
+you would otherw\
+ise\x0a   be requir\
+ed to provide su\
+ch information u\
+nder section 6 o\
+f the\x0a   GNU GPL\
+, and only to th\
+e extent that su\
+ch information i\
+s\x0a   necessary t\
+o install and ex\
+ecute a modified\
+ version of the\x0a\
+   Combined Work\
+ produced by rec\
+ombining or reli\
+nking the\x0a   App\
+lication with a \
+modified version\
+ of the Linked V\
+ersion. (If\x0a   y\
+ou use option 4d\
+0, the Installat\
+ion Information \
+must accompany\x0a \
+  the Minimal Co\
+rresponding Sour\
+ce and Correspon\
+ding Application\
+\x0a   Code. If you\
+ use option 4d1,\
+ you must provid\
+e the Installati\
+on\x0a   Informatio\
+n in the manner \
+specified by sec\
+tion 6 of the GN\
+U GPL\x0a   for con\
+veying Correspon\
+ding Source.)\x0a\x0a \
+ 5. Combined Lib\
+raries.\x0a\x0a  You m\
+ay place library\
+ facilities that\
+ are a work base\
+d on the\x0aLibrary\
+ side by side in\
+ a single librar\
+y together with \
+other library\x0afa\
+cilities that ar\
+e not Applicatio\
+ns and are not c\
+overed by this\x0aL\
+icense, and conv\
+ey such a combin\
+ed library under\
+ terms of your\x0ac\
+hoice, if you do\
+ both of the fol\
+lowing:\x0a\x0a   a) A\
+ccompany the com\
+bined library wi\
+th a copy of the\
+ same work based\
+\x0a   on the Libra\
+ry, uncombined w\
+ith any other li\
+brary facilities\
+,\x0a   conveyed un\
+der the terms of\
+ this License.\x0a\x0a\
+   b) Give promi\
+nent notice with\
+ the combined li\
+brary that part \
+of it\x0a   is a wo\
+rk based on the \
+Library, and exp\
+laining where to\
+ find the\x0a   acc\
+ompanying uncomb\
+ined form of the\
+ same work.\x0a\x0a  6\
+. Revised Versio\
+ns of the GNU Le\
+sser General Pub\
+lic License.\x0a\x0a  \
+The Free Softwar\
+e Foundation may\
+ publish revised\
+ and/or new vers\
+ions\x0aof the GNU \
+Lesser General P\
+ublic License fr\
+om time to time.\
+ Such new\x0aversio\
+ns will be simil\
+ar in spirit to \
+the present vers\
+ion, but may\x0adif\
+fer in detail to\
+ address new pro\
+blems or concern\
+s.\x0a\x0a  Each versi\
+on is given a di\
+stinguishing ver\
+sion number. If \
+the\x0aLibrary as y\
+ou received it s\
+pecifies that a \
+certain numbered\
+ version\x0aof the \
+GNU Lesser Gener\
+al Public Licens\
+e \x22or any later \
+version\x22\x0aapplies\
+ to it, you have\
+ the option of f\
+ollowing the ter\
+ms and\x0acondition\
+s either of that\
+ published versi\
+on or of any lat\
+er version\x0apubli\
+shed by the Free\
+ Software Founda\
+tion. If the Lib\
+rary as you\x0arece\
+ived it does not\
+ specify a versi\
+on number of the\
+ GNU Lesser\x0aGene\
+ral Public Licen\
+se, you may choo\
+se any version o\
+f the GNU Lesser\
+\x0aGeneral Public \
+License ever pub\
+lished by the Fr\
+ee Software Foun\
+dation.\x0a\x0a  If th\
+e Library as you\
+ received it spe\
+cifies that a pr\
+oxy can decide\x0aw\
+hether future ve\
+rsions of the GN\
+U Lesser General\
+ Public License \
+shall\x0aapply, tha\
+t proxy's public\
+ statement of ac\
+ceptance of any \
+version is\x0aperma\
+nent authorizati\
+on for you to ch\
+oose that versio\
+n for the\x0aLibrar\
+y.\x0a\
+\x00\x00(\x06\
+\x00\
+\x00\x90\x0ax\xda\xed]\xebs\x1aI\x92\xff\xde\x11\xfc\
+\x0f\x15D\x5cX\x8amaI\x1e\xcf\x8c\xed\xb8\xb8\xc3\
+\x08I\xecJ\xa0\x03d\xaf\xf7\xcbm\x03\x05\xf4\xba\xe9\
+f\xfaa\xcc\xfc\xf5\x97\x8fz\xf5\x03=<;\xbbw\
+{vLh\x04\xa2\xab\xb2\xb2\xb22\x7f\xf9*\xba\x1d\
+q=\x98LG\xe3Obt)\xa6\xd7}1\x19]\
+N?v\xc7\xfd\x96\xf7\xef\x07\xff\xb5\xbc\x96w\xb7\xcf\
+\xd7I,vA&\xe6\xa9\x0cr\xb9\x10a,\xf2\xb5\
+\x142H\xa3\xbd8{\xf3\xe64\x13\xb3\xbd\xb8*\xc2\
+E\x22\xbe\x04\xb1\x18'YVlD\x90\x8bI\x1e\xce\
+\xd7y\x18\xafZ\xdem\x00\xcfl\x82<\xcc\xe6k\xd1\
+\x93q\x9e\xc2G\x8ez\x1f\x07\xbe\xc8\xa4\x14\xeb<\xdf\
+fo_\xbe\xdc\xedv\x9d\xf9.\xec\xc4\xd1\xb1\x9eg\
+(\xe1g\x1a\x05\xf1\x22ky@F \xb2b>\x97\
+Y\x96\xa4\x22Y\xc2K\xf8\xd3\xaa\x08VR\xcc\x83(\
+\x02\xfa\xba\xef{\x1d\xa1\xe8Ia\xce0\xce\x04/\xe3\
+\x05\x8c\xb0M\xc3x\x1en\x83H\x04\x05\xbc\x97\xfa\x22\
+\x88\xe0\xff\xc5j-\xc2\x1c\xe6\x9cG\xc5Bfb\x13\
+\xc4{1O\x80\xcepV\xe4a\x02c,\xd3d#\
+\x12$&\xeb k\x061\xae\xfe\xb5\xaf\xa6\xc2\x0f\x87\
+q\x01\x04\xac\xc3L\xec\x92\xf4\xb3\x00\xc6)\xfe\x013\
+p-\xbd$\xdd&i\x80\xe3\x89e\x92\xb6\xbc!\xfd\
+\x0e\xc4\x8ce\x06\x0c\x05\xde\x0c\xe20\x0f\xe1\xdd/@\
+\xc4Qo8nbP\x9c\x86\x9dTfy\x12w\xbe\
+\x04\x9d\x22;ny\xc0\xac1\xbd\xe3\x8b\x0fa\xba\x0a\
+\xe30\x10; \x15\x9e\x94\xc0\x85H\x06\x19P\x96\xc9\
+/2\x85\xd9\xe0gFk\x02\x06\x02]-/K\x96\
+\xf9.H\xa5^\xd8m\xb0\x17\xe7\xa7\xa7\xa7zq\xc0\
+}Z\x80Z\xce<\x81\x81\x170X\x94l7\xb0\x99\
+\x22\x97\xc1Fl\x92/0G\x9e\xb4\xbc\xf7r\xb4\x95\
+qg\x0e\x0c\xcb\x13\x5c\xe9\x86\x9e\xe6\xb7\xd5 7\xc1\
+,\xa3\xe7`\xb3`\xc6\xd1<Of2U\x14\x89,\
+\xd8\x00Y{\xe0\x89\xefLl\x9e1s\x89\x8bp\x15\
+\xe6\xb0\xa4\x1eJ'\xae\xc9\x87u\x83\xd8\x89\x99\x9c\xd3\
+\x18\x7fI\xb6%\xc6\xf3t\xb0\xb83wd1Q\x1c\
+\x10\x97I\x11/x\x8b\x8e\xee&\x97\xc4\xfe\x96\xe7\xf2\
+\x7fKOt\x92t\xf5r\x9b-_\x1e\xd3\xe9\xc0E\
+\xca\x05H\x93\x88\x93\xf8d\x9b&K\x10'\xf8H\x10\
+\x87\xbf\xd2h-O\x1f\xa0l+\xe7\xe12Dq\xdd\
+\xe3\x12\x92\x9d\xe6\xc9\x09\xec\x14}d\x10\xe7\x12\x84y\
+\x9e\x17\xb0\xb4\xbb\x14\x96\x90\xe6\xfbN}145\x9c\
+\x88-,<\x01\xc9^\x89\x8d\xdc8l\x84\x05\xd0\x96\
+v\xa3H/T\x09\x03<\x06\x8b\xa5\xfd\x98$E:\
+\x97\xe2\xc8\x953\x98\x07F\xc4\xf7q\x9d,\xac8\xa0\
+\xfb\xc0\x85\x5c\x86(\xadI|\x0cL\xbd\x0eA\xfcR\
+^\x95\x0f\xfb\x93\xe5\xbe\x80\xa3\x03\xec\xc8\xe1\x88E\xbe\
+\x9a\xbf\xe5\x19\x02\xd6\xc1\x17\x09\x7f\xca\x12\xd8+\x18\xf5\
+\xea\xee\xe6\x04$f\x0b\x0b\x9bE\xf2\x1d\xd1\x9f\x07\xf0\
++\xfc9Jvp\xec7\x9b \x0d\x7f\x95\x19\x93\xf2\
+\x05^$Ef\x16D\x0b\x15\xf0o\xcco\x08\xfd\xef\
+B\xa6!J\x0b\xfe\xfb\x04\x12\xa5\xdf\x1f\xedb\xa9_\
+\xe0\xe4\xfct\xf5\x1f\x1d\xfbG\xfeY\xb2\xffC\x1c\x9d\
+\x1dkBN;o:\xa7\xb0\x8e\xb4\x10g\x9d\xf3\xf2\
+#\xa0:\xceNP\x7f\xc0\xef\xa0\x06\xcd\xfb{\x5c\x1e\
+}\xa0\xf3J?\xfa\x1a\x1fvG\xc0\xe7\xf0\xe17\xf8\
+0\xe8\x88\x86\x87\x7f,\xcf\xc6c\xd0?<\xd7\xfa}\
+\xf7\xe18\xe1g\xcf;\xa7\x95g\xedX\xee\xb3\xce!\
+7\xcf\xc2g;g\x87\x9f=k\x9aw\x8f\x9a\xee\xfc\
+XO~V\x9a\x1c\x88\xf9\x83\x1e\xd4\x1d\x00\x04[4\
+\x10^z\xfa)\xcf\x1a\x8e\xc1\xc4\x95\x87\xcf\xfe\xa0\x07\
+|\xd2\xc3\xe7\xe5\x87\xcd`\xf0\xf0\xf9\xa3\x0f\xbf\xaa<\
+|\xfe\xf4\x87\xcfI9\x073P\x88\xf5\x99\xcfNb\
+89M\x0f\xb7\xbc\xcb$\xc9\xe1p\xca\xec-\xbe\x02\
+\xb1\xad\x9c@\xb1Hd\x16\xbf\xc8A\xa5\x04h\x8a\xc1\
+\x86\xed\xe4\x0bT\xfcp\xd2\xd9,\x82\xbeQZ\x05t\
+\xa6L\x99$<\x9b0\x12\xa8\x04G\xebD\xe1\x1c\x14\
+\x8a\x04\xed\x5c\xc4Q\xf8Y\xeaO\xf9\x22\x92\xb9\xd8'\
+\x85\x1dU\xf20\x01\xe8\x90\x05\xa8I8\xb8\xca\x5c\x89\
+]\x88\x96\x1a\x08\x0a>\xe3\xd4\xf0T*\xe6k0\xff\
+ A\xa8\xb0\x84\xd2XBL\xd7j\x94\xca\x924\x19\
+8\x84D\x83\xbf\x05\xb0B\x7f\xc9\xd1\x82ofal\
+,\x02\xce\xc6\x83\x90\xd1\x17\xdaF2+\xc2\xcc\x9aU\
+Z\xbc^\x11+.\xc6\x09\xc0B` )&\x90p\
+\xd1\x9d\x83\xe1\x5c \xe90\xdb\x18\x8cT\x90.\x00$\
+\x81v\x04\xb8\xe1\xab\xc3\x03\x03\xa3\xca,\x13\xee3!\
+h\xd3\x8a\x0c\x09\xcf\xf4R@\x8b\xa2\x05\x98\xaf\x13x\
+\x8dj?\x0avb\x1e\xe1\xc7p\x07\x9c\x19y\x08\x86\
+\x14\xebd\x87P\xc07\xb3\xbf\xc8\xf0\xc1=,\x03\xc7\
+\xcb\x93hA\x9f\xb4o\xd3\xa2\x89B\x1e\x07\xc8l#\
+\x9d\x80\x98\x0c\x95m\xe2\x99\x11\x00\x5c\xf6\x14\xb6\xe73\
+\x0eH\xef\x12\xaa\x82\x1d\xcc\xc2\x05\xe8\xef$*\xc0\xcc\
+!\x9bv\xeb\x84\xad\x01\xc2&\xc3P\x82\x1e\x88\xd9\x16\
+a\x0a\xa6\x10%\x00\xc6\xa1\x9d\x83\xc12iM\x99\xde\
+E\x9a\x12\xe0GGL\xfb\xe3\xdb\x89\xe8\x0e/Do\
+4\xbc\x18L\x07\xa3\xe1D\x5c\x8e\xc6\xa2\xdb\xeb\xf5'\
+\x93\xc1\xf0J\xc0\x8b\x11@\xe1\xf1\xc7\xc1\xa4/\xee\xe9\
+\xad\xbbO\xd3\xeb\xd1\xf0!L\xfc\xa4\x7f\x0ep6B\
+\x83\x87t\x91\xcc\x0b\x84Kl\xba\xf1]\xb5\x89\x8e\x08\
+\x99'\x9b\x00\xc9\x8d\xda\xf3\x0f\xea@\x9c\xd3\x82a\x0f\
+S:\x8b\xc4}\xf5\xf8\xab\xce\xcf\x9d\x1f}!\xbf\x06\
+\x9bm\x84\xe7\x0eX\x18n\xf1\x17\xa4\x84%z\x9e\xc0\
+6\x841\x9b\xd3:q\x0b\x04\x1fu\x0aI\x97\xd4(\
+\x01l\xae0\xe2_d\x9a\x9c\xf4H\x02\xc5\xfb\xc9\x85\
+\x1e\x81IM6\xd2\xf2\x04e\x87\xa1\x0c\xb9\x15\xb0\xb9\
+\x8ax\x10.\x9e\x0e\x14\xc0\x12@, L}r;\
+(S\xceAf.f8\x02-\x9f\xd6\xb4\x04\xa1F\
+\x86h\x9a\x83\xbcD\x05\xf0\x986\xdaxA \x19\xf7\
+\xc3\x8b.J\x89\xb8\x19\xf4\xfaC\x90\x88\x0f\xfd\xf1\x04\
+_\xc3\xcaN\x9e\xf1\x0fG?\x03\xf9C'@\x0f\xd5\
+\xbd\x1a\xf7\xfb\xb7\xfd\xe1\x14\x176\x93\xf9\x0e\xe1\xce\xc3\
+\xd8\x13\x14F\x1b\xf8\xdc>\xf6\x0d\xf6\x1e\xc4\x8b\xf0K\
+H\x9b\x02\xae\xcf\xc8\x81\x96\xe2\xa8\xad\xf6C\xb6\x8fE\
+@\xde\x11.\x1f\x9ely\xb4\xd5\xbb\x106\xa3\xa07\
+s\xa4\xccl\x01\xccB4\xb4\xc9\xdfb\xfd\x89\xc3\x83\
+\x22\x0c\xd2=Cw\x1a\x06UN\x00N\xd7<\xa4\xdd\
+*I\x0b1\xf5\xbc#&\xc5\xecopP\xf5i\xcf\
+e\xba\xc9\x88|\xf0\x8d\x16an=\x0e\xe4\x8d\x12\xa0\
+\xee*\x95\x12G\xf2I\xae\xd0e\x99\xed[\xde*\x0d\
+\xe2\xdc|J2\xac\x96_\xc1;\xcb\x00\xcb\x814'\
+{\xf0\xdb\xf6'Kx\xdaG\xb5\x11-Nv\xa8U\
+\xb4Z\xcc\xd1\xf9\x03\x18\xbe(\xe6\xa8=\x03p\xb2\xf6\
+\xbf\xc2G\xc1\xde\xc1T\x80\xa7\xf5\xd2^&(f\xd9\
+6\x02\x97g[\xcc\xe0y\xc4\xaf[x\x98\xce\x00b\
+Gr\xc7H7e>j#m\xa8\x9c\xb3\xa4\x18l\
+\xb64\x88\x80\x5cd$p\x15\x95\x9e3\x8e\xb2f>\
+\xfa\xa2\x09l(z\x0dF\x1f\x93\xac\x02#^4p\
+\x88f\xe3\xbf\x81\xe6U\xea~\x9el\xf7i\xb8Z\xe7\
+0^\xd8\x91\x1d_\xb4{\xfa-q4?V\x9e\x0e\
+\x02\x09\xfa\xf9\x8a~\xfe@?_\xd3\xcf\x1f\xe9\xe7O\
+\xf4\xf3g\xfa\xf9\x06\x7f\x9e\x9d\xc2\x88\xf0?z\xf8\x8c\
+\x1e>\xa3\x87\xcf\xe8\xe13z\xf8\x8c\x1e>\xa3\x87\xcf\
+\xe8\xe13z\xf8\xfc\x94~\xd2\xb3\xe7\xf4\xec\xf9\xab\x07\
+\xa4\xfd\x1d{(c$:#_8\x05\xc0\xde\xa6\xc3\
+\x9d\xca\x1c\x5cx\x8e;<\x99\xb9\xc8[\xda\xc0\x05\xc6\
+&\xb4\x14\x91\x9c\xbe\xea\xa0\xffG\x11\x8c/\xc8T#\
+b\xea\x09\xb4\xa6\x95]7\x16\x7fF\xe6\x1e\x87\xa7\xc9\
+\x8d\xf6\xd2\x01\x06\xa4\x09\x09\x82q\xc8\xe1Oe\xb2d\
+!\xd9\x918+\xf3\xa5\x14ne\x92\xe0K\x10F\x81\
+\xc2\x22\x0a?\x80-\xd6BBG#\x8c\xc9i\x05\x02\
+\x0c\xd9|bD\x80RB3\xa8\x18\x86fNV\x80\
+3\xcc\x13\x88Y\x1a\xca\xa5r\xa4\xc0\x10/\x99\x10\x0d\
+\xa16\xc1\x82\xe6\xe6\xb5\x10\xb3~\xe8\xd0\xa9\x0c3\x8d\
+\xb9\xf4\x0e\xb8\xb4\x1aR\xf0\x0f\xb1hw'b0i\
+\xb7<\xe0V\x98u\x18{\xdev\xff\xd4\x9f\x88\xe1H\
+\x8c\xfbw\xe3\xfe\x04ta\x97m2Xa\xd0\xc0\xe3\
+\xeep:\xe8O|\xd1\xff3\xfe\x19\xdfny\x83\xdb\
+\xbb\x9bA\xff\x02Fx\xff\x09>D\xb1\xab\xfe\x9f\xbb\
+\xf0n\xdf\x17\xef\xef\xa70\xdc\x14t\xec\xed\x80\xc7\xf2\
+\xcb\x13\x81\xedoy\x17\x83I\xef\xa6; (\xf0\xa9\
+2\xb735\x0d}\xdb\x1f\xf7\xae\xe1E\xf7\xfd\xe0f\
+\x80o\x8d\xc5\xe5`:\x04j\x00+#r\x80\x11\xee\
+\xba\xe3\xe9\xa0w\x7f\xd3\x1d\x8b\xbb\xfb\xf1\xdd\x08\x94;\
+\xfcez\xdd\x9dRT\xed\x1e__*\x18!>\x0e\
+nn\x90FX\xc9\xf0r\x0c\xf8\xa2OcL\xaf\x07\
+\xe3\x0b\x1a\x09(\x1a\x5c]O'\xc4\xea\xd7\xcc\xea\xc9\
+u\x97\x9f\x12\xef\xfb\xb0\xb8\xee\xfb\x9b\xbe\x98\x8e\xb4)\
+\xa1\xe9p\x10B.8\xdfxbg\xb4t\x0e\x86\xbd\
+\xc1\x05.\x14\x00\xf6\xe4\xae\xdf\x1b\xe0/\xf07\x00C\
+\x93\xfe\x7f\xdd\xc3_\xe0\x1dq\xd1\xbd\xed^\xf5i\x0f\
+nF\xc0\xf4.\xac\xb4\x0b\x5c\x9a\xdc\xdfL\x89#\xa3\
+\x8b\xc1\xe5' \xdc\x17\xc0\xc8\xe9x\x00L\xa7W\x07\
+\xa1\x13\xa8\x0cE\xc1E\x7f<\xf8\x00|\xfe\xd0G\xce\
+\x8c\xfb\xa3K\xd8\xdc\x0f\xfd\xa1\x18\x5c\x8a\xee\xc5\x07x\
+\xf0B\xc7\x22\x81\x8d\x93\x81b\xba\xfa,q\xe4Gm\
+Fk\x8ap\x17F\x14\xbfK0\xa2\xa8\xe2(`l\
+\xc0f\xe5\xa0\x85\xb7(\x87 \xb0\xf0V\x18D \x87\
+\xa9\x0c\xe0\x0c\x80\xb2D#\xd6d\x95h\xba\x9f:b\
+\x08\xc7\x0e\xa5\x9cB\x8f\x8d3gk\x98\x0dl8\x9c\
+^x\x83\x22P\x1c\xd6\xc1\xb3F\xb1\x0d\x8eB\xad\xc3\
+-E'W2\x9e\xa39\x01\x85\x10\xc3\x81\x86\xb7}\
+T\x12\x7fK\x00\xee\x08\xd4?E*\x0d$\xc0\xfd'\
+ck\x14\x968\xc4\x01\xf4\xcd\xc8O C\x89\xf6l\
+\x13f\x99\x82\xc8d\x87&\x97p\xbaS8\xd2p\xd6\
+\x01\x81\xc3\xa4\xf4J\xc4\xc1\x86u\x830\x7f\x15\x996\
+\x992^$iF\xba\x15\xf4\xce&Ag\x8c\x8dh\
+NC\xa0b\x06Z\xc8\x8ck\x22}\xad\xf5\x80e\xe0\
+\xcf\xe0R\xf7\xc4\xd0\x9f;\xe2\xfd\x9e\x0c\x14\xf0\xd4\x87\
+9\xb3\x5c\xe12\x0c\xddV`\x09+\x16\xdf\x8c\x0a&\
+\xdbh4`\xf7\x0cm\x05\xea\xf2\xa7\x02\x0b\x90d\xcd\
+,\xed\x15\xf4Gw\xfda\xa77\xbam\x00fxp\
+\xd4\xb1\x05\xaf\xffY\x90\xcf\x8e\xadG\xa0\xdf'\xa3\xfb\
+q\xaf\xdf0\x95\x06\x96gO\x86\x8aN\xa4\xe5\xa8\xcd\
+/\x10\x18\x82\xc7\xc4(\x0f\xcc\xd1r\x89x\x00]\xb4\
+\x1fO\xc5$\x00\xa3\x94\xac\x02\xd1\x05\x09+`\x83&\
+ #\x81\x00L\x9e\x06\xbe\xe8u\xc5\x9b\xd7\xa7\xaf\xcf\
+\x0c\xb2\xc4\x88\xef7@\xcb\xea\x16\xa21q\xa1\xe5C\
+xR\x94\xe1$\x80\xaa\x92\xf7q\xd4\xc6m\xd6@\xa1\
+}\xfc-\x00\xb3\x14ln\x90\x0a_\x7fB\x19\xd0F\
+\xc4yb!'\x1c\xeegaN\xd1\x0c9\xc9Oz\
+&\xe6\x14\x15\xc8Y\x06\xf5\x1cK1\xa8\xea7!\xcf\
+Z\x94\xde\xa8\x1e\x8awX$Fb\xa3\xe7\xf4\x9f0\
+\xa9x\x08\x90\xa9)-\xcc(\xaf\xe89`C\x9d\xc4\
+\x7f\x08\xde\xa8\xce\xf5O\x84\x1cnN\xef\x99\xc0\x030\
+\x9eZ\xc8\xb7a\x0fx\x05\xa2`=\xe9\xdf\x80@\xe0\
+x\x02\xdb\x1c\x04B\xd8\xc2\xb7@\x04?\xe8B\x91\xd2\
+\xba}E \xec\xc1o\x07\x1f\xaf\xff\xb1\xe0\xe30\xd6\
+1\x88c\x95\xc0Q\x8a\xf9\x00\x91\x0a\x8da48U\
+*'\x0b\x9fB\xfc\x81\xc9\xa5<\xd3\x96\x12\x83\x81*\
+\x154\xc9\x91>x\xd1\x0b\xa2\x104Q\x1c\x06\x18\x1e\
+B_\x01O\x1c\xd0\xb3\x04=\x94\x93W\x80\x8f\x91\x8a\
+\xa0,!\x1c\x88o\x01F:\xe1E\x0a\xe1\x9b\x80\x11\
+p\xafd\x01i\xd9\xcf\xc5F\xa0\xecj\xe0H\x0dw\
+\x08\x1ee\x15|\xd4\xf2\x1e\x00H\xe2\xa9\xf8\x88\xec\xa3\
+\x01HBtQ\x10p\x07\xe4\x169\xc3\xd9\xc8vI\
+\xfb\xb6E\x94\xac\x92\xcc\xd1\x80A\xce\xb9\xc8R*\x12\
+\xfe\x94!:xI\x9f\xee\xac\xf3M\x04\x12\xb8\xc7\xdd\
+(\xd0a\x0d\xdc\xb83in\xcb\x92\x8c\xb9Dn\xad\
+\x0e\xf2\xcf\x80\xc6\x95\xd4\xa0\xf8\xe9\x18\x8e\x12\xb7\xc6&\
+\xfc~H\x8e\xb2G\x0fb8\x15\xa8\xfe=bv\x95\
+\x1c\xbe\xd0)\xfc\x96\xd7\x94\xc3wP\x9ap@\xda\xcf\
+o^\x8b;N\xe1\x8b\x8f\xeb\x10\xa4\xe8\x22e\x90a\
+\xb2\xf8]\x0a\xa6\x9c\x01\x16\xc2\xe5>-\x10\x88Q\xc3\
+\xa7\xc25m\xe09\xeb\xe0\xa06\xac\x06x\x1al\xfb\
+]\xa2\x80\xb8Z\x90\xf1\x07@\xd9\x13\xc2\x80\xa0\xc2\x9e\
+\x81\xc9\x0e\x86\x01M\x18\xe9qL\xd6\x1c\x06Tr\xf8\
+\x04L&\x0eA2N\xc3\x18\x9f\xb0\x12\x0eTI\x9a\
+\xa6x\xa0h\x0a\x07\x82\xa0c\xee\x982\x9a\x87$\xb9\
+\xb1\x18\xe5\x9d\xb0\x11:\x16\xf5\x07Ct,U\x87\xd7\
+\xdd\xf2\x1e\xc4\x85\x98;\x04\xc1A\x93\x8a\xc88\xc4\x04\
+\xa2,\xc8z\xf1\x82\x9b\xf0\xbc\x91\x12\xd4}Y1\xcb\
+\xf20\x87\xed!)\x5c&Q\x94\xecHI\xc9\xaf\xc0\
+\x89d\x13\xe6\xb9\xd2Y-\xef\x97\x02\xf3\xa0\xc7oE\
+\xbbD~\xa8bbV\xfdf\x07d\x1bl\x9d\x15n\
+\xa0\xb6L\xa5\xdd3m\xb4\xec&\x82\x9fF\x05N*\
+\xddX\x9a_\xe9\xf0(\x99\x07FAK\xb6\xfb\xb1\xcc\
+\x1d\xa5kV\xd7\xf2\x8a8\xfc\x05]\xbe-\xb27\xcb\
+q\x0a\x90\xaa8\xc7Lj*\x8e>\xc7XmB)\
+\xc35\xd0\x1dIX4j\xa3\xce\xf9\xf9\xcb\xb3\xd3\xb3\
+W\x8a@\x87\xafD\x85\xaa\xd2\x10\xc9L\xed4UE\
+\x04(\xb4_\xf7d\xf5\xb0\xe6\xa4L\x1f\xd0R'P\
+\xdc\x8fo\xde\x0ae\xc1\xd6\x8b\xa8\xc3Tt\xe0\xf3/\
+]:\xda\xbf\x7f\xac\x96y\xfc/\x14\xb1\xe5\x15iL\
+OF\xb2\x16\xb8U\xe7\xf29\x1e\x15\x0d\xf4\x0f\xf1\xa7\
+\xca3\xfd\xf3\x03\xb8\xcc\xacg\x87qi\x19\xbf-\x8e\
+\xcb3\xff\xb3\xa3\xb9\xcc\x80\xff\xe31\xdd\xe7\xb8U\xa4\
+\xaa\xe4\x02k$\xb1\xa4\xd2\xa9\xc1\xdb\xaa\x1a<\xd7\xa3\
+\xba\x07\xeb(\x17\xecXe\xbe:\xc5:\x0f\x9f\x149\
+\x82\x1003l`\x9d\xa1\xad\x8d\xc6\xd1H\xdb\xf8\xda\
+\xa2\x80q\x22\xea@\x05\xb4\xbc\xfb\xce\xa4c\x1e\xc2\x89\
+\x8dg\x13l\xb7h\x17\xeb^^/\xd9l\x92x'\
+\xb1\xa8\x95\xd4\x85\xae\x06u}=\xfd\x1eX(\xc7\xed\
+\x13\x15\xaf\xaf\xe5\x81\xd7\x87K\x01\xc8\x1f/\xac&O\
+\xe5*!g\x80\xf2\xed\xf0\x0a\xabX\x80\xfc*Db\
+\x0d\x0c\xea\xb7\x02\x0aXA[\x85Lq\xb6\x0c\xf59\
+i$\xbd\xc7\xca\x19\x09\xa8fW~\xc1R?\x10\x09\
+\x8b\xbaJe7\xc3{q%c\xe2\xd3\x1d\x817\xb3\
+\xe3GWw7\xc7>\x9b\xf9\xc3|\xb2E\xb3,\x17\
+,\x14\x87\xdc\x10\xd0\x94@J\xc0\xba;\xcb\x0a*C\
+\x083[q\x90\xa4\x9a9\xe4\x8e\x933|\x07\xeb\x03\
+8\xbb]g\xe2\x07_\xbcf#\xf3\xd3a$\x5c\xf7\
+\xba\x9b0\xe0\x83\xf9\x88\xaa\xd7\x8d\x9e\xd8s\xf2\x11\xa4\
+\xc8\x1a|\xee&B\x1eMH\xd0`%\x8f[\xe5'\
+\x9e\x9b\x91p\x1dn\xf4\xcc\x9f\x9f\x91\x00\xf9 \x9b\xa8\
+\x8ee\x1bk\x82\xee\xa6m,WE\x87\x8c\xeb\xa6C\
+\x90y\xc2]4\xda\xcc:\xc1\xa8\x19\x1e\xcfd(\xdd\
+\xe9\xb8.\x8e\x13\x0c\xfa\xeb\xb9^\xb0(;\xc1\xba\x96\
+\x8fIWn\xf1\xc7G\xbcb\xaeG\x9d^\x8fG\xf7\
+W\xd7XP\xfa\xbc\xd2\x16\xeb,\x97+\x0c\xb0\x94U\
+\x9c\xa8bxS\xf3/\x1aK\xfe\xbb\x1b\xc0\xa4\xe9\x22\
+\xd8\xf8\x5c\xc7\xe3T\xf7\xab\x82\xc1\x94\x8b\x00R\xe5a\
+\xd0j\xef\xaa\xd2\xe4\xd3n\xf8\x5c\x22\xb8\xe7\xb3dU\
+C\xa5\xc6E9\xae\xd5$\xc3RC\xbf\x02\x14Q\xc6\
+\x1f\xd3\x15\x86KI\x11o\xd7\x0b\x05A\xb0qs\x1b\
+-\xe7\xc2K\xab\xd1\x95'\x06\x0a\x1a+\x8d9.\x87\
+\x7f\x0ee\xa6\x1cx\x0c\xe1\xcc\x12\xaa\x93\x831\xeaO\
+\xd2\x87`r\xe7\x08U\x07\x05\xb1/\xb6\xa0=\x89\xcf\
+\xa5U\xf9f\x12\xa2\x8e\x8e\x16HR\xf3\xae\xc0F\xaa\
+m\x01V\xa0\xf4\xe0\xf9\xd5A#$}\x01Z0g\
+\xc5\x86\xe7\x8f4k\x08F\x10M!\xf8\x01\xba\xae\xd0\
+\x16\x84b\x09\xc4\xb2\x14\x072,\xd5U\xef`7R\
+\xf0\xbd$z~!\x9e`\xbbN.\x11\x03|vM\
+\xb1\xdd\xdb. \x07\xf8\x01\x10\xf0Z\x80XO\xc7\xf7\
+\xb7\xc2\x01\x84\x80\xaf,\xf4\x04\x986\xbd\x06\xb4s\xd5\
+\x05T6\x1d\x81t]\x0f&Nh\x180\xd4\xcd\xfd\
+\x05\x0e\x8b\xcf)h\xea>\xdf\x00 \x09\x81*\x08\x89\
+# *E\xbc3U\xe8\xee\x11R\x0d\xf0\xb3\xf0\xd3\
+\xa0\xb7\xc1\xf0b0\xee\xf7\xa6\x0f\xc28\xc2\x5c\xfc\xb2\
+\xe5}\x04\x8c:\x19\xc1\xf4c\x85\xe9p\xde\xcb1f\
+3\x11\xedQ\xb0\x1c\xd6y\xd1\x9dv\xf1\xd9\xbb\xf1\x08\
+(\x07\xb2?^\xf7\x09c\x02\xf9]@\x96\xdd\x1eC\
+\xe7K\x9cv:\x86\x97\xbe\x18\xf6\xafn\x06W\xfda\
+\xafo\xb0 \xb0\x10\x80\xf2\xe8\x1e\xd8\xdccp\xde\x1d\
+\x0f\xb8l\xf2\x1e\xd4\x0d<>\xa2!a\x90a\x9f\x87\
+\xa4\x0d0 \x1a(\xe8\x8fa\xd9\xb7]\x1a\x16Q\xa1\
+\xb3\x1f\xb4\xd3\x7f\xe9\x8fG'\xb0\x99\xf8y,\x14\xd4\
+\xba\xeb\x92xr\xd1\xc7\xf1\x09K\xb2\xf6\xba\x18\xf5\xee\
+o5\xf6\xff\x16\xcduH\x9b=E\xbb\xa8\xf0P\xb3\
+\x82Y\xea\x00\xafV%d\xfc\x15\x088\xa8N\xb8>\
+\xd6\xcd\xdb\x00\x83`\xdb>\x00\xd6\xbf\xd0n\x18\x95\xb0\
+\xe2\x87\xba\xf7\xc0\x84\xf1\xc3\xe2\xdf\xf2\x8c\xfc\x97\xd9\xfd\
+-\xd2\x0f\xa2\x02S+\xe9\xef4H\xbfC\x95uq\
+j\x82\xceb\xee\xa3\xf3\xa4~}\xaa\xc8\x8b\x83\x12\x0f\
+\xf8\xe3\xe9\x22/\x1e\x95x\x10\xe7GE^<A\xe2\
+A\x92\x1e\x13y\xea\xc5Y\xb0\x89\xc7\xa6%k\xeeQ\
+\x86H\xaa>\x02\xf0Hv\x99\x0e\xbd\xce\x8a0Z|\
+\x93\xb4s\xf9uH\xf1\x08\x10\xb9\x0dJ `\x96\xcf\
+\xbaR\x16\x0dE\x81%\xb4\xb7\xe1<MP\x98\xc5\x85\
+\x96pB\xe2\xbdd\x81\x11ic\xa1\xd8G\xb2\x9f.\
+5U\xa11\x7fh @M\x99\xc0\xde\xa4\xc5\x82\x8d\
+\x0b\xf9o\x1d\xf9\x15N[g\x81\xae\x1f\x90\xd3\xd9\xee\
+\x17b\x19b\x9e\x03C;\x80\x01\x8a\x88\x5c\x93\xb4\x88\
+cUb \xb9\xc47_\xa7\xd4\xb4\x17\xf0\x9aR\xee\
+\x5c[R+\xc1\xb2H)\xa4\xe6\x1cX\xc5\x83\xccx\
+\x1f\x14p\xc9]\xa2[^\xc3\xf2i\xbcM\x91\xe5\xd4\
+\xe3\x03\xa8\xdfT\xb8c\xf4>\x0d\xe7\x0a\xac\xc5\x15+\
+\xa8\xac]\x85e\x14\xceB8\x1a\xce\x8b\x08[\xdb\xcc\
+\xe8\xa9\xfc\xa5\x081\xe3eFIR\x06\x0c\xe8\x11\xa6\
+(,\x92\xf7+%\x0cIh\x92\x9cF\xc2\x8e\xb4*\
+XcN\xde\x06\xfa:\x0f\xed\x05\xa6 \xb0r>G\
+6o0\xda\x148R\x00^a\xb2\xa3>-\x22\x09\
+\xa1\x85\x16O\xd90XGL\xa4,=]\x02$-\
+\xefHq\x9bv\x1d\xbdu\xd58\x88\xbe[\x92D\xbc\
+\xca\x84\xff\xb4\x93\xb3\x0c\xb3!@\xe0\xc60\x0d8\x7f\
+\xdc\xf2\x90\x02\x8d!`\x08\xc0\x1f\x11\xfb\xf8c\xd9\x84\
+?\x9a\x8e\x91\xe9\x8aSU\xe6&\x81\x9a\xa2\x94\xc3\xf6\
+\x22HS\x1b\x0c\xd2\x1a\xd8\xd0r\x19\xf7Q\xbbJ\x82\
+h\x89ZgN\xb0\x85T2\x98t\xc2\xef\xd6\x99A\
+\xec\x14\x90_\xaf\x80\x1c0\xc2aX\x93\xe0\xbd\xe3\x81\
+\xd1qrY\xeb\xf8O0\x065\xc0h\xc9~\xa1R\
+\x97*\xda\x0e\x9e\xf3^\x81\xcd\xacX\xad@X\xb3\xf2\
+\xe7Q\xa0\xa5jjM)\x8c\xaf\x5c\xad\xb2\xc8*B\
+\x9c\xa3\xe4\xd2\xd3 [\x98p)b\x0a&\x8a-\xb8\
+\x9f\x94`!\x1f\x09Oo\xe0\xac\x1c{vP}\x00\
+\x8a\xcc\xf6\xe0\x16l\xb0K\xa1\x88O\xf2p\x83>\xd1\
+|\x1d'Q\xb2\x0ayM\x18\xf1@\x7f\x8c\x8b{\xd5\
+\xb8\xd9;\xf2\x01\x91@}\xa4\x1f\x94{`\xcc&@\
+\x0c\x9b\x14\x98\xc1\x91\x94z\xfd\x22i\x90\x22\x8e\x82\xdd\
+\xb2\x88\x0c\x83T\xff\x0a7\x9a8g\x9db/\x1c\x02\
+PA\x9b\x87\xcf\x1a:\x1e\xd8))U\x97\x96O0\
+\xdbiv\xc83\x19-M Zo\x8fRy\xcaI\
+5\x99\x01GhY\xe9\xa6\x8d\xe2_\xff4\xa7)\xa2\
+p\x96\x06)\xf2\x14\x04\xbc\x1a\xfa\xaa\x16h\x9b\xda\x1f\
+}\x80\xcd\xd9\x80\xe3\x08ZZ{\xc6\xdcMb[2\
+0\xe8\x8c}<\xca\xe4\xfd\x9d\xa0\x1a\xfe\xf3J\x16\xcd\
+\x17\xed\xd9\xaf\xe1\xf6\xbc\xcd\xb9s'1\xc9\xcb\xdc\x8b\
+6\xfc\xa2?BmrQ\xe4U\xfd\xa5\xd4u\xdf\x8e\
+z\xe4\xcf\xfex\x82\xc9W\xf1\xc7\x22\x0a\xb1\xa3\x1dT\
+\x1c0d\xc1\x1e\xaaW\xf5P\xbd\xaa\x0aR\x96\xd5\xa9\
+\x80\xc3w\x9c\x5cj\xe6W!\xa2\xc7\xcdns\x87(\
+\xf2\x8br\x5cM\xdd\xeb\xb4\xf9\x14\x1b1\xf0\xf0\xa1\x8d\
+\xcc\xdfz\x98\xcc.\x93D\xe1\x04E\x0b\x99Oet\
+\xd0\x8bkrc=j\xabD]\xe5\xb3.\xc4\x16\x1b\
+N/\x1a\xc4\xa2\xd3\xd1\x96\x16\x98q\x1e\x05pzS\
+\xe0\xc99\x8bg\x02\xe3\x85\xb1\x89f\x18\xccL\x04(\
+\x7f\x13\xd07\xe6h\x81\x9f\x88\x8b\xdfY\xab\xa8\xc8\x10\
+4\xaa\xd5\xbd;4t\xdcfG\xa3\x83q4\x0d\xec\
+B(\x10\xc0\x85q0%\x0e\xe2\x16%\x06:\x80\x84\
+\x22!\x829\xa6\xc4\x22\xb9XQ\x18K\xb1C}\x82\
+\x9e-G\x0dvI\x01\x86dF\xce8\xb6T\x91\xb8\
+a\x9f\xb3\xea\xdbSV\x13\xa5\xe2U\x87\xb3\x98\xd8\xf2\
+\xcd\xac7}\xf7\xb4:\x18\x04\x14Y\x88\x8a\x84\xcf\x0b\
+\x9e\x1c\x8c\xfc\xb2\xac\xe2g4\x03jL\xc2\x8f\xce\xa4\
+\x0e\xca\xd6\xd9\xe0a\x0ah\xeaD\x00h\x93\xe9\xc6\x03\
+J\xe8\xb9\x9e~s\x94\x0d\xa76\x91\xb6\x85j\xa1&\
+sQ\xde\xc8\xaa\x7f\xcfn\xbdq\xf2i\x18\xeb\xe1{\
+^\xc51q\x5c\x9e\xf7\x9f\x5c\x9f\xe2\xaf\x7f%\x0f\xe8\
+\xc5\x0br\x81\xd0/P\xb9%\xccF\xd4=\x18\xc7\xc3\
+\xaf$\x97\xfa\xe8\x0f\xf94\xb4z\xcc{\xd4\xed\xd7~\
+\x0f\xfb3\x0dY#\x0f\x89\xd7\xce\x18\xe5\xb8\x9e\xe7 \
+y\xda\x19\xb2nQc\x96\xa7\xff\xe7>\xd0\xdc\x1d\x7f\
+\xaa\xbbM\x9e\xf6\x93\x8e\x1eY90\xb8w?\xe6h\
+ ,wr\xff~2\x1dL\xef\xa7}\xefj4\xba\
+ \xb7k\xd2\x1f\x7f\x00\xef{\xf2\xae\x1eL\xf0\x1d\xd7\
+\xea\x1d\xfe\xfe\x1eSD\xb8\x0f\x83\xe1\xb4?\x1e\xdf\xdf\
+\xa1/t,\xaeG\x1f\xc9U\xeb\xa1?\x7fAL\x1c\
+\x0dU\xa6\xac\xafn\x1eA\x1e\x10\x8f}\xcf\xf1\xd1\xac\
+[\x86Y\xa9\xde\xd4\xf9\x18%\xe7\xc0-s\xd6\xe85\
+D+0sul\xdc\xb5\x01OK\x19G\xf6\xdcJ\
+\x85\x92\x83\x89g\xc3BOH_\x11\xcbz\xd7\xca-\
+\x05\x09VV\x81m\x82/\xfe\x96\xd1/\xff\x19\xcc7\
+xW\x82G\xf6\xe6\xa56<\xa6\xfe\xf5\xacs\xda\xf9\
+\x19O\xe2\xd9+\xb4+{*\xef\xf9\xbb\xdaF\xb2\xee\
+\xcbe(ND-@\x8b\x06\xed\xfc\x1c\xecW\x8c&\
+~/\xae\x00\xda\x82\x9d\x01+!\xae\x03\xd0\x84\x83x\
+n\xabX\xb2\x8e\x87\x98^)-\xb4\xf4\xec\x00h\xd4\
+\xed\xb9!\x93z\x98T`5\x0e\x19\x8bu\x90\xae$\
+\xe5\xb6\x08\xda\xc0\xc8\x88Pf*v\xe8\x05dp\xea\
+\xb6\x81,\xf5\x81*#E\xce\x11\xd0\xe9\xfd\xf5\xaf\x1a\
+\xaa\xbcxq\xecs\x0e\x0a\x94\xa0\xd2\xe1\x93\xaa\x86r\
+P\x9c\x93\xad\xf3\xf4\x9f+\xc9:e\xe5\x9b#B`\
+\xe2pa\x14\x11\xcd\xd6~\xa9'0\xa30)B!\
+\x139\x02\x80g\x82\xc0\xba\x1c\xd3\xd6N\xa3\x1dM8\
+\x0c\x9a+&\xd1\xbc\xbbu\xb2)\xaf\x04\x98\x04\xbem\
+\x0cS\xb2\xda\x06'$K|\xa7*\xc5;\x04\x0e\xde\
+z\x14n?\x14\xad>\x1cs\xd6\x09&\xcf\xf5\xe2\x9c\
+\x986\xae\x0eKm`\xeb1iGAi{\xb3\x8c\
+!\x9d\x14\xff\x81P\x97\xd1\xf4>ET\xf0\xcc\xbai\
+}<\xcb\x7f\x025\xe9{\xb6\xb8@kr7\xae[\
+W}t\x94K\xba\xde\xab\xe8z\xffQEO\x8al\
+8\x1a\xea\xdc?j\xd1\x8e\xf7\x90\xb2\x9f\xb0\xa6\xbe\xfb\
+DU\x01\xa0\x17o.0\xbb_7\x01d;|7\
+\xfa\xc5q(G\xfd=\x1a\xc9\xf2H;\xbaz\xd0\x86\
+\xad0T\xe6?\x1a\xbc\xb2\xa5\xdbT\x08a\xc2\xb7L\
+\xcbE\xbf{\x03cMt,\xd6D\xb3<7\x0bu\
+\xf0_w\x1b\xcc\xd7\xd2\xa6P\x1f\xf8\xa8\xedi?\xf5\
+\xc5\x1f\x83\xb8@\xb0\x8c\xad\xaa\x87\x9fr/\xe5\x09h\
+&\xba\x94G;\x22/\x15\x89\x07\xef\x02 \x1b\x875\
+%\xa3\x8b{\x1d\xf2\x83O\xd9\xea\x08\x8c3\xd3\x10\x00\
+\xa8\xedm7\x99\x93\x81\xd3\xe5\x96muP\xd4]\x19\
+\x07rz\xa8DI\x9b\xe8\x92\xc4\x9c\xdb1x\xacR\
+\x12\x8b\xfc\x08\x04^\xec9\x82z\x9dH\xe5\x80\x9e\x99\
+\xe0\xd7\x1b\xa3;\xb5\x8e\xac\x93\x96\xa45\xda\xec\xf9O\
+\xe8\x0a\x1c\xa0\x0a+\xc4\xf2\xbdB\x88\xe1\xaf4\xa3\x1e\
+\xa8\xe9\x11]eE:_\xc3\xd0\x1b\xa7\xc7^\xd3 \
+W\xa0\x15\xfa4z\x8d\x8e\x22v<\xd6`N\xe3h\
+B\xd8Y\xd3\xe3\xb0\x87I\x7fC\xa5\xa32gq\x9e\
+&\x91\xf6\xe0\xe8ED\x84\xfb:\xa2\xc1\xd9\xf89\xe5\
+\xfa\xf5P\xea\x93\xda\x97\x85\x81x\xca\x8e\xb8T1.\
+\x15\xc5\xb7)\xd8\x85\xd9z\xb3Wm5L\x9bV\x03\
+\xf6(<\xe6g\x93\x1dVn\xf2\x8d\x15\x1c\x8b\xe1\xdf\
+\xc9<\xf1\xed\x1d\xf9\xda\x9c\x04{\xb3\x05\xe1\xf28X\
+\xa9\x02\x83%W\x811ix\xa5\x15\x17\x09\xce\xd4\xa5\
+d\x01\x0d^\xe2\x0ef\xa0i\xe1G!\xd0B\xbb\xa4\
+\x8b\xed\x97\xe1\x92\x93vs\x1c\xfb\xe8\xf5\xe9\xbf\x1d\xd3\
+|x\x8b\x97\xbe\x01L\x8dT\xe4\xa6\xda\x036+\xc5\
+\xba\x16\x1e\x12\xc6\x9c\xc9\x18\x181G5_\x1a\xde\xa1\
+\xd4\xdd\xfaOI\xd1\x16G\xf04\xfe\x96\xb6\x8f\xdd\xdd\
+\x0fbb\x8c\xadbv\xe5D\x8f \xbf\x02\xc5\x9c}\
+l\xaaW\xa7\xa0\x85M\x90\xbbS\xf3\x05Um\xae[\
+\xae\x08\x1d\xb8PK\x99\xa2SF\x7f]\x12\xe3\xa9\x1c\
+\xc0u\xc13\xb3\xd3\xb6\xacG\xdffE@\x81\x0d\xb0\
+\x81,\x8eo\xedW\x03\xa0<\x0e\x7f\xc2\xd7*a\x19\
+\xae\x8a\xd4A4.\xf9#2\xe7u\xf2\x11D\xd1{\
+\x1c\x18G\x9a\xc8!\xdbH,\x08\xc4\xa2)sd\x81\
+G\x19~4\xd0\xc2E\xefD\x81\x8e\x11\x05\xfa\x12/\
+\xfc\x90_^\xa4\x1e\xa4\xb2V\x8c\x90\x86x\xc0\x12F\
+\x1b\xbc\xd6\x15\x95\xdd\xd4`ZI\xa9\xc1r\x8d\xe7\xab\
++%\x81\xe8E\x18\x88|\xbf-\xaf\xfdc\x92~\xae\
+)\x0a\xbeMo\xa9\xd4\x13W\xad\xe8#\x11\x9a\xfb\xc8\
+\xec\x81`\x06\xaa\xb5UJxm\xd5\xd0\x8dAi\x99\
+\xad\xf6\xa0\xee\x1a\xab+*@I\xab=\x17\x0c\xa1\xae\
+\xc9s\xb4>\x0b\x1d\x10Dz\xf5\x18G\xd4\xe4A\xb7\
+\xb0\x88\xd0)\x0eU(\xb5\xbb\xdd\x82\xf3\x1d~\xe5K\
+\xce\x8e]V\x5c\xd8\x82*\xe4J\xd6\xae\xca\x02N\xd3\
+\xcc\x08\xc5\x01=\x143\xa2Z\x19K\x87\xd3\xf5\xecY\
+\x85}\xa4\xca\xd3\x98\xce\x87\xbaK\xcf\xd1\x10\xb0kx\
+\xcd\x1b\x1cV,\xca\xca\xf8\xc6\xbd \x06\xfe\xe8\xeb\xf7\
+$\xf0Y\xa5\x85X{\xa8\xfdvO\x97\x1e\xcdD4\
+|\xce\xf8\x00\xe4\x8d\xe8\x8c\xd8\x90F}\xef\xeb\x9a\xda\
+\xa8\xafr\xcd\x8c/\xaa,T\x1cT\x17\x17Q\xc0\x98\
+k\xd5\x887|[\xa49\xb0\xa6$\x0dyC+\x01\
+\xd8/\xc1s\xc3\x8c\x131o\x16r\x11\x0f\x06Y\x8e\
+\xf5\xe6S\xccu\x19pM\x92\xef\x1aQ\xc3\xd9\x1aY\
+\xaa\xf2\xd8\xdd\xfd\x9es\xf9d\xe3\xceW\x0f\x849\xc3\
+\xee\x94\x86\x8d\xda\x0d\xd5\xe9\x11M\x0a\x8eV\xda\x1a\x92\
+g\x95\xa24\x8c\xa5\xa5\x01\x87\xe81\xf8\xc0\xa1\x05\xf8\
+\xce\x09\xc1\x84\x07\xa59#\xa3\xd1\xc1SP!MS\
+w\x0c\x83-\xb9@\x1b{:(dm\x09Tq\xe9\
+\x0a\xf80\xbb\x9dr+\xdc\x03\xa6\xc4\x054\xa8\xaei\
+~\x14\xfd\x99\x04\x86.\xa9&\xee \xc8y\x1a\x22\x10\
+m\xb3\xaa\xb6\x1e\x8c1\x81Q\xd7\xf0\x94\xc4B\xd24\
+\x89\xb1\xfe\x05\xb6b\x16D$P:J\x86\x10\xa5\x88\
+\xd5\x16`\xf1[^\xe2\xbc\xb4\xccB^Q\xf0Y\x1d\
+\x1c\xddf\xf4\x90\x99\xb2\xea\xcc\x9d\x05\xfe\xb3T\x81\x96\
+\x0c\xa9\xa0\x0d\x03\xbd0\x9c\x1b+\xd6\x88I'i\x5c\
+\xd5N\xe5\x8fh\x5c\xb8\xa2N}\x84\xa5\x80\xc2\xbc\x84\
+i\x0c(s9\xef\xbbj\xa5$\x0c\x0e\xcb\x91w\x18\
+V.l\x1fS\xb8!\x1d\xaa0\xe7G\xd2\x81\x8e\xd5\
+r[\x1a\xdd\xe5j\xc1\x84\xd5d\xdbp^p=\xa9\
+\x0a\xbc\xbae|\x06\x9b\xc9,\x5c\xc5\xfa\xca[\xdc)\
+\xe2n\xa3H\xa2\xf6j\x0f\xb10W\xb8\xe7\xb6\xd3n\
+:\xd0\x15Dn\x96\xae\x8f\xe3\xe3\xc8\xc8e#\x87\x09\
+\xca\xf3\xd2%nt\xa9&\xc0KI\xfa\xddt\xd7$\
+*\x13dNd&\x7f)@\x90\xa2}\xf9>.\xc4\
+\xc7\xceY\xd4\xaa\xe9\xbc#\xae\xa8\xc2\x13{q\x0c\x13\
+4\x06{b\xf3\x97=t\xae\xb2\xa6\x8a\x00\x87K\x95\
+\xce|\x18\x12\x80$\x86\xefe\xba\x95X\x95m$\x91\
+\x1a\xbf\xb0\xef\xcb\xaf4\xed\xc3\xcb\x13\x1d\x85*\xf7\x8a\
+\x85\x00\x01\xbf$s\xd4\xefuk\xdf\xdc<\xa6{\xc1\
+j\xca\xcfQ\xf3\xbauL\xf7\x92\xf9\xf6\x1d\xd5lV\
+\x0b\x10\x95\xeb\x8a\x0c5FC\x13\xbc\xae\xcd\xd9`\xed\
+I\xd9\xe8}z\xe5\xec\xd3\x1d'\x9f\xff%6\xe9\x88\
+\x1bf)U\x92\xdb\xfb\xa81|\xc8\x9e\xd4\xb1\xce\xb5\
+;\x9b\x88-<>\xdf0\x88h\xd0\x90D\xbex\x82\
+W\xcc\x91u\x90xM-\xff\x04%\x93\xa4y\xb5\xb3\
+\x8fa\xb5\x82\x8f\xa4y\xcc\xe2\xa8f\x98\xb6J\xcfK\
+\x19k\xb4\x19&S\x8c\xfaL\x11G\x19-}\x89\xa3\
+\xbb\xbe\x99\xea\xffqYl\xb4i,\xb1\xa13HC\
+:\xacK\xbc\xf0\xd7doCc\x17]Mp\x94\x1d\
+\xdb.<\xf2\x1e\xf1\x8e\xcb\xc0I\x15\x87i\xf5\x01\xb3\
+&]\xeaB\xa2H\x01I\x04\x83e\xf2\xd4\x1c;J\
+]);\xd8\xc1\x1c\x1c\x88\x81u\xa1t+\x9e\xd9\x9a\
+<\x5c\xa9\x8b\x06WxAwN\x8aO\xf9\xfeG\xd6\
+\x96Y$\x9e&Yv\xc2y\xc0\x04]z\xbc:2\
+\xe5\xd7\x94\xd3\x8b\x82]V\x849\xae6\x92+\xb6\x0e\
+*Y\xfa\xd1A\xe3\xa8\xfd\xca\xaa\xf2!\xa5G\xc6\x82\
+I\xcf\x94\xaf\xee\x0c4\xb7[\xb4\xd7+\xd3\xbb\xc2e\
+#\xd8\xf8\xa5\xda\xcb\x5c\x914\xb0J\xbb\xb2\xea\xd4h\
+\xd7\xc4\xa9\xfa^\xea\xed'r\xd8j\x98\xb6\x18c\x88\
+M\xb8u\x81\x95\xffJ\x0a\x0d\x8b1j\x8c\x8e\x9bV\
+\x0d?T\xb3\xc3\x1d\x9a\x1d\xd3\x82F\xdbU\x15S)\
+x]RQ\x0f\xa0A\xdd\xd0\x86\xae^\xb1\xa9\xe5\xbc\
+\x0dZ*\xf9\xdd\xean\x83f\xedV\xad\xc4q\x84l\
+#\xe5\xe1\xdc\xf8[k\x87\x8f\x82c^.\xa6`W\
+H3]JJ>\x0a\xdd\x91\x19R\xc1\x93\x8b\x93\xad\
+ci\xae\x93vW[Ic\xa8\xad{\xc7f\xd6L\
+;s\xa6\xe58\x90\x85\xder\xa1\xd2\x1a\x14#JS\
+*\x03\x81=\xb6%C\x99K\x01*>#\xe18(\
+\xf7\x03\xaat<\x0eT\x9d|\xeeL\xceY\x7f\xdf\xa6\
+IL\x1c\x80<\x0a \xaa\xbaBwn3g\xa9\xff\
+9\x8a\xdc\xca'\x96v\xa7\x02\xcaw!\x07Iln\
+\x0f\xa0Z\xa0\xce-\xd7(\xaa\xe9\xda2\xcac\xb5\xaa\
+\x07!\xf2\xb86KW\xa9\x9b\xf4\x13\xb6xZ\xb3\xa6\
+A\x7fu\xb1U\xd6-\x8eQ\x9b\x19Y0\xdf\x10\x10\
+\x00\xe0\x1bM\x07\xbd~\x9b[\x8au\xd9\xa2\x9a\x86;\
+\x0e\xecT\xeeys\x14C\xc3\xd1\xa9\xf1\x97\xb6\xcd\x1d\
+K\xbb\xaeX!\x19,\xc8E\xb5\x12(\x1b\x99\x8b\xba\
+\x8a:w\xddq\x94\xb6#}\xc1k\x11\x5c\xd6\xf3\x04\
+\xee\xba\xe343\xba\x91\xbb$v\xa6\xfc\x10\xec\x92;\
+\x8ez\xc6\x1e`@P0\xed[Mh\xa0\xa9\xb4\x0c\
+w\xfa\xc1J\xf2\x95=H\xc5;W\xd1\x97\xc4\xadt\
+\xd2+\x95B\xe1\xd2j\x1f\xb4\xa9+k!\xeb\x13$\
+\xa9\xdf\xc0\xea\xc0\xdc1`\xe3f\xca\xa3h\xe0\xd4\xb2\
+zl\x08e`\xab5m\x19u7\x9dPw\x93\xd9\
+\xa1\x18c~\xd8;\xc9\xbd\x22\x5c\x03\x82\x9b\x8fJ\xad\
+\x81\xd7\xce\xb6\x0b]\xca\x0e6LG\x0e1\xa3g|\
+_jz+\x13\xa4N\x1a\xa7EK9\x00cR\x82\
+\xc5\x02\x7fO\xe9k\x0e\x1c\xd1t\x87\xd1\xd4+.=\
+\xe5P\xf0\x9dS\xab\x8c.{p\x96E\xae\x18FI\
+\x16\x0b\x19/\x8a\x8d\x06\xb9%\xc9\xd1\x9a\x86\x9dG\xbd\
+\xa955G\x5c\x0el\xb9v\xe3\xc1\xa2\xd8\x17\xd6\xd2\
+\x10VH\x8b\x9a 2s\x0e\xe7H\x1a\x19e}\x11\
+B\xb9\xea\xaa\x00\xfe{9\x5c\xe3\xec\x08\x8e\xa2\x16\xe3\
+\x92\x9d4\xdc\xa3\xdc\x08\xfa\x9dpaC\x9aJ\xb8-\
+\x10\x0a?\xd6\xe9\xf1\x9d3\xa4;\xac\x9a=\x187\xe0\
+g\xce\x15\x0d\x88s\xbb\x11BKB-EV2\xd3\
+\x06\xa7\x97\x8ay\xcb\x11\x1e\xe3\xe0T\xbc\x87\xca\xbe\xbc\
+&/I\xe7\xc2\xc9\xd7u\xbe\x0b\xa6#\xeec\xb0\xb2\
+\x19\xed\x9d\xfc\xba\xa5\xb6(8\x1d\x19\xdf\xb1d\xd21\
+6R\xb2\xaf\x82N':\xe6\x84\xc5\x0e\x86\xc2\x1c\xf7\
+\x00\xe7\xacF\x85L\x1b\xa8\x8dn?\xcb\xab\xd35\x10\
+H\xa8#9<\x06C]\xdbV\xcd\x0345\x07\xdb\
+\xfaV\xea[\xe5\xfb\x0f\x14qY\x81\xa5\x0dr!9\
+\xf5\x84g\xc2\xdd\x195\x15\x03\x10\x0e\xbd\xe6\xf6f=\
+S\x8a\xcd\xb5\x81 \xe7\xe4\xcc\xc9\xafr\xee\xaa~\xd2\
+\xc7\x86)\xdc\x9aLa\xa9\xaa\xcbbR\x0e\xd8\x8fn\
+j\xaa+\xcd\xe2\x8f\xb6\xb4\x12\xdd\xf8\xb4\xc9\x98`\x05\
+\xb6\x83{0\x90\xc6\xfd\xa9B\xbd\xe4\x02;\xaa-T\
+\xe5\xda\xcb\xd2N\xfaN\x18K\xb9\xb9\xba\xa2\x90\x84\x03\
+\x0c~\x06[CWA\xe1\xd6\x022H\xe8j\x08U\
+o\x0a\xc8d\x0e\x8b47\x9bh\xadh\x8b0\x9d\xd8\
+\xaf>[z\xfb\x94\x9dh\xb0\x0d\x9a]?u\xb0\xc4\
+Y\x15y\xe2\xe7>\x02Z\x05\xe6\xec\xcd\x890\xd4\xce\
+\xf6\xbaf\x9b\xbex\x01[\xaf\x8db\xa0\xed\x5c\xf0\xd5\
+\x17:\xb2\xe6\xdb\x8dS\xda \xb3\xd4\x1eQ'D0\
+_\xd7|\x5c\xf7\xe3\x18\x18-\xed\xf2q\xf9N\x0b\xf1\
+\xbe;\x19L\x0c\x8b+\xc5&\x83\xbe\xaa\xdc05\x02\
+n\xf1\x89\x90!\xe7\xa0\xbfb\xe05s\x16\x13\x92\xae\
+Y8!X{\x9elM\x91\xcfq{f\x97*\x9c\
+\xa9k^\xe0\xe8t0\xc5\xfb1\x86\xa3\xe1\x89[s\
+\xe2\x8bZ\xe9\x0a\x8cP\xaa^\xd1\x83\xd4\x8bX\xd8\x1a\
+s\x9e2\xc2\x0c\x066\xa6\xc3\xb4\xf4\xcd\x17\xaa\xb2\x8b\
+\x9c\xca\x8a\xdc`\x8dk\xb2M\xb1\x0c+\xa6E/U\
+\x8f3Ib\xe9{@\xcaI\x05\xfc\x060u%\xae\
+R\xe3a\xf6\xb9tu\x14\x1dU\xd2\xf6*\xcdK\xa1\
+^7\xcf[\xf7\x86\xb5\x14\xfe\xdc\x81wL\xb1\x165\
+~\x07\xb30\xa2$\xfe\x00M\xb3\xba.\x86\xea\xb0i\
+\x14x+\xa28*\x90\x09\xde\xba\x1b\xb6\xd1\xb93\x90\
+\xa4\xdc\x0d=\xc4r\x15\x85\xd8./\x8f}\x93t\xf7\
+K\x91b\x1bGzT\xf6\x8f2\xd5f\xb3\x90Q8\
+#\xe4G\xe4\xad0\xaea\x13$z\xd2\x1c\xcb!2\
+\xca\xd27\x9f\x15\xd6\xa9%\xbb\x82\x01\x1e\xb3sQ\xa8\
+\xafw\xc1\x9d\xa7-\x0e6\xc1\xaa\x9c)\xa0+\x99T\
+u\x82\xadS\xa0B^'n\x87\xdf\x97\x867\x08\xa9\
+\x94\x05\xc2\x1c\x8e\x18c\x12P\x8d\xaa\x157\x86\xf1\x80\
+r\x0c\x88\xab\x0b\x11\xd0\xca[[\xae\xfb\xb9J1\x0e\
+dia\xb4N\x91\xa9\x1b\xa3\xd4\x96:\xca\xb6\x14w\
+8z01\xaf\xe9\xc2\x95G\x09\x8b\xee*I\x16x\
+\xcb\x88\x1b\x91\xfc\x0c6;\xd9\xe2uw>\xa1\x86\x02\
+i_\x06a\x84\xf7 Pi@\xb4,b\x0b\x80\xc8\
+@6\xd5\xa6`\xb2\x01\xe5\xd8\xe5\x09O-3\x10 \
+\x14H\x04\xf4\xd5\xd8\x9e\x1e\xc4\x04\xec\x83\xc5\x97\x90\xd2\
+\xb3KUO\x82\xdfl\xc2\x8c\xd0\xa5\x16j|}\x1a\
+\xdet\xf0k^\xb0\x93\x05X\xa1\xf51N\xee4\x1a\
+:\x07\xe4\xe3\x1a\xb1~\xf9\xf4\xd6\x92\x94\x0f\xa6\xf84\
+`\x9d\xaf\x93\x84\xe3\xab\x14B-\xa7\xfc)\x9e\x0b\x00\
+\x0f[_\x97\xf45{Dc\x10\xf35e\xaa\x7f\xdd\
+\xd7\x1a\x91.\xf9\x02\xa3\x19c\xb9\x8b\x13c\xd3\xad%\
+Z\x18\x92Y\xa4\xc2Z\x99.\xaeT\x85\x9a(\x97\xea\
+\xc2+\xa7M\xc5\xcd.\x81Sr\xad\xafVC_\xcc\
+0\x8d\xb8\xea\x8cl\x97Hu6q\xe4&^\x0cD\
+W\x19\x18\xd5\xbdFo\xa3v\xb5\xba\x95(\xe6n\x1f\
+\x93\xb0q\x14\xbd\x0d;9\xf2\xa0\x22\xce\xe8j\x85K\
+\xd6\xda\xba\xd3O\xf1gi\xf9\xb3\x90K\x89w\xc7\xe0\
+#k\xfc\xca\x9ezp>H7\xa4\x9a4\x147\x9c\
+tNw\x91\xa66C\xa7\x02\xd3\xa0\xa9\xc1\xa9GG\
+\x97\xe3\xb3~=*=\xdb+4\xe2\xac\x89:\xcc,\
+c\xedmV\x8eX:\xf8\xd2P\xa3e\xb9?\xe4\x12\
+\xec\x86\x8a=\xd3\xce\x9a9\xd5\xb0\x95\xdeT\x94\xdf\xb1\
+\x5c\xb9\x01\xbc\xfb8\xa4\xd4w\xce\xb7g\xb9\x97\x9fN\
+\x0a\xdd\x8c\xa6\xbb\xcf\x06\xf1\xbc\x03\xef\x03\x82\x02\xfa\xe7\
+\x99\xdb\xe1\xea\xc3!\xc3\xc3@\xb7\xfd\xe0\x0d\x18\xf6\xee\
+<\xfb\x85:\xd4\xda)3\xfe\x02\xaa\xd2\x9ds\x84\xc5\
+\xa9q\x0c\x83$\xa0\xba)L\x87_hY\xb6\x88\xa5\
+\xab\x13\x94Yq\x1c\x0c\xd3a\xb3\xa0[ \x9cL\xa1\
+-\x22\x9a\x9aN\x8frev\x1d\xc0V\xab\x9a\x1d\xef\
+\x9a\xbf\xce\xc78\x8bM\xf7i\x88\x07\xaf\xd3p\xddj\
+\xae\xb2\xfb\x0a\xa3sT\xb6\x5cT\x93\xd5\xee\x10l\xb8\
+2C\x1dg\xdd?\xe9T\xe0P6=Wi\x80x\
+_r\x0f3\xbc\xd2\xdf$\xd9m?\xa7\xb9\x1e\x92D\
+^\xe5\x9ct\x97~\x09o\xd3!u\xbbg\xa8\x94\xa0\
+\xe0/\x22\xba-9\xe2\xe4\x93\x95Z\x9c\xf8\xfa\xbe\xba\
+\x8c\x86\xa9\xde fs\x8c\x06\x1e\xd5\x04K\x0c\xdf\xe9\
+D\x04Z\xe1Q\xc0^\xdd*W\x89\x83s_t,\
+wZ\xd2\xb0\x222\xe2oh\xb5\x95M\xfa\x16\xaa0\
+\xcdr\xba\xe1\x95\x0a\x13PeP\xf8\x87\x82K4\x12\
+\xa3\x17>\x94\x8fV:\x9bj\xd9Q\xa9\xc8y:2\
+\xf7\xad}\xe2\xfb/\xea\x1d/\xcem\x18\xb6\xf5\xe5\xd0\
+\xed\x00-\xaf\xd2\x8e_i\xeap\xef\xfa\x98N\xca\xb7\
+E4\xdd\x0c=\xa9\xdfa\xe6\xae\xec\xba\xfb\xa1\x0f\xcb\
+\x81?\x94[CZ\xde\x03\xbd!\xfaF\x07=H\xa9\
+\x9a\x18\xdf\xa0\x15_\x0ez\xc0\xc7O\xa6}Hu\xab\
+\x98N&d\xfaS[\x99\x1e\xbe\xc3\xc17\xd7\x97\x1c\
+\xaco\xf7u\x81{\xc9\xdb@\x0d\xe6\xf2\x14Hr\x0a\
+\xf6\xa9\xaf\xa7\xe2TU.\xaahX;r\xb4\xe5\x81\
+0\x8d\xde\xdf\x0c\xae\xf8\x06?\x90\x125\xaa\xb8\xedb\
+?\xd1\x10\xefN\x00\xc9\xb8\xbf\xbb\x1b\x8dAD\xee\xef\
+.\xbaS\xbaXpx\x8d\x7fB\xe2&>]\xb6@\
+\xf7\xd9\x01+\xc9:\x10\xeb\xafF\x1f\xfa\xe3!\xf59\
+\x81`\xbc\xd5\x9d\x80\xa4\xb3\xe6x\xa8\xeb\xdf\x7fU\xaa\
+\xa4 \x88I\x97\xaeqg\xacI\xe2\x89+\xf3Z!\
+o\x0a?\x90\x99n\x8fU[\x09\x9c0\xbe\x1e\xb5M\
+_\xc7[\xd2\xe4\xecmG\x0d\xed,N\x8d\xb7z\xe8\
+R_@\xd7E\x9a3\xb2\x95h\xd5\x0au\x97\x978\
+\xba\xec\x8e3\xfa\xbe.\xf5-k\xaf\xcf;\xe7\xe7?\
+u\xce\xdeP\xa2\xe7\xe8\xfc\xd8tA\xb6\xbc\xea\xe2\xe5\
+\xe1\xb5\x03\xe4C\x03\xa6\x0b\x90/\x10]d\xd2/\x7f\
+C\xb0\x0d5\x81!\x02cB\xc9+\xac~\xe9Y\x00\
+\xdc\xd3@\xda|\x83\x83\xfd\xaa\x89\xe7q\xb2\xc2\x1e^\
+o\xcb;\xe7\x15\x9f\xfctz\xf6\x03e\xd6\x8e^\x1d\
+\x13\xc9\xc8\x99Nsl\xca\xb9\xb8\x8e\x08\xd1&\x92m\
+#A\x05\xdcy\x87>\xdb\x0f\xa5\x8b\xd3\xd5\x05\x06\x1a\
+\xca\xd5#B\xf5r\x8er\xeb)]\xc4M\x18X[\
+{P\xb8\xa4\xb2\xed\x85\x11:\x22\xe9~c\xdd\xffJ\
+\xe0\xe3c\xf1j$\xe9\xe1g\x83 \xbc\x14Y\xa1\x16\
+\xf1\x1d\x04}\x07A\xdfA\xd0w\x10\xf4\x1d\x04}\x07\
+A\xdfA\xd07\x80\xa0W\xff/@P\xad\xa9\xfd\xd5\
+\x09\xfcx#\x06I(\xfe\x04\xb6\xef&\xc0\xea\xd7\xda\
+\xb7\x9f\x9e\xf2\xb7\x1dL\xc3\xaf\xe2.M\xa8\x94\xec*\
+M\x8am\xd3g\x7f(\x83\x9d\xa7\x01/n\xaa\xd6\xcd\
+\x89l\xcd\xbe-\x1eT\xfaJ\xb4gC!\xf1\x1d\x09\
+}GB\xdf\x91\xd0w$\xf4\x1d\x09\xfd\xeb!!\xf1\
+\x1d\x0a=\x15\x0a\xe1\x9a\xcf\xfeu\xa1\x90\xa0\x0b\x0f\xff\
+~\xb7\x1f\xc3\x16g\x0dw\xf0\xe0\xf7\x00\xe8Fa\xa4\
+{:\x8f^N?\xdb\x0f\x94\xed\x18\x9b\x9c\x87BP\
+\xe2\x09\x11\xa8F\xec4u\xdbX\xcb\xe5\x8bj\x9e\x0a\
+i\x95\xabX+\xed\xda\xbaF\x1e\x0f^\xa6\xef\x0a\xe9\
+\xe4\xf3(\xe7\x1e\xb7\xa7\xf2\xe3zz{#n\xd4=\
+\x83v\xea\x8ayo^\xe8\xc3kb^6\x8e/\x9e\
+\xb22\xba\xe8\xde.\x0d\xbf\x0e\xf0\xbf\xa3pF\xab\xfb\
+\x1fU\xa2]\x9d\
+\x00\x00\x045\
+M\
+IT License\x0a\x0aCopy\
+right (c) 2021-2\
+022 Yunosuke Ohs\
+ugi\x0a\x0aPermission \
+is hereby grante\
+d, free of charg\
+e, to any person\
+ obtaining a cop\
+y\x0aof this softwa\
+re and associate\
+d documentation \
+files (the \x22Soft\
+ware\x22), to deal\x0a\
+in the Software \
+without restrict\
+ion, including w\
+ithout limitatio\
+n the rights\x0ato \
+use, copy, modif\
+y, merge, publis\
+h, distribute, s\
+ublicense, and/o\
+r sell\x0acopies of\
+ the Software, a\
+nd to permit per\
+sons to whom the\
+ Software is\x0afur\
+nished to do so,\
+ subject to the \
+following condit\
+ions:\x0a\x0aThe above\
+ copyright notic\
+e and this permi\
+ssion notice sha\
+ll be included i\
+n all\x0acopies or \
+substantial port\
+ions of the Soft\
+ware.\x0a\x0aTHE SOFTW\
+ARE IS PROVIDED \
+\x22AS IS\x22, WITHOUT\
+ WARRANTY OF ANY\
+ KIND, EXPRESS O\
+R\x0aIMPLIED, INCLU\
+DING BUT NOT LIM\
+ITED TO THE WARR\
+ANTIES OF MERCHA\
+NTABILITY,\x0aFITNE\
+SS FOR A PARTICU\
+LAR PURPOSE AND \
+NONINFRINGEMENT.\
+ IN NO EVENT SHA\
+LL THE\x0aAUTHORS O\
+R COPYRIGHT HOLD\
+ERS BE LIABLE FO\
+R ANY CLAIM, DAM\
+AGES OR OTHER\x0aLI\
+ABILITY, WHETHER\
+ IN AN ACTION OF\
+ CONTRACT, TORT \
+OR OTHERWISE, AR\
+ISING FROM,\x0aOUT \
+OF OR IN CONNECT\
+ION WITH THE SOF\
+TWARE OR THE USE\
+ OR OTHER DEALIN\
+GS IN THE\x0aSOFTWA\
+RE.\x0a\
+\x00\x00\x07^\
+C\
+opyright (c) 200\
+1-2020 Chris Lie\
+chti <cliechti@g\
+mx.net>\x0aAll Righ\
+ts Reserved.\x0a\x0aRe\
+distribution and\
+ use in source a\
+nd binary forms,\
+ with or without\
+\x0amodification, a\
+re permitted pro\
+vided that the f\
+ollowing conditi\
+ons are\x0amet:\x0a\x0a  \
+* Redistribution\
+s of source code\
+ must retain the\
+ above copyright\
+\x0a    notice, thi\
+s list of condit\
+ions and the fol\
+lowing disclaime\
+r.\x0a\x0a  * Redistri\
+butions in binar\
+y form must repr\
+oduce the above\x0a\
+    copyright no\
+tice, this list \
+of conditions an\
+d the following\x0a\
+    disclaimer i\
+n the documentat\
+ion and/or other\
+ materials provi\
+ded\x0a    with the\
+ distribution.\x0a\x0a\
+  * Neither the \
+name of the copy\
+right holder nor\
+ the names of it\
+s\x0a    contributo\
+rs may be used t\
+o endorse or pro\
+mote products de\
+rived\x0a    from t\
+his software wit\
+hout specific pr\
+ior written perm\
+ission.\x0a\x0aTHIS SO\
+FTWARE IS PROVID\
+ED BY THE COPYRI\
+GHT HOLDERS AND \
+CONTRIBUTORS\x0a\x22AS\
+ IS\x22 AND ANY EXP\
+RESS OR IMPLIED \
+WARRANTIES, INCL\
+UDING, BUT NOT\x0aL\
+IMITED TO, THE I\
+MPLIED WARRANTIE\
+S OF MERCHANTABI\
+LITY AND FITNESS\
+ FOR\x0aA PARTICULA\
+R PURPOSE ARE DI\
+SCLAIMED. IN NO \
+EVENT SHALL THE \
+COPYRIGHT\x0aHOLDER\
+ OR CONTRIBUTORS\
+ BE LIABLE FOR A\
+NY DIRECT, INDIR\
+ECT, INCIDENTAL,\
+\x0aSPECIAL, EXEMPL\
+ARY, OR CONSEQUE\
+NTIAL DAMAGES (I\
+NCLUDING, BUT NO\
+T\x0aLIMITED TO, PR\
+OCUREMENT OF SUB\
+STITUTE GOODS OR\
+ SERVICES; LOSS \
+OF USE,\x0aDATA, OR\
+ PROFITS; OR BUS\
+INESS INTERRUPTI\
+ON) HOWEVER CAUS\
+ED AND ON ANY\x0aTH\
+EORY OF LIABILIT\
+Y, WHETHER IN CO\
+NTRACT, STRICT L\
+IABILITY, OR TOR\
+T\x0a(INCLUDING NEG\
+LIGENCE OR OTHER\
+WISE) ARISING IN\
+ ANY WAY OUT OF \
+THE USE\x0aOF THIS \
+SOFTWARE, EVEN I\
+F ADVISED OF THE\
+ POSSIBILITY OF \
+SUCH DAMAGE.\x0a\x0a--\
+----------------\
+----------------\
+----------------\
+----------------\
+---------\x0aNote:\x0a\
+Individual files\
+ contain the fol\
+lowing tag inste\
+ad of the full l\
+icense text.\x0a\x0a  \
+  SPDX-License-I\
+dentifier:    BS\
+D-3-Clause\x0a\x0aThis\
+ enables machine\
+ processing of l\
+icense informati\
+on based on the \
+SPDX\x0aLicense Ide\
+ntifiers that ar\
+e here available\
+: https://spdx.o\
+rg/licenses/\x0a\
+\x00\x00\x03s\
+Q\
+t Notice\x0a=======\
+==\x0a\x0aThis applica\
+tion uses the Qt\
+ framework throu\
+gh the PySide6 (\
+Qt for Python)\x0aa\
+nd shiboken6 bin\
+dings, licensed \
+under the GNU Le\
+sser General Pub\
+lic License\x0avers\
+ion 3 (LGPL-3.0)\
+.\x0a\x0aQt and PySide\
+6 are Copyright \
+(C) The Qt Compa\
+ny Ltd. and othe\
+r contributors.\x0a\
+\x0aThe Qt librarie\
+s are used unmod\
+ified and are dy\
+namically linked\
+ (shared\x0alibrari\
+es / DLLs shippe\
+d alongside the \
+application). In\
+ accordance with\
+ the\x0aLGPL-3.0 yo\
+u may replace th\
+em with a compat\
+ible version of \
+the libraries.\x0a\x0a\
+Source code of t\
+he versions used\
+ is available fr\
+om The Qt Compan\
+y:\x0a  - Qt:      \
+https://download\
+.qt.io/official_\
+releases/qt/\x0a  -\
+ PySide6: https:\
+//code.qt.io/cgi\
+t/pyside/pyside-\
+setup.git/\x0a  - Q\
+t licensing info\
+rmation: https:/\
+/www.qt.io/licen\
+sing/\x0a\x0aThe full \
+text of the LGPL\
+-3.0 follows, to\
+gether with the \
+GNU General Publ\
+ic\x0aLicense versi\
+on 3 that the LG\
+PL-3.0 incorpora\
+tes by reference\
+.\x0a\
+\x00\x00\x11\x9f\
+C\
+opyright (c) 201\
+5, NAVER Corpora\
+tion (https://ww\
+w.navercorp.com)\
+,\x0awith Reserved \
+Font Name D2Codi\
+ng.\x0a\x0aCopyright (\
+c) 2015, NAVER C\
+orporation (http\
+s://www.navercor\
+p.com),\x0awith Res\
+erved Font Name \
+D2Coding-Bold.\x0a\x0a\
+This Font Softwa\
+re is licensed u\
+nder the SIL Ope\
+n Font License, \
+Version 1.1.\x0aThi\
+s license is cop\
+ied below, and i\
+s also available\
+ with a FAQ at:\x0a\
+https://openfont\
+license.org\x0a\x0a\x0a--\
+----------------\
+----------------\
+----------------\
+---------\x0aSIL OP\
+EN FONT LICENSE \
+Version 1.1 - 26\
+ February 2007\x0a-\
+----------------\
+----------------\
+----------------\
+----------\x0a\x0aPREA\
+MBLE\x0aThe goals o\
+f the Open Font \
+License (OFL) ar\
+e to stimulate w\
+orldwide\x0adevelop\
+ment of collabor\
+ative font proje\
+cts, to support \
+the font creatio\
+n\x0aefforts of aca\
+demic and lingui\
+stic communities\
+, and to provide\
+ a free and\x0aopen\
+ framework in wh\
+ich fonts may be\
+ shared and impr\
+oved in partners\
+hip\x0awith others.\
+\x0a\x0aThe OFL allows\
+ the licensed fo\
+nts to be used, \
+studied, modifie\
+d and\x0aredistribu\
+ted freely as lo\
+ng as they are n\
+ot sold by thems\
+elves. The\x0afonts\
+, including any \
+derivative works\
+, can be bundled\
+, embedded,\x0aredi\
+stributed and/or\
+ sold with any s\
+oftware provided\
+ that any reserv\
+ed\x0anames are not\
+ used by derivat\
+ive works. The f\
+onts and derivat\
+ives,\x0ahowever, c\
+annot be release\
+d under any othe\
+r type of licens\
+e. The\x0arequireme\
+nt for fonts to \
+remain under thi\
+s license does n\
+ot apply\x0ato any \
+document created\
+ using the fonts\
+ or their deriva\
+tives.\x0a\x0aDEFINITI\
+ONS\x0a\x22Font Softwa\
+re\x22 refers to th\
+e set of files r\
+eleased by the C\
+opyright\x0aHolder(\
+s) under this li\
+cense and clearl\
+y marked as such\
+. This may\x0ainclu\
+de source files,\
+ build scripts a\
+nd documentation\
+.\x0a\x0a\x22Reserved Fon\
+t Name\x22 refers t\
+o any names spec\
+ified as such af\
+ter the\x0acopyrigh\
+t statement(s).\x0a\
+\x0a\x22Original Versi\
+on\x22 refers to th\
+e collection of \
+Font Software co\
+mponents as\x0adist\
+ributed by the C\
+opyright Holder(\
+s).\x0a\x0a\x22Modified V\
+ersion\x22 refers t\
+o any derivative\
+ made by adding \
+to, deleting,\x0aor\
+ substituting --\
+ in part or in w\
+hole -- any of t\
+he components of\
+ the\x0aOriginal Ve\
+rsion, by changi\
+ng formats or by\
+ porting the Fon\
+t Software to a\x0a\
+new environment.\
+\x0a\x0a\x22Author\x22 refer\
+s to any designe\
+r, engineer, pro\
+grammer, technic\
+al\x0awriter or oth\
+er person who co\
+ntributed to the\
+ Font Software.\x0a\
+\x0aPERMISSION & CO\
+NDITIONS\x0aPermiss\
+ion is hereby gr\
+anted, free of c\
+harge, to any pe\
+rson obtaining\x0aa\
+ copy of the Fon\
+t Software, to u\
+se, study, copy,\
+ merge, embed, m\
+odify,\x0aredistrib\
+ute, and sell mo\
+dified and unmod\
+ified copies of \
+the Font\x0aSoftwar\
+e, subject to th\
+e following cond\
+itions:\x0a\x0a1) Neit\
+her the Font Sof\
+tware nor any of\
+ its individual \
+components,\x0ain O\
+riginal or Modif\
+ied Versions, ma\
+y be sold by its\
+elf.\x0a\x0a2) Origina\
+l or Modified Ve\
+rsions of the Fo\
+nt Software may \
+be bundled,\x0aredi\
+stributed and/or\
+ sold with any s\
+oftware, provide\
+d that each copy\
+\x0acontains the ab\
+ove copyright no\
+tice and this li\
+cense. These can\
+ be\x0aincluded eit\
+her as stand-alo\
+ne text files, h\
+uman-readable he\
+aders or\x0ain the \
+appropriate mach\
+ine-readable met\
+adata fields wit\
+hin text or\x0abina\
+ry files as long\
+ as those fields\
+ can be easily v\
+iewed by the use\
+r.\x0a\x0a3) No Modifi\
+ed Version of th\
+e Font Software \
+may use the Rese\
+rved Font\x0aName(s\
+) unless explici\
+t written permis\
+sion is granted \
+by the correspon\
+ding\x0aCopyright H\
+older. This rest\
+riction only app\
+lies to the prim\
+ary font name as\
+\x0apresented to th\
+e users.\x0a\x0a4) The\
+ name(s) of the \
+Copyright Holder\
+(s) or the Autho\
+r(s) of the Font\
+\x0aSoftware shall \
+not be used to p\
+romote, endorse \
+or advertise any\
+\x0aModified Versio\
+n, except to ack\
+nowledge the con\
+tribution(s) of \
+the\x0aCopyright Ho\
+lder(s) and the \
+Author(s) or wit\
+h their explicit\
+ written\x0apermiss\
+ion.\x0a\x0a5) The Fon\
+t Software, modi\
+fied or unmodifi\
+ed, in part or i\
+n whole,\x0amust be\
+ distributed ent\
+irely under this\
+ license, and mu\
+st not be\x0adistri\
+buted under any \
+other license. T\
+he requirement f\
+or fonts to\x0arema\
+in under this li\
+cense does not a\
+pply to any docu\
+ment created\x0ausi\
+ng the Font Soft\
+ware.\x0a\x0aTERMINATI\
+ON\x0aThis license \
+becomes null and\
+ void if any of \
+the above condit\
+ions are\x0anot met\
+.\x0a\x0aDISCLAIMER\x0aTH\
+E FONT SOFTWARE \
+IS PROVIDED \x22AS \
+IS\x22, WITHOUT WAR\
+RANTY OF ANY KIN\
+D,\x0aEXPRESS OR IM\
+PLIED, INCLUDING\
+ BUT NOT LIMITED\
+ TO ANY WARRANTI\
+ES OF\x0aMERCHANTAB\
+ILITY, FITNESS F\
+OR A PARTICULAR \
+PURPOSE AND NONI\
+NFRINGEMENT\x0aOF C\
+OPYRIGHT, PATENT\
+, TRADEMARK, OR \
+OTHER RIGHT. IN \
+NO EVENT SHALL T\
+HE\x0aCOPYRIGHT HOL\
+DER BE LIABLE FO\
+R ANY CLAIM, DAM\
+AGES OR OTHER LI\
+ABILITY,\x0aINCLUDI\
+NG ANY GENERAL, \
+SPECIAL, INDIREC\
+T, INCIDENTAL, O\
+R CONSEQUENTIAL\x0a\
+DAMAGES, WHETHER\
+ IN AN ACTION OF\
+ CONTRACT, TORT \
+OR OTHERWISE, AR\
+ISING\x0aFROM, OUT \
+OF THE USE OR IN\
+ABILITY TO USE T\
+HE FONT SOFTWARE\
+ OR FROM\x0aOTHER D\
+EALINGS IN THE F\
+ONT SOFTWARE.\x0a\
+\x00\x00\x05\xd7\
+C\
+opyright (c) 201\
+9, Alberto Sotti\
+le\x0aAll rights re\
+served.\x0a\x0aRedistr\
+ibution and use \
+in source and bi\
+nary forms, with\
+ or without\x0amodi\
+fication, are pe\
+rmitted provided\
+ that the follow\
+ing conditions a\
+re met:\x0a    * Re\
+distributions of\
+ source code mus\
+t retain the abo\
+ve copyright\x0a   \
+   notice, this \
+list of conditio\
+ns and the follo\
+wing disclaimer.\
+\x0a    * Redistrib\
+utions in binary\
+ form must repro\
+duce the above c\
+opyright\x0a      n\
+otice, this list\
+ of conditions a\
+nd the following\
+ disclaimer in t\
+he\x0a      documen\
+tation and/or ot\
+her materials pr\
+ovided with the \
+distribution.\x0a  \
+  * Neither the \
+name of \x22darkdet\
+ect\x22 nor the\x0a   \
+   names of its \
+contributors may\
+ be used to endo\
+rse or promote p\
+roducts\x0a      de\
+rived from this \
+software without\
+ specific prior \
+written permissi\
+on.\x0a\x0aTHIS SOFTWA\
+RE IS PROVIDED B\
+Y THE COPYRIGHT \
+HOLDERS AND CONT\
+RIBUTORS \x22AS IS\x22\
+ AND\x0aANY EXPRESS\
+ OR IMPLIED WARR\
+ANTIES, INCLUDIN\
+G, BUT NOT LIMIT\
+ED TO, THE IMPLI\
+ED\x0aWARRANTIES OF\
+ MERCHANTABILITY\
+ AND FITNESS FOR\
+ A PARTICULAR PU\
+RPOSE ARE\x0aDISCLA\
+IMED. IN NO EVEN\
+T SHALL \x22Alberto\
+ Sottile\x22 BE LIA\
+BLE FOR ANY\x0aDIRE\
+CT, INDIRECT, IN\
+CIDENTAL, SPECIA\
+L, EXEMPLARY, OR\
+ CONSEQUENTIAL D\
+AMAGES\x0a(INCLUDIN\
+G, BUT NOT LIMIT\
+ED TO, PROCUREME\
+NT OF SUBSTITUTE\
+ GOODS OR SERVIC\
+ES;\x0aLOSS OF USE,\
+ DATA, OR PROFIT\
+S; OR BUSINESS I\
+NTERRUPTION) HOW\
+EVER CAUSED AND\x0a\
+ON ANY THEORY OF\
+ LIABILITY, WHET\
+HER IN CONTRACT,\
+ STRICT LIABILIT\
+Y, OR TORT\x0a(INCL\
+UDING NEGLIGENCE\
+ OR OTHERWISE) A\
+RISING IN ANY WA\
+Y OUT OF THE USE\
+ OF THIS\x0aSOFTWAR\
+E, EVEN IF ADVIS\
+ED OF THE POSSIB\
+ILITY OF SUCH DA\
+MAGE.\x0a\
+\x00\x00\xb3\x07\
+C\
+opyright (c) 200\
+5-2025, NumPy De\
+velopers.\x0d\x0aAll r\
+ights reserved.\x0d\
+\x0a\x0d\x0aRedistributio\
+n and use in sou\
+rce and binary f\
+orms, with or wi\
+thout\x0d\x0amodificat\
+ion, are permitt\
+ed provided that\
+ the following c\
+onditions are\x0d\x0am\
+et:\x0d\x0a\x0d\x0a    * Red\
+istributions of \
+source code must\
+ retain the abov\
+e copyright\x0d\x0a   \
+    notice, this\
+ list of conditi\
+ons and the foll\
+owing disclaimer\
+.\x0d\x0a\x0d\x0a    * Redis\
+tributions in bi\
+nary form must r\
+eproduce the abo\
+ve\x0d\x0a       copyr\
+ight notice, thi\
+s list of condit\
+ions and the fol\
+lowing\x0d\x0a       d\
+isclaimer in the\
+ documentation a\
+nd/or other mate\
+rials provided\x0d\x0a\
+       with the \
+distribution.\x0d\x0a\x0d\
+\x0a    * Neither t\
+he name of the N\
+umPy Developers \
+nor the names of\
+ any\x0d\x0a       con\
+tributors may be\
+ used to endorse\
+ or promote prod\
+ucts derived\x0d\x0a  \
+     from this s\
+oftware without \
+specific prior w\
+ritten permissio\
+n.\x0d\x0a\x0d\x0aTHIS SOFTW\
+ARE IS PROVIDED \
+BY THE COPYRIGHT\
+ HOLDERS AND CON\
+TRIBUTORS\x0d\x0a\x22AS I\
+S\x22 AND ANY EXPRE\
+SS OR IMPLIED WA\
+RRANTIES, INCLUD\
+ING, BUT NOT\x0d\x0aLI\
+MITED TO, THE IM\
+PLIED WARRANTIES\
+ OF MERCHANTABIL\
+ITY AND FITNESS \
+FOR\x0d\x0aA PARTICULA\
+R PURPOSE ARE DI\
+SCLAIMED. IN NO \
+EVENT SHALL THE \
+COPYRIGHT\x0d\x0aOWNER\
+ OR CONTRIBUTORS\
+ BE LIABLE FOR A\
+NY DIRECT, INDIR\
+ECT, INCIDENTAL,\
+\x0d\x0aSPECIAL, EXEMP\
+LARY, OR CONSEQU\
+ENTIAL DAMAGES (\
+INCLUDING, BUT N\
+OT\x0d\x0aLIMITED TO, \
+PROCUREMENT OF S\
+UBSTITUTE GOODS \
+OR SERVICES; LOS\
+S OF USE,\x0d\x0aDATA,\
+ OR PROFITS; OR \
+BUSINESS INTERRU\
+PTION) HOWEVER C\
+AUSED AND ON ANY\
+\x0d\x0aTHEORY OF LIAB\
+ILITY, WHETHER I\
+N CONTRACT, STRI\
+CT LIABILITY, OR\
+ TORT\x0d\x0a(INCLUDIN\
+G NEGLIGENCE OR \
+OTHERWISE) ARISI\
+NG IN ANY WAY OU\
+T OF THE USE\x0d\x0aOF\
+ THIS SOFTWARE, \
+EVEN IF ADVISED \
+OF THE POSSIBILI\
+TY OF SUCH DAMAG\
+E.\x0d\x0a\x0a----\x0a\x0a\x0a----\
+\x0a\x0aThis binary di\
+stribution of Nu\
+mPy also bundles\
+ the following s\
+oftware:\x0a\x0a\x0aName:\
+ OpenBLAS\x0aFiles:\
+ numpy.libs\x5clibs\
+cipy_openblas*.d\
+ll\x0aDescription: \
+bundled as a dyn\
+amically linked \
+library\x0aAvailabi\
+lity: https://gi\
+thub.com/OpenMat\
+hLib/OpenBLAS/\x0aL\
+icense: BSD-3-Cl\
+ause\x0a  Copyright\
+ (c) 2011-2014, \
+The OpenBLAS Pro\
+ject\x0a  All right\
+s reserved.\x0a\x0a  R\
+edistribution an\
+d use in source \
+and binary forms\
+, with or withou\
+t\x0a  modification\
+, are permitted \
+provided that th\
+e following cond\
+itions are\x0a  met\
+:\x0a\x0a     1. Redis\
+tributions of so\
+urce code must r\
+etain the above \
+copyright\x0a      \
+  notice, this l\
+ist of condition\
+s and the follow\
+ing disclaimer.\x0a\
+\x0a     2. Redistr\
+ibutions in bina\
+ry form must rep\
+roduce the above\
+ copyright\x0a     \
+   notice, this \
+list of conditio\
+ns and the follo\
+wing disclaimer \
+in\x0a        the d\
+ocumentation and\
+/or other materi\
+als provided wit\
+h the\x0a        di\
+stribution.\x0a    \
+ 3. Neither the \
+name of the Open\
+BLAS project nor\
+ the names of\x0a  \
+      its contri\
+butors may be us\
+ed to endorse or\
+ promote product\
+s\x0a        derive\
+d from this soft\
+ware without spe\
+cific prior writ\
+ten\x0a        perm\
+ission.\x0a\x0a  THIS \
+SOFTWARE IS PROV\
+IDED BY THE COPY\
+RIGHT HOLDERS AN\
+D CONTRIBUTORS \x22\
+AS IS\x22\x0a  AND ANY\
+ EXPRESS OR IMPL\
+IED WARRANTIES, \
+INCLUDING, BUT N\
+OT LIMITED TO, T\
+HE\x0a  IMPLIED WAR\
+RANTIES OF MERCH\
+ANTABILITY AND F\
+ITNESS FOR A PAR\
+TICULAR PURPOSE\x0a\
+  ARE DISCLAIMED\
+. IN NO EVENT SH\
+ALL THE COPYRIGH\
+T OWNER OR CONTR\
+IBUTORS BE\x0a  LIA\
+BLE FOR ANY DIRE\
+CT, INDIRECT, IN\
+CIDENTAL, SPECIA\
+L, EXEMPLARY, OR\
+ CONSEQUENTIAL\x0a \
+ DAMAGES (INCLUD\
+ING, BUT NOT LIM\
+ITED TO, PROCURE\
+MENT OF SUBSTITU\
+TE GOODS OR\x0a  SE\
+RVICES; LOSS OF \
+USE, DATA, OR PR\
+OFITS; OR BUSINE\
+SS INTERRUPTION)\
+ HOWEVER\x0a  CAUSE\
+D AND ON ANY THE\
+ORY OF LIABILITY\
+, WHETHER IN CON\
+TRACT, STRICT LI\
+ABILITY,\x0a  OR TO\
+RT (INCLUDING NE\
+GLIGENCE OR OTHE\
+RWISE) ARISING I\
+N ANY WAY OUT OF\
+ THE\x0a  USE OF TH\
+IS SOFTWARE, EVE\
+N IF ADVISED OF \
+THE POSSIBILITY \
+OF SUCH DAMAGE.\x0a\
+\x0a\x0aName: LAPACK\x0aF\
+iles: numpy.libs\
+\x5clibscipy_openbl\
+as*.dll\x0aDescript\
+ion: bundled in \
+OpenBLAS\x0aAvailab\
+ility: https://g\
+ithub.com/OpenMa\
+thLib/OpenBLAS/\x0a\
+License: BSD-3-C\
+lause-Open-MPI\x0a \
+ Copyright (c) 1\
+992-2013 The Uni\
+versity of Tenne\
+ssee and The Uni\
+versity\x0a        \
+                \
+  of Tennessee R\
+esearch Foundati\
+on.  All rights\x0a\
+                \
+          reserv\
+ed.\x0a  Copyright \
+(c) 2000-2013 Th\
+e University of \
+California Berke\
+ley. All\x0a       \
+                \
+   rights reserv\
+ed.\x0a  Copyright \
+(c) 2006-2013 Th\
+e University of \
+Colorado Denver.\
+  All rights\x0a   \
+                \
+       reserved.\
+\x0a\x0a  $COPYRIGHT$\x0a\
+\x0a  Additional co\
+pyrights may fol\
+low\x0a\x0a  $HEADER$\x0a\
+\x0a  Redistributio\
+n and use in sou\
+rce and binary f\
+orms, with or wi\
+thout\x0a  modifica\
+tion, are permit\
+ted provided tha\
+t the following \
+conditions are\x0a \
+ met:\x0a\x0a  - Redis\
+tributions of so\
+urce code must r\
+etain the above \
+copyright\x0a    no\
+tice, this list \
+of conditions an\
+d the following \
+disclaimer.\x0a\x0a  -\
+ Redistributions\
+ in binary form \
+must reproduce t\
+he above copyrig\
+ht\x0a    notice, t\
+his list of cond\
+itions and the f\
+ollowing disclai\
+mer listed\x0a    i\
+n this license i\
+n the documentat\
+ion and/or other\
+ materials\x0a    p\
+rovided with the\
+ distribution.\x0a\x0a\
+  - Neither the \
+name of the copy\
+right holders no\
+r the names of i\
+ts\x0a    contribut\
+ors may be used \
+to endorse or pr\
+omote products d\
+erived from\x0a    \
+this software wi\
+thout specific p\
+rior written per\
+mission.\x0a\x0a  The \
+copyright holder\
+s provide no rea\
+ssurances that t\
+he source code\x0a \
+ provided does n\
+ot infringe any \
+patent, copyrigh\
+t, or any other\x0a\
+  intellectual p\
+roperty rights o\
+f third parties.\
+  The copyright \
+holders\x0a  discla\
+im any liability\
+ to any recipien\
+t for claims bro\
+ught against\x0a  r\
+ecipient by any \
+third party for \
+infringement of \
+that parties\x0a  i\
+ntellectual prop\
+erty rights.\x0a\x0a  \
+THIS SOFTWARE IS\
+ PROVIDED BY THE\
+ COPYRIGHT HOLDE\
+RS AND CONTRIBUT\
+ORS\x0a  \x22AS IS\x22 AN\
+D ANY EXPRESS OR\
+ IMPLIED WARRANT\
+IES, INCLUDING, \
+BUT NOT\x0a  LIMITE\
+D TO, THE IMPLIE\
+D WARRANTIES OF \
+MERCHANTABILITY \
+AND FITNESS FOR\x0a\
+  A PARTICULAR P\
+URPOSE ARE DISCL\
+AIMED. IN NO EVE\
+NT SHALL THE COP\
+YRIGHT\x0a  OWNER O\
+R CONTRIBUTORS B\
+E LIABLE FOR ANY\
+ DIRECT, INDIREC\
+T, INCIDENTAL,\x0a \
+ SPECIAL, EXEMPL\
+ARY, OR CONSEQUE\
+NTIAL DAMAGES (I\
+NCLUDING, BUT NO\
+T\x0a  LIMITED TO, \
+PROCUREMENT OF S\
+UBSTITUTE GOODS \
+OR SERVICES; LOS\
+S OF USE,\x0a  DATA\
+, OR PROFITS; OR\
+ BUSINESS INTERR\
+UPTION) HOWEVER \
+CAUSED AND ON AN\
+Y\x0a  THEORY OF LI\
+ABILITY, WHETHER\
+ IN CONTRACT, ST\
+RICT LIABILITY, \
+OR TORT\x0a  (INCLU\
+DING NEGLIGENCE \
+OR OTHERWISE) AR\
+ISING IN ANY WAY\
+ OUT OF THE USE\x0a\
+  OF THIS SOFTWA\
+RE, EVEN IF ADVI\
+SED OF THE POSSI\
+BILITY OF SUCH D\
+AMAGE.\x0a\x0a\x0aName: G\
+CC runtime libra\
+ry\x0aFiles: numpy.\
+libs\x5clibscipy_op\
+enblas*.dll\x0aDesc\
+ription: statica\
+lly linked to fi\
+les compiled wit\
+h gcc\x0aAvailabili\
+ty: https://gcc.\
+gnu.org/git/?p=g\
+cc.git;a=tree;f=\
+libgfortran\x0aLice\
+nse: GPL-3.0-or-\
+later WITH GCC-e\
+xception-3.1\x0a  C\
+opyright (C) 200\
+2-2017 Free Soft\
+ware Foundation,\
+ Inc.\x0a\x0a  Libgfor\
+tran is free sof\
+tware; you can r\
+edistribute it a\
+nd/or modify\x0a  i\
+t under the term\
+s of the GNU Gen\
+eral Public Lice\
+nse as published\
+ by\x0a  the Free S\
+oftware Foundati\
+on; either versi\
+on 3, or (at you\
+r option)\x0a  any \
+later version.\x0a\x0a\
+  Libgfortran is\
+ distributed in \
+the hope that it\
+ will be useful,\
+\x0a  but WITHOUT A\
+NY WARRANTY; wit\
+hout even the im\
+plied warranty o\
+f\x0a  MERCHANTABIL\
+ITY or FITNESS F\
+OR A PARTICULAR \
+PURPOSE.  See th\
+e\x0a  GNU General \
+Public License f\
+or more details.\
+\x0a\x0a  Under Sectio\
+n 7 of GPL versi\
+on 3, you are gr\
+anted additional\
+\x0a  permissions d\
+escribed in the \
+GCC Runtime Libr\
+ary Exception, v\
+ersion\x0a  3.1, as\
+ published by th\
+e Free Software \
+Foundation.\x0a\x0a  Y\
+ou should have r\
+eceived a copy o\
+f the GNU Genera\
+l Public License\
+ and\x0a  a copy of\
+ the GCC Runtime\
+ Library Excepti\
+on along with th\
+is program;\x0a  se\
+e the files COPY\
+ING3 and COPYING\
+.RUNTIME respect\
+ively.  If not, \
+see\x0a  <http://ww\
+w.gnu.org/licens\
+es/>.\x0a\x0a----\x0a\x0aFul\
+l text of licens\
+e texts referred\
+ to above follow\
+s (that they are\
+\x0alisted below do\
+es not necessari\
+ly imply the con\
+ditions apply to\
+ the\x0apresent bin\
+ary release):\x0a\x0a-\
+---\x0a\x0aGCC RUNTIME\
+ LIBRARY EXCEPTI\
+ON\x0a\x0aVersion 3.1,\
+ 31 March 2009\x0a\x0a\
+Copyright (C) 20\
+09 Free Software\
+ Foundation, Inc\
+. <https://fsf.o\
+rg/>\x0a\x0aEveryone i\
+s permitted to c\
+opy and distribu\
+te verbatim copi\
+es of this\x0alicen\
+se document, but\
+ changing it is \
+not allowed.\x0a\x0aTh\
+is GCC Runtime L\
+ibrary Exception\
+ (\x22Exception\x22) i\
+s an additional\x0a\
+permission under\
+ section 7 of th\
+e GNU General Pu\
+blic License, ve\
+rsion\x0a3 (\x22GPLv3\x22\
+). It applies to\
+ a given file (t\
+he \x22Runtime Libr\
+ary\x22) that\x0abears\
+ a notice placed\
+ by the copyrigh\
+t holder of the \
+file stating tha\
+t\x0athe file is go\
+verned by GPLv3 \
+along with this \
+Exception.\x0a\x0aWhen\
+ you use GCC to \
+compile a progra\
+m, GCC may combi\
+ne portions of\x0ac\
+ertain GCC heade\
+r files and runt\
+ime libraries wi\
+th the compiled\x0a\
+program. The pur\
+pose of this Exc\
+eption is to all\
+ow compilation o\
+f\x0anon-GPL (inclu\
+ding proprietary\
+) programs to us\
+e, in this way, \
+the\x0aheader files\
+ and runtime lib\
+raries covered b\
+y this Exception\
+.\x0a\x0a0. Definition\
+s.\x0a\x0aA file is an\
+ \x22Independent Mo\
+dule\x22 if it eith\
+er requires the \
+Runtime\x0aLibrary \
+for execution af\
+ter a Compilatio\
+n Process, or ma\
+kes use of an\x0ain\
+terface provided\
+ by the Runtime \
+Library, but is \
+not otherwise ba\
+sed\x0aon the Runti\
+me Library.\x0a\x0a\x22GC\
+C\x22 means a versi\
+on of the GNU Co\
+mpiler Collectio\
+n, with or witho\
+ut\x0amodifications\
+, governed by ve\
+rsion 3 (or a sp\
+ecified later ve\
+rsion) of\x0athe GN\
+U General Public\
+ License (GPL) w\
+ith the option o\
+f using any\x0asubs\
+equent versions \
+published by the\
+ FSF.\x0a\x0a\x22GPL-comp\
+atible Software\x22\
+ is software who\
+se conditions of\
+ propagation,\x0amo\
+dification and u\
+se would permit \
+combination with\
+ GCC in accord w\
+ith\x0athe license \
+of GCC.\x0a\x0a\x22Target\
+ Code\x22 refers to\
+ output from any\
+ compiler for a \
+real or virtual\x0a\
+target processor\
+ architecture, i\
+n executable for\
+m or suitable fo\
+r\x0ainput to an as\
+sembler, loader,\
+ linker and/or e\
+xecution\x0aphase. \
+Notwithstanding \
+that, Target Cod\
+e does not inclu\
+de data in any\x0af\
+ormat that is us\
+ed as a compiler\
+ intermediate re\
+presentation, or\
+ used\x0afor produc\
+ing a compiler i\
+ntermediate repr\
+esentation.\x0a\x0aThe\
+ \x22Compilation Pr\
+ocess\x22 transform\
+s code entirely \
+represented in\x0an\
+on-intermediate \
+languages design\
+ed for human-wri\
+tten code, and/o\
+r in\x0aJava Virtua\
+l Machine byte c\
+ode, into Target\
+ Code. Thus, for\
+ example,\x0ause of\
+ source code gen\
+erators and prep\
+rocessors need n\
+ot be considered\
+\x0apart of the Com\
+pilation Process\
+, since the Comp\
+ilation Process \
+can be\x0aunderstoo\
+d as starting wi\
+th the output of\
+ the generators \
+or\x0apreprocessors\
+.\x0a\x0aA Compilation\
+ Process is \x22Eli\
+gible\x22 if it is \
+done using GCC, \
+alone or\x0awith ot\
+her GPL-compatib\
+le software, or \
+if it is done wi\
+thout using any\x0a\
+work based on GC\
+C. For example, \
+using non-GPL-co\
+mpatible Softwar\
+e to\x0aoptimize an\
+y GCC intermedia\
+te representatio\
+ns would not qua\
+lify as an\x0aEligi\
+ble Compilation \
+Process.\x0a\x0a1. Gra\
+nt of Additional\
+ Permission.\x0a\x0aYo\
+u have permissio\
+n to propagate a\
+ work of Target \
+Code formed by\x0ac\
+ombining the Run\
+time Library wit\
+h Independent Mo\
+dules, even if s\
+uch\x0apropagation \
+would otherwise \
+violate the term\
+s of GPLv3, prov\
+ided that\x0aall Ta\
+rget Code was ge\
+nerated by Eligi\
+ble Compilation \
+Processes. You\x0am\
+ay then convey s\
+uch a combinatio\
+n under terms of\
+ your choice,\x0aco\
+nsistent with th\
+e licensing of t\
+he Independent M\
+odules.\x0a\x0a2. No W\
+eakening of GCC \
+Copyleft.\x0a\x0aThe a\
+vailability of t\
+his Exception do\
+es not imply any\
+ general\x0apresump\
+tion that third-\
+party software i\
+s unaffected by \
+the copyleft\x0areq\
+uirements of the\
+ license of GCC.\
+\x0a\x0a----\x0a\x0a        \
+            GNU \
+GENERAL PUBLIC L\
+ICENSE\x0a         \
+              Ve\
+rsion 3, 29 June\
+ 2007\x0a\x0a Copyrigh\
+t (C) 2007 Free \
+Software Foundat\
+ion, Inc. <https\
+://fsf.org/>\x0a Ev\
+eryone is permit\
+ted to copy and \
+distribute verba\
+tim copies\x0a of t\
+his license docu\
+ment, but changi\
+ng it is not all\
+owed.\x0a\x0a         \
+                \
+   Preamble\x0a\x0a  T\
+he GNU General P\
+ublic License is\
+ a free, copylef\
+t license for\x0aso\
+ftware and other\
+ kinds of works.\
+\x0a\x0a  The licenses\
+ for most softwa\
+re and other pra\
+ctical works are\
+ designed\x0ato tak\
+e away your free\
+dom to share and\
+ change the work\
+s.  By contrast,\
+\x0athe GNU General\
+ Public License \
+is intended to g\
+uarantee your fr\
+eedom to\x0ashare a\
+nd change all ve\
+rsions of a prog\
+ram--to make sur\
+e it remains fre\
+e\x0asoftware for a\
+ll its users.  W\
+e, the Free Soft\
+ware Foundation,\
+ use the\x0aGNU Gen\
+eral Public Lice\
+nse for most of \
+our software; it\
+ applies also to\
+\x0aany other work \
+released this wa\
+y by its authors\
+.  You can apply\
+ it to\x0ayour prog\
+rams, too.\x0a\x0a  Wh\
+en we speak of f\
+ree software, we\
+ are referring t\
+o freedom, not\x0ap\
+rice.  Our Gener\
+al Public Licens\
+es are designed \
+to make sure tha\
+t you\x0ahave the f\
+reedom to distri\
+bute copies of f\
+ree software (an\
+d charge for\x0athe\
+m if you wish), \
+that you receive\
+ source code or \
+can get it if yo\
+u\x0awant it, that \
+you can change t\
+he software or u\
+se pieces of it \
+in new\x0afree prog\
+rams, and that y\
+ou know you can \
+do these things.\
+\x0a\x0a  To protect y\
+our rights, we n\
+eed to prevent o\
+thers from denyi\
+ng you\x0athese rig\
+hts or asking yo\
+u to surrender t\
+he rights.  Ther\
+efore, you have\x0a\
+certain responsi\
+bilities if you \
+distribute copie\
+s of the softwar\
+e, or if\x0ayou mod\
+ify it: responsi\
+bilities to resp\
+ect the freedom \
+of others.\x0a\x0a  Fo\
+r example, if yo\
+u distribute cop\
+ies of such a pr\
+ogram, whether\x0ag\
+ratis or for a f\
+ee, you must pas\
+s on to the reci\
+pients the same\x0a\
+freedoms that yo\
+u received.  You\
+ must make sure \
+that they, too, \
+receive\x0aor can g\
+et the source co\
+de.  And you mus\
+t show them thes\
+e terms so they\x0a\
+know their right\
+s.\x0a\x0a  Developers\
+ that use the GN\
+U GPL protect yo\
+ur rights with t\
+wo steps:\x0a(1) as\
+sert copyright o\
+n the software, \
+and (2) offer yo\
+u this License\x0ag\
+iving you legal \
+permission to co\
+py, distribute a\
+nd/or modify it.\
+\x0a\x0a  For the deve\
+lopers' and auth\
+ors' protection,\
+ the GPL clearly\
+ explains\x0athat t\
+here is no warra\
+nty for this fre\
+e software.  For\
+ both users' and\
+\x0aauthors' sake, \
+the GPL requires\
+ that modified v\
+ersions be marke\
+d as\x0achanged, so\
+ that their prob\
+lems will not be\
+ attributed erro\
+neously to\x0aautho\
+rs of previous v\
+ersions.\x0a\x0a  Some\
+ devices are des\
+igned to deny us\
+ers access to in\
+stall or run\x0amod\
+ified versions o\
+f the software i\
+nside them, alth\
+ough the manufac\
+turer\x0acan do so.\
+  This is fundam\
+entally incompat\
+ible with the ai\
+m of\x0aprotecting \
+users' freedom t\
+o change the sof\
+tware.  The syst\
+ematic\x0apattern o\
+f such abuse occ\
+urs in the area \
+of products for \
+individuals to\x0au\
+se, which is pre\
+cisely where it \
+is most unaccept\
+able.  Therefore\
+, we\x0ahave design\
+ed this version \
+of the GPL to pr\
+ohibit the pract\
+ice for those\x0apr\
+oducts.  If such\
+ problems arise \
+substantially in\
+ other domains, \
+we\x0astand ready t\
+o extend this pr\
+ovision to those\
+ domains in futu\
+re versions\x0aof t\
+he GPL, as neede\
+d to protect the\
+ freedom of user\
+s.\x0a\x0a  Finally, e\
+very program is \
+threatened const\
+antly by softwar\
+e patents.\x0aState\
+s should not all\
+ow patents to re\
+strict developme\
+nt and use of\x0aso\
+ftware on genera\
+l-purpose comput\
+ers, but in thos\
+e that do, we wi\
+sh to\x0aavoid the \
+special danger t\
+hat patents appl\
+ied to a free pr\
+ogram could\x0amake\
+ it effectively \
+proprietary.  To\
+ prevent this, t\
+he GPL assures t\
+hat\x0apatents cann\
+ot be used to re\
+nder the program\
+ non-free.\x0a\x0a  Th\
+e precise terms \
+and conditions f\
+or copying, dist\
+ribution and\x0amod\
+ification follow\
+.\x0a\x0a             \
+          TERMS \
+AND CONDITIONS\x0a\x0a\
+  0. Definitions\
+.\x0a\x0a  \x22This Licen\
+se\x22 refers to ve\
+rsion 3 of the G\
+NU General Publi\
+c License.\x0a\x0a  \x22C\
+opyright\x22 also m\
+eans copyright-l\
+ike laws that ap\
+ply to other kin\
+ds of\x0aworks, suc\
+h as semiconduct\
+or masks.\x0a\x0a  \x22Th\
+e Program\x22 refer\
+s to any copyrig\
+htable work lice\
+nsed under this\x0a\
+License.  Each l\
+icensee is addre\
+ssed as \x22you\x22.  \
+\x22Licensees\x22 and\x0a\
+\x22recipients\x22 may\
+ be individuals \
+or organizations\
+.\x0a\x0a  To \x22modify\x22\
+ a work means to\
+ copy from or ad\
+apt all or part \
+of the work\x0ain a\
+ fashion requiri\
+ng copyright per\
+mission, other t\
+han the making o\
+f an\x0aexact copy.\
+  The resulting \
+work is called a\
+ \x22modified versi\
+on\x22 of the\x0aearli\
+er work or a wor\
+k \x22based on\x22 the\
+ earlier work.\x0a\x0a\
+  A \x22covered wor\
+k\x22 means either \
+the unmodified P\
+rogram or a work\
+ based\x0aon the Pr\
+ogram.\x0a\x0a  To \x22pr\
+opagate\x22 a work \
+means to do anyt\
+hing with it tha\
+t, without\x0apermi\
+ssion, would mak\
+e you directly o\
+r secondarily li\
+able for\x0ainfring\
+ement under appl\
+icable copyright\
+ law, except exe\
+cuting it on a\x0ac\
+omputer or modif\
+ying a private c\
+opy.  Propagatio\
+n includes copyi\
+ng,\x0adistribution\
+ (with or withou\
+t modification),\
+ making availabl\
+e to the\x0apublic,\
+ and in some cou\
+ntries other act\
+ivities as well.\
+\x0a\x0a  To \x22convey\x22 \
+a work means any\
+ kind of propaga\
+tion that enable\
+s other\x0aparties \
+to make or recei\
+ve copies.  Mere\
+ interaction wit\
+h a user through\
+\x0aa computer netw\
+ork, with no tra\
+nsfer of a copy,\
+ is not conveyin\
+g.\x0a\x0a  An interac\
+tive user interf\
+ace displays \x22Ap\
+propriate Legal \
+Notices\x22\x0ato the \
+extent that it i\
+ncludes a conven\
+ient and promine\
+ntly visible\x0afea\
+ture that (1) di\
+splays an approp\
+riate copyright \
+notice, and (2)\x0a\
+tells the user t\
+hat there is no \
+warranty for the\
+ work (except to\
+ the\x0aextent that\
+ warranties are \
+provided), that \
+licensees may co\
+nvey the\x0awork un\
+der this License\
+, and how to vie\
+w a copy of this\
+ License.  If\x0ath\
+e interface pres\
+ents a list of u\
+ser commands or \
+options, such as\
+ a\x0amenu, a promi\
+nent item in the\
+ list meets this\
+ criterion.\x0a\x0a  1\
+. Source Code.\x0a\x0a\
+  The \x22source co\
+de\x22 for a work m\
+eans the preferr\
+ed form of the w\
+ork\x0afor making m\
+odifications to \
+it.  \x22Object cod\
+e\x22 means any non\
+-source\x0aform of \
+a work.\x0a\x0a  A \x22St\
+andard Interface\
+\x22 means an inter\
+face that either\
+ is an official\x0a\
+standard defined\
+ by a recognized\
+ standards body,\
+ or, in the case\
+ of\x0ainterfaces s\
+pecified for a p\
+articular progra\
+mming language, \
+one that\x0ais wide\
+ly used among de\
+velopers working\
+ in that languag\
+e.\x0a\x0a  The \x22Syste\
+m Libraries\x22 of \
+an executable wo\
+rk include anyth\
+ing, other\x0athan \
+the work as a wh\
+ole, that (a) is\
+ included in the\
+ normal form of\x0a\
+packaging a Majo\
+r Component, but\
+ which is not pa\
+rt of that Major\
+\x0aComponent, and \
+(b) serves only \
+to enable use of\
+ the work with t\
+hat\x0aMajor Compon\
+ent, or to imple\
+ment a Standard \
+Interface for wh\
+ich an\x0aimplement\
+ation is availab\
+le to the public\
+ in source code \
+form.  A\x0a\x22Major \
+Component\x22, in t\
+his context, mea\
+ns a major essen\
+tial component\x0a(\
+kernel, window s\
+ystem, and so on\
+) of the specifi\
+c operating syst\
+em\x0a(if any) on w\
+hich the executa\
+ble work runs, o\
+r a compiler use\
+d to\x0aproduce the\
+ work, or an obj\
+ect code interpr\
+eter used to run\
+ it.\x0a\x0a  The \x22Cor\
+responding Sourc\
+e\x22 for a work in\
+ object code for\
+m means all\x0athe \
+source code need\
+ed to generate, \
+install, and (fo\
+r an executable\x0a\
+work) run the ob\
+ject code and to\
+ modify the work\
+, including scri\
+pts to\x0acontrol t\
+hose activities.\
+  However, it do\
+es not include t\
+he work's\x0aSystem\
+ Libraries, or g\
+eneral-purpose t\
+ools or generall\
+y available free\
+\x0aprograms which \
+are used unmodif\
+ied in performin\
+g those activiti\
+es but\x0awhich are\
+ not part of the\
+ work.  For exam\
+ple, Correspondi\
+ng Source\x0ainclud\
+es interface def\
+inition files as\
+sociated with so\
+urce files for\x0at\
+he work, and the\
+ source code for\
+ shared librarie\
+s and dynamicall\
+y\x0alinked subprog\
+rams that the wo\
+rk is specifical\
+ly designed to r\
+equire,\x0asuch as \
+by intimate data\
+ communication o\
+r control flow b\
+etween those\x0asub\
+programs and oth\
+er parts of the \
+work.\x0a\x0a  The Cor\
+responding Sourc\
+e need not inclu\
+de anything that\
+ users\x0acan regen\
+erate automatica\
+lly from other p\
+arts of the Corr\
+esponding\x0aSource\
+.\x0a\x0a  The Corresp\
+onding Source fo\
+r a work in sour\
+ce code form is \
+that\x0asame work.\x0a\
+\x0a  2. Basic Perm\
+issions.\x0a\x0a  All \
+rights granted u\
+nder this Licens\
+e are granted fo\
+r the term of\x0aco\
+pyright on the P\
+rogram, and are \
+irrevocable prov\
+ided the stated\x0a\
+conditions are m\
+et.  This Licens\
+e explicitly aff\
+irms your unlimi\
+ted\x0apermission t\
+o run the unmodi\
+fied Program.  T\
+he output from r\
+unning a\x0acovered\
+ work is covered\
+ by this License\
+ only if the out\
+put, given its\x0ac\
+ontent, constitu\
+tes a covered wo\
+rk.  This Licens\
+e acknowledges y\
+our\x0arights of fa\
+ir use or other \
+equivalent, as p\
+rovided by copyr\
+ight law.\x0a\x0a  You\
+ may make, run a\
+nd propagate cov\
+ered works that \
+you do not\x0aconve\
+y, without condi\
+tions so long as\
+ your license ot\
+herwise remains\x0a\
+in force.  You m\
+ay convey covere\
+d works to other\
+s for the sole p\
+urpose\x0aof having\
+ them make modif\
+ications exclusi\
+vely for you, or\
+ provide you\x0awit\
+h facilities for\
+ running those w\
+orks, provided t\
+hat you comply w\
+ith\x0athe terms of\
+ this License in\
+ conveying all m\
+aterial for whic\
+h you do\x0anot con\
+trol copyright. \
+ Those thus maki\
+ng or running th\
+e covered works\x0a\
+for you must do \
+so exclusively o\
+n your behalf, u\
+nder your direct\
+ion\x0aand control,\
+ on terms that p\
+rohibit them fro\
+m making any cop\
+ies of\x0ayour copy\
+righted material\
+ outside their r\
+elationship with\
+ you.\x0a\x0a  Conveyi\
+ng under any oth\
+er circumstances\
+ is permitted so\
+lely under\x0athe c\
+onditions stated\
+ below.  Sublice\
+nsing is not all\
+owed; section 10\
+\x0amakes it unnece\
+ssary.\x0a\x0a  3. Pro\
+tecting Users' L\
+egal Rights From\
+ Anti-Circumvent\
+ion Law.\x0a\x0a  No c\
+overed work shal\
+l be deemed part\
+ of an effective\
+ technological\x0am\
+easure under any\
+ applicable law \
+fulfilling oblig\
+ations under art\
+icle\x0a11 of the W\
+IPO copyright tr\
+eaty adopted on \
+20 December 1996\
+, or\x0asimilar law\
+s prohibiting or\
+ restricting cir\
+cumvention of su\
+ch\x0ameasures.\x0a\x0a  \
+When you convey \
+a covered work, \
+you waive any le\
+gal power to for\
+bid\x0acircumventio\
+n of technologic\
+al measures to t\
+he extent such c\
+ircumvention\x0ais \
+effected by exer\
+cising rights un\
+der this License\
+ with respect to\
+\x0athe covered wor\
+k, and you discl\
+aim any intentio\
+n to limit opera\
+tion or\x0amodifica\
+tion of the work\
+ as a means of e\
+nforcing, agains\
+t the work's\x0ause\
+rs, your or thir\
+d parties' legal\
+ rights to forbi\
+d circumvention \
+of\x0atechnological\
+ measures.\x0a\x0a  4.\
+ Conveying Verba\
+tim Copies.\x0a\x0a  Y\
+ou may convey ve\
+rbatim copies of\
+ the Program's s\
+ource code as yo\
+u\x0areceive it, in\
+ any medium, pro\
+vided that you c\
+onspicuously and\
+\x0aappropriately p\
+ublish on each c\
+opy an appropria\
+te copyright not\
+ice;\x0akeep intact\
+ all notices sta\
+ting that this L\
+icense and any\x0an\
+on-permissive te\
+rms added in acc\
+ord with section\
+ 7 apply to the \
+code;\x0akeep intac\
+t all notices of\
+ the absence of \
+any warranty; an\
+d give all\x0arecip\
+ients a copy of \
+this License alo\
+ng with the Prog\
+ram.\x0a\x0a  You may \
+charge any price\
+ or no price for\
+ each copy that \
+you convey,\x0aand \
+you may offer su\
+pport or warrant\
+y protection for\
+ a fee.\x0a\x0a  5. Co\
+nveying Modified\
+ Source Versions\
+.\x0a\x0a  You may con\
+vey a work based\
+ on the Program,\
+ or the modifica\
+tions to\x0aproduce\
+ it from the Pro\
+gram, in the for\
+m of source code\
+ under the\x0aterms\
+ of section 4, p\
+rovided that you\
+ also meet all o\
+f these conditio\
+ns:\x0a\x0a    a) The \
+work must carry \
+prominent notice\
+s stating that y\
+ou modified\x0a    \
+it, and giving a\
+ relevant date.\x0a\
+\x0a    b) The work\
+ must carry prom\
+inent notices st\
+ating that it is\
+\x0a    released un\
+der this License\
+ and any conditi\
+ons added under \
+section\x0a    7.  \
+This requirement\
+ modifies the re\
+quirement in sec\
+tion 4 to\x0a    \x22k\
+eep intact all n\
+otices\x22.\x0a\x0a    c)\
+ You must licens\
+e the entire wor\
+k, as a whole, u\
+nder this\x0a    Li\
+cense to anyone \
+who comes into p\
+ossession of a c\
+opy.  This\x0a    L\
+icense will ther\
+efore apply, alo\
+ng with any appl\
+icable section 7\
+\x0a    additional \
+terms, to the wh\
+ole of the work,\
+ and all its par\
+ts,\x0a    regardle\
+ss of how they a\
+re packaged.  Th\
+is License gives\
+ no\x0a    permissi\
+on to license th\
+e work in any ot\
+her way, but it \
+does not\x0a    inv\
+alidate such per\
+mission if you h\
+ave separately r\
+eceived it.\x0a\x0a   \
+ d) If the work \
+has interactive \
+user interfaces,\
+ each must displ\
+ay\x0a    Appropria\
+te Legal Notices\
+; however, if th\
+e Program has in\
+teractive\x0a    in\
+terfaces that do\
+ not display App\
+ropriate Legal N\
+otices, your\x0a   \
+ work need not m\
+ake them do so.\x0a\
+\x0a  A compilation\
+ of a covered wo\
+rk with other se\
+parate and indep\
+endent\x0aworks, wh\
+ich are not by t\
+heir nature exte\
+nsions of the co\
+vered work,\x0aand \
+which are not co\
+mbined with it s\
+uch as to form a\
+ larger program,\
+\x0ain or on a volu\
+me of a storage \
+or distribution \
+medium, is calle\
+d an\x0a\x22aggregate\x22\
+ if the compilat\
+ion and its resu\
+lting copyright \
+are not\x0aused to \
+limit the access\
+ or legal rights\
+ of the compilat\
+ion's users\x0abeyo\
+nd what the indi\
+vidual works per\
+mit.  Inclusion \
+of a covered wor\
+k\x0ain an aggregat\
+e does not cause\
+ this License to\
+ apply to the ot\
+her\x0aparts of the\
+ aggregate.\x0a\x0a  6\
+. Conveying Non-\
+Source Forms.\x0a\x0a \
+ You may convey \
+a covered work i\
+n object code fo\
+rm under the ter\
+ms\x0aof sections 4\
+ and 5, provided\
+ that you also c\
+onvey the\x0amachin\
+e-readable Corre\
+sponding Source \
+under the terms \
+of this License,\
+\x0ain one of these\
+ ways:\x0a\x0a    a) C\
+onvey the object\
+ code in, or emb\
+odied in, a phys\
+ical product\x0a   \
+ (including a ph\
+ysical distribut\
+ion medium), acc\
+ompanied by the\x0a\
+    Correspondin\
+g Source fixed o\
+n a durable phys\
+ical medium\x0a    \
+customarily used\
+ for software in\
+terchange.\x0a\x0a    \
+b) Convey the ob\
+ject code in, or\
+ embodied in, a \
+physical product\
+\x0a    (including \
+a physical distr\
+ibution medium),\
+ accompanied by \
+a\x0a    written of\
+fer, valid for a\
+t least three ye\
+ars and valid fo\
+r as\x0a    long as\
+ you offer spare\
+ parts or custom\
+er support for t\
+hat product\x0a    \
+model, to give a\
+nyone who posses\
+ses the object c\
+ode either (1) a\
+\x0a    copy of the\
+ Corresponding S\
+ource for all th\
+e software in th\
+e\x0a    product th\
+at is covered by\
+ this License, o\
+n a durable phys\
+ical\x0a    medium \
+customarily used\
+ for software in\
+terchange, for a\
+ price no\x0a    mo\
+re than your rea\
+sonable cost of \
+physically perfo\
+rming this\x0a    c\
+onveying of sour\
+ce, or (2) acces\
+s to copy the\x0a  \
+  Corresponding \
+Source from a ne\
+twork server at \
+no charge.\x0a\x0a    \
+c) Convey indivi\
+dual copies of t\
+he object code w\
+ith a copy of th\
+e\x0a    written of\
+fer to provide t\
+he Corresponding\
+ Source.  This\x0a \
+   alternative i\
+s allowed only o\
+ccasionally and \
+noncommercially,\
+ and\x0a    only if\
+ you received th\
+e object code wi\
+th such an offer\
+, in accord\x0a    \
+with subsection \
+6b.\x0a\x0a    d) Conv\
+ey the object co\
+de by offering a\
+ccess from a des\
+ignated\x0a    plac\
+e (gratis or for\
+ a charge), and \
+offer equivalent\
+ access to the\x0a \
+   Corresponding\
+ Source in the s\
+ame way through \
+the same place a\
+t no\x0a    further\
+ charge.  You ne\
+ed not require r\
+ecipients to cop\
+y the\x0a    Corres\
+ponding Source a\
+long with the ob\
+ject code.  If t\
+he place to\x0a    \
+copy the object \
+code is a networ\
+k server, the Co\
+rresponding Sour\
+ce\x0a    may be on\
+ a different ser\
+ver (operated by\
+ you or a third \
+party)\x0a    that \
+supports equival\
+ent copying faci\
+lities, provided\
+ you maintain\x0a  \
+  clear directio\
+ns next to the o\
+bject code sayin\
+g where to find \
+the\x0a    Correspo\
+nding Source.  R\
+egardless of wha\
+t server hosts t\
+he\x0a    Correspon\
+ding Source, you\
+ remain obligate\
+d to ensure that\
+ it is\x0a    avail\
+able for as long\
+ as needed to sa\
+tisfy these requ\
+irements.\x0a\x0a    e\
+) Convey the obj\
+ect code using p\
+eer-to-peer tran\
+smission, provid\
+ed\x0a    you infor\
+m other peers wh\
+ere the object c\
+ode and Correspo\
+nding\x0a    Source\
+ of the work are\
+ being offered t\
+o the general pu\
+blic at no\x0a    c\
+harge under subs\
+ection 6d.\x0a\x0a  A \
+separable portio\
+n of the object \
+code, whose sour\
+ce code is exclu\
+ded\x0afrom the Cor\
+responding Sourc\
+e as a System Li\
+brary, need not \
+be\x0aincluded in c\
+onveying the obj\
+ect code work.\x0a\x0a\
+  A \x22User Produc\
+t\x22 is either (1)\
+ a \x22consumer pro\
+duct\x22, which mea\
+ns any\x0atangible \
+personal propert\
+y which is norma\
+lly used for per\
+sonal, family,\x0ao\
+r household purp\
+oses, or (2) any\
+thing designed o\
+r sold for incor\
+poration\x0ainto a \
+dwelling.  In de\
+termining whethe\
+r a product is a\
+ consumer produc\
+t,\x0adoubtful case\
+s shall be resol\
+ved in favor of \
+coverage.  For a\
+ particular\x0aprod\
+uct received by \
+a particular use\
+r, \x22normally use\
+d\x22 refers to a\x0at\
+ypical or common\
+ use of that cla\
+ss of product, r\
+egardless of the\
+ status\x0aof the p\
+articular user o\
+r of the way in \
+which the partic\
+ular user\x0aactual\
+ly uses, or expe\
+cts or is expect\
+ed to use, the p\
+roduct.  A produ\
+ct\x0ais a consumer\
+ product regardl\
+ess of whether t\
+he product has s\
+ubstantial\x0acomme\
+rcial, industria\
+l or non-consume\
+r uses, unless s\
+uch uses represe\
+nt\x0athe only sign\
+ificant mode of \
+use of the produ\
+ct.\x0a\x0a  \x22Installa\
+tion Information\
+\x22 for a User Pro\
+duct means any m\
+ethods,\x0aprocedur\
+es, authorizatio\
+n keys, or other\
+ information req\
+uired to install\
+\x0aand execute mod\
+ified versions o\
+f a covered work\
+ in that User Pr\
+oduct from\x0aa mod\
+ified version of\
+ its Correspondi\
+ng Source.  The \
+information must\
+\x0asuffice to ensu\
+re that the cont\
+inued functionin\
+g of the modifie\
+d object\x0acode is\
+ in no case prev\
+ented or interfe\
+red with solely \
+because\x0amodifica\
+tion has been ma\
+de.\x0a\x0a  If you co\
+nvey an object c\
+ode work under t\
+his section in, \
+or with, or\x0aspec\
+ifically for use\
+ in, a User Prod\
+uct, and the con\
+veying occurs as\
+\x0apart of a trans\
+action in which \
+the right of pos\
+session and use \
+of the\x0aUser Prod\
+uct is transferr\
+ed to the recipi\
+ent in perpetuit\
+y or for a\x0afixed\
+ term (regardles\
+s of how the tra\
+nsaction is char\
+acterized), the\x0a\
+Corresponding So\
+urce conveyed un\
+der this section\
+ must be accompa\
+nied\x0aby the Inst\
+allation Informa\
+tion.  But this \
+requirement does\
+ not apply\x0aif ne\
+ither you nor an\
+y third party re\
+tains the abilit\
+y to install\x0amod\
+ified object cod\
+e on the User Pr\
+oduct (for examp\
+le, the work has\
+\x0abeen installed \
+in ROM).\x0a\x0a  The \
+requirement to p\
+rovide Installat\
+ion Information \
+does not include\
+ a\x0arequirement t\
+o continue to pr\
+ovide support se\
+rvice, warranty,\
+ or updates\x0afor \
+a work that has \
+been modified or\
+ installed by th\
+e recipient, or \
+for\x0athe User Pro\
+duct in which it\
+ has been modifi\
+ed or installed.\
+  Access to a\x0ane\
+twork may be den\
+ied when the mod\
+ification itself\
+ materially and\x0a\
+adversely affect\
+s the operation \
+of the network o\
+r violates the r\
+ules and\x0aprotoco\
+ls for communica\
+tion across the \
+network.\x0a\x0a  Corr\
+esponding Source\
+ conveyed, and I\
+nstallation Info\
+rmation provided\
+,\x0ain accord with\
+ this section mu\
+st be in a forma\
+t that is public\
+ly\x0adocumented (a\
+nd with an imple\
+mentation availa\
+ble to the publi\
+c in\x0asource code\
+ form), and must\
+ require no spec\
+ial password or \
+key for\x0aunpackin\
+g, reading or co\
+pying.\x0a\x0a  7. Add\
+itional Terms.\x0a\x0a\
+  \x22Additional pe\
+rmissions\x22 are t\
+erms that supple\
+ment the terms o\
+f this\x0aLicense b\
+y making excepti\
+ons from one or \
+more of its cond\
+itions.\x0aAddition\
+al permissions t\
+hat are applicab\
+le to the entire\
+ Program shall\x0ab\
+e treated as tho\
+ugh they were in\
+cluded in this L\
+icense, to the e\
+xtent\x0athat they \
+are valid under \
+applicable law. \
+ If additional p\
+ermissions\x0aapply\
+ only to part of\
+ the Program, th\
+at part may be u\
+sed separately\x0au\
+nder those permi\
+ssions, but the \
+entire Program r\
+emains governed \
+by\x0athis License \
+without regard t\
+o the additional\
+ permissions.\x0a\x0a \
+ When you convey\
+ a copy of a cov\
+ered work, you m\
+ay at your optio\
+n\x0aremove any add\
+itional permissi\
+ons from that co\
+py, or from any \
+part of\x0ait.  (Ad\
+ditional permiss\
+ions may be writ\
+ten to require t\
+heir own\x0aremoval\
+ in certain case\
+s when you modif\
+y the work.)  Yo\
+u may place\x0aaddi\
+tional permissio\
+ns on material, \
+added by you to \
+a covered work,\x0a\
+for which you ha\
+ve or can give a\
+ppropriate copyr\
+ight permission.\
+\x0a\x0a  Notwithstand\
+ing any other pr\
+ovision of this \
+License, for mat\
+erial you\x0aadd to\
+ a covered work,\
+ you may (if aut\
+horized by the c\
+opyright holders\
+ of\x0athat materia\
+l) supplement th\
+e terms of this \
+License with ter\
+ms:\x0a\x0a    a) Disc\
+laiming warranty\
+ or limiting lia\
+bility different\
+ly from the\x0a    \
+terms of section\
+s 15 and 16 of t\
+his License; or\x0a\
+\x0a    b) Requirin\
+g preservation o\
+f specified reas\
+onable legal not\
+ices or\x0a    auth\
+or attributions \
+in that material\
+ or in the Appro\
+priate Legal\x0a   \
+ Notices display\
+ed by works cont\
+aining it; or\x0a\x0a \
+   c) Prohibitin\
+g misrepresentat\
+ion of the origi\
+n of that materi\
+al, or\x0a    requi\
+ring that modifi\
+ed versions of s\
+uch material be \
+marked in\x0a    re\
+asonable ways as\
+ different from \
+the original ver\
+sion; or\x0a\x0a    d)\
+ Limiting the us\
+e for publicity \
+purposes of name\
+s of licensors o\
+r\x0a    authors of\
+ the material; o\
+r\x0a\x0a    e) Declin\
+ing to grant rig\
+hts under tradem\
+ark law for use \
+of some\x0a    trad\
+e names, tradema\
+rks, or service \
+marks; or\x0a\x0a    f\
+) Requiring inde\
+mnification of l\
+icensors and aut\
+hors of that\x0a   \
+ material by any\
+one who conveys \
+the material (or\
+ modified versio\
+ns of\x0a    it) wi\
+th contractual a\
+ssumptions of li\
+ability to the r\
+ecipient, for\x0a  \
+  any liability \
+that these contr\
+actual assumptio\
+ns directly impo\
+se on\x0a    those \
+licensors and au\
+thors.\x0a\x0a  All ot\
+her non-permissi\
+ve additional te\
+rms are consider\
+ed \x22further\x0arest\
+rictions\x22 within\
+ the meaning of \
+section 10.  If \
+the Program as y\
+ou\x0areceived it, \
+or any part of i\
+t, contains a no\
+tice stating tha\
+t it is\x0agoverned\
+ by this License\
+ along with a te\
+rm that is a fur\
+ther\x0arestriction\
+, you may remove\
+ that term.  If \
+a license docume\
+nt contains\x0aa fu\
+rther restrictio\
+n but permits re\
+licensing or con\
+veying under thi\
+s\x0aLicense, you m\
+ay add to a cove\
+red work materia\
+l governed by th\
+e terms\x0aof that \
+license document\
+, provided that \
+the further rest\
+riction does\x0anot\
+ survive such re\
+licensing or con\
+veying.\x0a\x0a  If yo\
+u add terms to a\
+ covered work in\
+ accord with thi\
+s section, you\x0am\
+ust place, in th\
+e relevant sourc\
+e files, a state\
+ment of the\x0aaddi\
+tional terms tha\
+t apply to those\
+ files, or a not\
+ice indicating\x0aw\
+here to find the\
+ applicable term\
+s.\x0a\x0a  Additional\
+ terms, permissi\
+ve or non-permis\
+sive, may be sta\
+ted in the\x0aform \
+of a separately \
+written license,\
+ or stated as ex\
+ceptions;\x0athe ab\
+ove requirements\
+ apply either wa\
+y.\x0a\x0a  8. Termina\
+tion.\x0a\x0a  You may\
+ not propagate o\
+r modify a cover\
+ed work except a\
+s expressly\x0aprov\
+ided under this \
+License.  Any at\
+tempt otherwise \
+to propagate or\x0a\
+modify it is voi\
+d, and will auto\
+matically termin\
+ate your rights \
+under\x0athis Licen\
+se (including an\
+y patent license\
+s granted under \
+the third\x0aparagr\
+aph of section 1\
+1).\x0a\x0a  However, \
+if you cease all\
+ violation of th\
+is License, then\
+ your\x0alicense fr\
+om a particular \
+copyright holder\
+ is reinstated (\
+a)\x0aprovisionally\
+, unless and unt\
+il the copyright\
+ holder explicit\
+ly and\x0afinally t\
+erminates your l\
+icense, and (b) \
+permanently, if \
+the copyright\x0aho\
+lder fails to no\
+tify you of the \
+violation by som\
+e reasonable mea\
+ns\x0aprior to 60 d\
+ays after the ce\
+ssation.\x0a\x0a  More\
+over, your licen\
+se from a partic\
+ular copyright h\
+older is\x0areinsta\
+ted permanently \
+if the copyright\
+ holder notifies\
+ you of the\x0aviol\
+ation by some re\
+asonable means, \
+this is the firs\
+t time you have\x0a\
+received notice \
+of violation of \
+this License (fo\
+r any work) from\
+ that\x0acopyright \
+holder, and you \
+cure the violati\
+on prior to 30 d\
+ays after\x0ayour r\
+eceipt of the no\
+tice.\x0a\x0a  Termina\
+tion of your rig\
+hts under this s\
+ection does not \
+terminate the\x0ali\
+censes of partie\
+s who have recei\
+ved copies or ri\
+ghts from you un\
+der\x0athis License\
+.  If your right\
+s have been term\
+inated and not p\
+ermanently\x0areins\
+tated, you do no\
+t qualify to rec\
+eive new license\
+s for the same\x0am\
+aterial under se\
+ction 10.\x0a\x0a  9. \
+Acceptance Not R\
+equired for Havi\
+ng Copies.\x0a\x0a  Yo\
+u are not requir\
+ed to accept thi\
+s License in ord\
+er to receive or\
+\x0arun a copy of t\
+he Program.  Anc\
+illary propagati\
+on of a covered \
+work\x0aoccurring s\
+olely as a conse\
+quence of using \
+peer-to-peer tra\
+nsmission\x0ato rec\
+eive a copy like\
+wise does not re\
+quire acceptance\
+.  However,\x0anoth\
+ing other than t\
+his License gran\
+ts you permissio\
+n to propagate o\
+r\x0amodify any cov\
+ered work.  Thes\
+e actions infrin\
+ge copyright if \
+you do\x0anot accep\
+t this License. \
+ Therefore, by m\
+odifying or prop\
+agating a\x0acovere\
+d work, you indi\
+cate your accept\
+ance of this Lic\
+ense to do so.\x0a\x0a\
+  10. Automatic \
+Licensing of Dow\
+nstream Recipien\
+ts.\x0a\x0a  Each time\
+ you convey a co\
+vered work, the \
+recipient automa\
+tically\x0areceives\
+ a license from \
+the original lic\
+ensors, to run, \
+modify and\x0apropa\
+gate that work, \
+subject to this \
+License.  You ar\
+e not responsibl\
+e\x0afor enforcing \
+compliance by th\
+ird parties with\
+ this License.\x0a\x0a\
+  An \x22entity tra\
+nsaction\x22 is a t\
+ransaction trans\
+ferring control \
+of an\x0aorganizati\
+on, or substanti\
+ally all assets \
+of one, or subdi\
+viding an\x0aorgani\
+zation, or mergi\
+ng organizations\
+.  If propagatio\
+n of a covered\x0aw\
+ork results from\
+ an entity trans\
+action, each par\
+ty to that\x0atrans\
+action who recei\
+ves a copy of th\
+e work also rece\
+ives whatever\x0ali\
+censes to the wo\
+rk the party's p\
+redecessor in in\
+terest had or co\
+uld\x0agive under t\
+he previous para\
+graph, plus a ri\
+ght to possessio\
+n of the\x0aCorresp\
+onding Source of\
+ the work from t\
+he predecessor i\
+n interest, if\x0at\
+he predecessor h\
+as it or can get\
+ it with reasona\
+ble efforts.\x0a\x0a  \
+You may not impo\
+se any further r\
+estrictions on t\
+he exercise of t\
+he\x0arights grante\
+d or affirmed un\
+der this License\
+.  For example, \
+you may\x0anot impo\
+se a license fee\
+, royalty, or ot\
+her charge for e\
+xercise of\x0aright\
+s granted under \
+this License, an\
+d you may not in\
+itiate litigatio\
+n\x0a(including a c\
+ross-claim or co\
+unterclaim in a \
+lawsuit) allegin\
+g that\x0aany paten\
+t claim is infri\
+nged by making, \
+using, selling, \
+offering for\x0asal\
+e, or importing \
+the Program or a\
+ny portion of it\
+.\x0a\x0a  11. Patents\
+.\x0a\x0a  A \x22contribu\
+tor\x22 is a copyri\
+ght holder who a\
+uthorizes use un\
+der this\x0aLicense\
+ of the Program \
+or a work on whi\
+ch the Program i\
+s based.  The\x0awo\
+rk thus licensed\
+ is called the c\
+ontributor's \x22co\
+ntributor versio\
+n\x22.\x0a\x0a  A contrib\
+utor's \x22essentia\
+l patent claims\x22\
+ are all patent \
+claims\x0aowned or \
+controlled by th\
+e contributor, w\
+hether already a\
+cquired or\x0aherea\
+fter acquired, t\
+hat would be inf\
+ringed by some m\
+anner, permitted\
+\x0aby this License\
+, of making, usi\
+ng, or selling i\
+ts contributor v\
+ersion,\x0abut do n\
+ot include claim\
+s that would be \
+infringed only a\
+s a\x0aconsequence \
+of further modif\
+ication of the c\
+ontributor versi\
+on.  For\x0apurpose\
+s of this defini\
+tion, \x22control\x22 \
+includes the rig\
+ht to grant\x0apate\
+nt sublicenses i\
+n a manner consi\
+stent with the r\
+equirements of\x0at\
+his License.\x0a\x0a  \
+Each contributor\
+ grants you a no\
+n-exclusive, wor\
+ldwide, royalty-\
+free\x0apatent lice\
+nse under the co\
+ntributor's esse\
+ntial patent cla\
+ims, to\x0amake, us\
+e, sell, offer f\
+or sale, import \
+and otherwise ru\
+n, modify and\x0apr\
+opagate the cont\
+ents of its cont\
+ributor version.\
+\x0a\x0a  In the follo\
+wing three parag\
+raphs, a \x22patent\
+ license\x22 is any\
+ express\x0aagreeme\
+nt or commitment\
+, however denomi\
+nated, not to en\
+force a patent\x0a(\
+such as an expre\
+ss permission to\
+ practice a pate\
+nt or covenant n\
+ot to\x0asue for pa\
+tent infringemen\
+t).  To \x22grant\x22 \
+such a patent li\
+cense to a\x0aparty\
+ means to make s\
+uch an agreement\
+ or commitment n\
+ot to enforce a\x0a\
+patent against t\
+he party.\x0a\x0a  If \
+you convey a cov\
+ered work, knowi\
+ngly relying on \
+a patent license\
+,\x0aand the Corres\
+ponding Source o\
+f the work is no\
+t available for \
+anyone\x0ato copy, \
+free of charge a\
+nd under the ter\
+ms of this Licen\
+se, through a\x0apu\
+blicly available\
+ network server \
+or other readily\
+ accessible mean\
+s,\x0athen you must\
+ either (1) caus\
+e the Correspond\
+ing Source to be\
+ so\x0aavailable, o\
+r (2) arrange to\
+ deprive yoursel\
+f of the benefit\
+ of the\x0apatent l\
+icense for this \
+particular work,\
+ or (3) arrange,\
+ in a manner\x0acon\
+sistent with the\
+ requirements of\
+ this License, t\
+o extend the pat\
+ent\x0alicense to d\
+ownstream recipi\
+ents.  \x22Knowingl\
+y relying\x22 means\
+ you have\x0aactual\
+ knowledge that,\
+ but for the pat\
+ent license, you\
+r conveying the\x0a\
+covered work in \
+a country, or yo\
+ur recipient's u\
+se of the covere\
+d work\x0ain a coun\
+try, would infri\
+nge one or more \
+identifiable pat\
+ents in that\x0acou\
+ntry that you ha\
+ve reason to bel\
+ieve are valid.\x0a\
+\x0a  If, pursuant \
+to or in connect\
+ion with a singl\
+e transaction or\
+\x0aarrangement, yo\
+u convey, or pro\
+pagate by procur\
+ing conveyance o\
+f, a\x0acovered wor\
+k, and grant a p\
+atent license to\
+ some of the par\
+ties\x0areceiving t\
+he covered work \
+authorizing them\
+ to use, propaga\
+te, modify\x0aor co\
+nvey a specific \
+copy of the cove\
+red work, then t\
+he patent licens\
+e\x0ayou grant is a\
+utomatically ext\
+ended to all rec\
+ipients of the c\
+overed\x0awork and \
+works based on i\
+t.\x0a\x0a  A patent l\
+icense is \x22discr\
+iminatory\x22 if it\
+ does not includ\
+e within\x0athe sco\
+pe of its covera\
+ge, prohibits th\
+e exercise of, o\
+r is\x0aconditioned\
+ on the non-exer\
+cise of one or m\
+ore of the right\
+s that are\x0aspeci\
+fically granted \
+under this Licen\
+se.  You may not\
+ convey a covere\
+d\x0awork if you ar\
+e a party to an \
+arrangement with\
+ a third party t\
+hat is\x0ain the bu\
+siness of distri\
+buting software,\
+ under which you\
+ make payment\x0ato\
+ the third party\
+ based on the ex\
+tent of your act\
+ivity of conveyi\
+ng\x0athe work, and\
+ under which the\
+ third party gra\
+nts, to any of t\
+he\x0aparties who w\
+ould receive the\
+ covered work fr\
+om you, a discri\
+minatory\x0apatent \
+license (a) in c\
+onnection with c\
+opies of the cov\
+ered work\x0aconvey\
+ed by you (or co\
+pies made from t\
+hose copies), or\
+ (b) primarily\x0af\
+or and in connec\
+tion with specif\
+ic products or c\
+ompilations that\
+\x0acontain the cov\
+ered work, unles\
+s you entered in\
+to that arrangem\
+ent,\x0aor that pat\
+ent license was \
+granted, prior t\
+o 28 March 2007.\
+\x0a\x0a  Nothing in t\
+his License shal\
+l be construed a\
+s excluding or l\
+imiting\x0aany impl\
+ied license or o\
+ther defenses to\
+ infringement th\
+at may\x0aotherwise\
+ be available to\
+ you under appli\
+cable patent law\
+.\x0a\x0a  12. No Surr\
+ender of Others'\
+ Freedom.\x0a\x0a  If \
+conditions are i\
+mposed on you (w\
+hether by court \
+order, agreement\
+ or\x0aotherwise) t\
+hat contradict t\
+he conditions of\
+ this License, t\
+hey do not\x0aexcus\
+e you from the c\
+onditions of thi\
+s License.  If y\
+ou cannot convey\
+ a\x0acovered work \
+so as to satisfy\
+ simultaneously \
+your obligations\
+ under this\x0aLice\
+nse and any othe\
+r pertinent obli\
+gations, then as\
+ a consequence y\
+ou may\x0anot conve\
+y it at all.  Fo\
+r example, if yo\
+u agree to terms\
+ that obligate y\
+ou\x0ato collect a \
+royalty for furt\
+her conveying fr\
+om those to whom\
+ you convey\x0athe \
+Program, the onl\
+y way you could \
+satisfy both tho\
+se terms and thi\
+s\x0aLicense would \
+be to refrain en\
+tirely from conv\
+eying the Progra\
+m.\x0a\x0a  13. Use wi\
+th the GNU Affer\
+o General Public\
+ License.\x0a\x0a  Not\
+withstanding any\
+ other provision\
+ of this License\
+, you have\x0apermi\
+ssion to link or\
+ combine any cov\
+ered work with a\
+ work licensed\x0au\
+nder version 3 o\
+f the GNU Affero\
+ General Public \
+License into a s\
+ingle\x0acombined w\
+ork, and to conv\
+ey the resulting\
+ work.  The term\
+s of this\x0aLicens\
+e will continue \
+to apply to the \
+part which is th\
+e covered work,\x0a\
+but the special \
+requirements of \
+the GNU Affero G\
+eneral Public Li\
+cense,\x0asection 1\
+3, concerning in\
+teraction throug\
+h a network will\
+ apply to the\x0aco\
+mbination as suc\
+h.\x0a\x0a  14. Revise\
+d Versions of th\
+is License.\x0a\x0a  T\
+he Free Software\
+ Foundation may \
+publish revised \
+and/or new versi\
+ons of\x0athe GNU G\
+eneral Public Li\
+cense from time \
+to time.  Such n\
+ew versions will\
+\x0abe similar in s\
+pirit to the pre\
+sent version, bu\
+t may differ in \
+detail to\x0aaddres\
+s new problems o\
+r concerns.\x0a\x0a  E\
+ach version is g\
+iven a distingui\
+shing version nu\
+mber.  If the\x0aPr\
+ogram specifies \
+that a certain n\
+umbered version \
+of the GNU Gener\
+al\x0aPublic Licens\
+e \x22or any later \
+version\x22 applies\
+ to it, you have\
+ the\x0aoption of f\
+ollowing the ter\
+ms and condition\
+s either of that\
+ numbered\x0aversio\
+n or of any late\
+r version publis\
+hed by the Free \
+Software\x0aFoundat\
+ion.  If the Pro\
+gram does not sp\
+ecify a version \
+number of the\x0aGN\
+U General Public\
+ License, you ma\
+y choose any ver\
+sion ever publis\
+hed\x0aby the Free \
+Software Foundat\
+ion.\x0a\x0a  If the P\
+rogram specifies\
+ that a proxy ca\
+n decide which f\
+uture\x0aversions o\
+f the GNU Genera\
+l Public License\
+ can be used, th\
+at proxy's\x0apubli\
+c statement of a\
+cceptance of a v\
+ersion permanent\
+ly authorizes yo\
+u\x0ato choose that\
+ version for the\
+ Program.\x0a\x0a  Lat\
+er license versi\
+ons may give you\
+ additional or d\
+ifferent\x0apermiss\
+ions.  However, \
+no additional ob\
+ligations are im\
+posed on any\x0aaut\
+hor or copyright\
+ holder as a res\
+ult of your choo\
+sing to follow a\
+\x0alater version.\x0a\
+\x0a  15. Disclaime\
+r of Warranty.\x0a\x0a\
+  THERE IS NO WA\
+RRANTY FOR THE P\
+ROGRAM, TO THE E\
+XTENT PERMITTED \
+BY\x0aAPPLICABLE LA\
+W.  EXCEPT WHEN \
+OTHERWISE STATED\
+ IN WRITING THE \
+COPYRIGHT\x0aHOLDER\
+S AND/OR OTHER P\
+ARTIES PROVIDE T\
+HE PROGRAM \x22AS I\
+S\x22 WITHOUT WARRA\
+NTY\x0aOF ANY KIND,\
+ EITHER EXPRESSE\
+D OR IMPLIED, IN\
+CLUDING, BUT NOT\
+ LIMITED TO,\x0aTHE\
+ IMPLIED WARRANT\
+IES OF MERCHANTA\
+BILITY AND FITNE\
+SS FOR A PARTICU\
+LAR\x0aPURPOSE.  TH\
+E ENTIRE RISK AS\
+ TO THE QUALITY \
+AND PERFORMANCE \
+OF THE PROGRAM\x0aI\
+S WITH YOU.  SHO\
+ULD THE PROGRAM \
+PROVE DEFECTIVE,\
+ YOU ASSUME THE \
+COST OF\x0aALL NECE\
+SSARY SERVICING,\
+ REPAIR OR CORRE\
+CTION.\x0a\x0a  16. Li\
+mitation of Liab\
+ility.\x0a\x0a  IN NO \
+EVENT UNLESS REQ\
+UIRED BY APPLICA\
+BLE LAW OR AGREE\
+D TO IN WRITING\x0a\
+WILL ANY COPYRIG\
+HT HOLDER, OR AN\
+Y OTHER PARTY WH\
+O MODIFIES AND/O\
+R CONVEYS\x0aTHE PR\
+OGRAM AS PERMITT\
+ED ABOVE, BE LIA\
+BLE TO YOU FOR D\
+AMAGES, INCLUDIN\
+G ANY\x0aGENERAL, S\
+PECIAL, INCIDENT\
+AL OR CONSEQUENT\
+IAL DAMAGES ARIS\
+ING OUT OF THE\x0aU\
+SE OR INABILITY \
+TO USE THE PROGR\
+AM (INCLUDING BU\
+T NOT LIMITED TO\
+ LOSS OF\x0aDATA OR\
+ DATA BEING REND\
+ERED INACCURATE \
+OR LOSSES SUSTAI\
+NED BY YOU OR TH\
+IRD\x0aPARTIES OR A\
+ FAILURE OF THE \
+PROGRAM TO OPERA\
+TE WITH ANY OTHE\
+R PROGRAMS),\x0aEVE\
+N IF SUCH HOLDER\
+ OR OTHER PARTY \
+HAS BEEN ADVISED\
+ OF THE POSSIBIL\
+ITY OF\x0aSUCH DAMA\
+GES.\x0a\x0a  17. Inte\
+rpretation of Se\
+ctions 15 and 16\
+.\x0a\x0a  If the disc\
+laimer of warran\
+ty and limitatio\
+n of liability p\
+rovided\x0aabove ca\
+nnot be given lo\
+cal legal effect\
+ according to th\
+eir terms,\x0arevie\
+wing courts shal\
+l apply local la\
+w that most clos\
+ely approximates\
+\x0aan absolute wai\
+ver of all civil\
+ liability in co\
+nnection with th\
+e\x0aProgram, unles\
+s a warranty or \
+assumption of li\
+ability accompan\
+ies a\x0acopy of th\
+e Program in ret\
+urn for a fee.\x0a\x0a\
+                \
+     END OF TERM\
+S AND CONDITIONS\
+\x0a\x0a            Ho\
+w to Apply These\
+ Terms to Your N\
+ew Programs\x0a\x0a  I\
+f you develop a \
+new program, and\
+ you want it to \
+be of the greate\
+st\x0apossible use \
+to the public, t\
+he best way to a\
+chieve this is t\
+o make it\x0afree s\
+oftware which ev\
+eryone can redis\
+tribute and chan\
+ge under these t\
+erms.\x0a\x0a  To do s\
+o, attach the fo\
+llowing notices \
+to the program. \
+ It is safest\x0ato\
+ attach them to \
+the start of eac\
+h source file to\
+ most effectivel\
+y\x0astate the excl\
+usion of warrant\
+y; and each file\
+ should have at \
+least\x0athe \x22copyr\
+ight\x22 line and a\
+ pointer to wher\
+e the full notic\
+e is found.\x0a\x0a   \
+ <one line to gi\
+ve the program's\
+ name and a brie\
+f idea of what i\
+t does.>\x0a    Cop\
+yright (C) <year\
+>  <name of auth\
+or>\x0a\x0a    This pr\
+ogram is free so\
+ftware: you can \
+redistribute it \
+and/or modify\x0a  \
+  it under the t\
+erms of the GNU \
+General Public L\
+icense as publis\
+hed by\x0a    the F\
+ree Software Fou\
+ndation, either \
+version 3 of the\
+ License, or\x0a   \
+ (at your option\
+) any later vers\
+ion.\x0a\x0a    This p\
+rogram is distri\
+buted in the hop\
+e that it will b\
+e useful,\x0a    bu\
+t WITHOUT ANY WA\
+RRANTY; without \
+even the implied\
+ warranty of\x0a   \
+ MERCHANTABILITY\
+ or FITNESS FOR \
+A PARTICULAR PUR\
+POSE.  See the\x0a \
+   GNU General P\
+ublic License fo\
+r more details.\x0a\
+\x0a    You should \
+have received a \
+copy of the GNU \
+General Public L\
+icense\x0a    along\
+ with this progr\
+am.  If not, see\
+ <https://www.gn\
+u.org/licenses/>\
+.\x0a\x0aAlso add info\
+rmation on how t\
+o contact you by\
+ electronic and \
+paper mail.\x0a\x0a  I\
+f the program do\
+es terminal inte\
+raction, make it\
+ output a short\x0a\
+notice like this\
+ when it starts \
+in an interactiv\
+e mode:\x0a\x0a    <pr\
+ogram>  Copyrigh\
+t (C) <year>  <n\
+ame of author>\x0a \
+   This program \
+comes with ABSOL\
+UTELY NO WARRANT\
+Y; for details t\
+ype `show w'.\x0a  \
+  This is free s\
+oftware, and you\
+ are welcome to \
+redistribute it\x0a\
+    under certai\
+n conditions; ty\
+pe `show c' for \
+details.\x0a\x0aThe hy\
+pothetical comma\
+nds `show w' and\
+ `show c' should\
+ show the approp\
+riate\x0aparts of t\
+he General Publi\
+c License.  Of c\
+ourse, your prog\
+ram's commands\x0am\
+ight be differen\
+t; for a GUI int\
+erface, you woul\
+d use an \x22about \
+box\x22.\x0a\x0a  You sho\
+uld also get you\
+r employer (if y\
+ou work as a pro\
+grammer) or scho\
+ol,\x0aif any, to s\
+ign a \x22copyright\
+ disclaimer\x22 for\
+ the program, if\
+ necessary.\x0aFor \
+more information\
+ on this, and ho\
+w to apply and f\
+ollow the GNU GP\
+L, see\x0a<https://\
+www.gnu.org/lice\
+nses/>.\x0a\x0a  The G\
+NU General Publi\
+c License does n\
+ot permit incorp\
+orating your pro\
+gram\x0ainto propri\
+etary programs. \
+ If your program\
+ is a subroutine\
+ library, you\x0ama\
+y consider it mo\
+re useful to per\
+mit linking prop\
+rietary applicat\
+ions with\x0athe li\
+brary.  If this \
+is what you want\
+ to do, use the \
+GNU Lesser Gener\
+al\x0aPublic Licens\
+e instead of thi\
+s License.  But \
+first, please re\
+ad\x0a<https://www.\
+gnu.org/licenses\
+/why-not-lgpl.ht\
+ml>.\x0a\x0a\
+\x00\x00\x02\xe0\
+F\
+TDI D2XX Driver \
+(ftd2xx.dll)\x0a===\
+================\
+==========\x0a\x0aThis\
+ application inc\
+ludes the FTDI D\
+2XX direct drive\
+r library (ftd2x\
+x.dll),\x0awhich is\
+ used to control\
+ the USB firmwar\
+e-update adapter\
+.\x0a\x0aftd2xx.dll is\
+ Copyright (C) F\
+uture Technology\
+ Devices Interna\
+tional Limited\x0a(\
+FTDI). It is NOT\
+ open source sof\
+tware. It is red\
+istributed under\
+ the FTDI\x0aDriver\
+ Licence Terms, \
+which permit its\
+ distribution an\
+d use only in\x0aco\
+njunction with F\
+TDI devices (pro\
+ducts incorporat\
+ing FTDI silicon\
+ or\x0aFTDI-license\
+d IP).\x0a\x0aThe FTDI\
+ Driver Licence \
+Terms are publis\
+hed by FTDI at:\x0a\
+  https://ftdich\
+ip.com/driver-li\
+cence-terms/\x0a\x0aFT\
+DI provides the \
+driver \x22as is\x22 w\
+ithout warranty \
+of any kind. Use\
+ of the\x0adriver w\
+ith non-FTDI dev\
+ices is not perm\
+itted by FTDI.\x0a\
+\x00\x00\x04-\
+M\
+IT License\x0a\x0aCopy\
+right (c) 2019 S\
+atya Mishra\x0a\x0aPer\
+mission is hereb\
+y granted, free \
+of charge, to an\
+y person obtaini\
+ng a copy\x0aof thi\
+s software and a\
+ssociated docume\
+ntation files (t\
+he \x22Software\x22), \
+to deal\x0ain the S\
+oftware without \
+restriction, inc\
+luding without l\
+imitation the ri\
+ghts\x0ato use, cop\
+y, modify, merge\
+, publish, distr\
+ibute, sublicens\
+e, and/or sell\x0ac\
+opies of the Sof\
+tware, and to pe\
+rmit persons to \
+whom the Softwar\
+e is\x0afurnished t\
+o do so, subject\
+ to the followin\
+g conditions:\x0a\x0aT\
+he above copyrig\
+ht notice and th\
+is permission no\
+tice shall be in\
+cluded in all\x0aco\
+pies or substant\
+ial portions of \
+the Software.\x0a\x0aT\
+HE SOFTWARE IS P\
+ROVIDED \x22AS IS\x22,\
+ WITHOUT WARRANT\
+Y OF ANY KIND, E\
+XPRESS OR\x0aIMPLIE\
+D, INCLUDING BUT\
+ NOT LIMITED TO \
+THE WARRANTIES O\
+F MERCHANTABILIT\
+Y,\x0aFITNESS FOR A\
+ PARTICULAR PURP\
+OSE AND NONINFRI\
+NGEMENT. IN NO E\
+VENT SHALL THE\x0aA\
+UTHORS OR COPYRI\
+GHT HOLDERS BE L\
+IABLE FOR ANY CL\
+AIM, DAMAGES OR \
+OTHER\x0aLIABILITY,\
+ WHETHER IN AN A\
+CTION OF CONTRAC\
+T, TORT OR OTHER\
+WISE, ARISING FR\
+OM,\x0aOUT OF OR IN\
+ CONNECTION WITH\
+ THE SOFTWARE OR\
+ THE USE OR OTHE\
+R DEALINGS IN TH\
+E\x0aSOFTWARE.\x0a\
+\x00\x00\x89M\
+ \
+                \
+   GNU GENERAL P\
+UBLIC LICENSE\x0a  \
+                \
+     Version 3, \
+29 June 2007\x0a\x0a C\
+opyright (C) 200\
+7 Free Software \
+Foundation, Inc.\
+ <https://fsf.or\
+g/>\x0a Everyone is\
+ permitted to co\
+py and distribut\
+e verbatim copie\
+s\x0a of this licen\
+se document, but\
+ changing it is \
+not allowed.\x0a\x0a  \
+                \
+          Preamb\
+le\x0a\x0a  The GNU Ge\
+neral Public Lic\
+ense is a free, \
+copyleft license\
+ for\x0asoftware an\
+d other kinds of\
+ works.\x0a\x0a  The l\
+icenses for most\
+ software and ot\
+her practical wo\
+rks are designed\
+\x0ato take away yo\
+ur freedom to sh\
+are and change t\
+he works.  By co\
+ntrast,\x0athe GNU \
+General Public L\
+icense is intend\
+ed to guarantee \
+your freedom to\x0a\
+share and change\
+ all versions of\
+ a program--to m\
+ake sure it rema\
+ins free\x0asoftwar\
+e for all its us\
+ers.  We, the Fr\
+ee Software Foun\
+dation, use the\x0a\
+GNU General Publ\
+ic License for m\
+ost of our softw\
+are; it applies \
+also to\x0aany othe\
+r work released \
+this way by its \
+authors.  You ca\
+n apply it to\x0ayo\
+ur programs, too\
+.\x0a\x0a  When we spe\
+ak of free softw\
+are, we are refe\
+rring to freedom\
+, not\x0aprice.  Ou\
+r General Public\
+ Licenses are de\
+signed to make s\
+ure that you\x0ahav\
+e the freedom to\
+ distribute copi\
+es of free softw\
+are (and charge \
+for\x0athem if you \
+wish), that you \
+receive source c\
+ode or can get i\
+t if you\x0awant it\
+, that you can c\
+hange the softwa\
+re or use pieces\
+ of it in new\x0afr\
+ee programs, and\
+ that you know y\
+ou can do these \
+things.\x0a\x0a  To pr\
+otect your right\
+s, we need to pr\
+event others fro\
+m denying you\x0ath\
+ese rights or as\
+king you to surr\
+ender the rights\
+.  Therefore, yo\
+u have\x0acertain r\
+esponsibilities \
+if you distribut\
+e copies of the \
+software, or if\x0a\
+you modify it: r\
+esponsibilities \
+to respect the f\
+reedom of others\
+.\x0a\x0a  For example\
+, if you distrib\
+ute copies of su\
+ch a program, wh\
+ether\x0agratis or \
+for a fee, you m\
+ust pass on to t\
+he recipients th\
+e same\x0afreedoms \
+that you receive\
+d.  You must mak\
+e sure that they\
+, too, receive\x0ao\
+r can get the so\
+urce code.  And \
+you must show th\
+em these terms s\
+o they\x0aknow thei\
+r rights.\x0a\x0a  Dev\
+elopers that use\
+ the GNU GPL pro\
+tect your rights\
+ with two steps:\
+\x0a(1) assert copy\
+right on the sof\
+tware, and (2) o\
+ffer you this Li\
+cense\x0agiving you\
+ legal permissio\
+n to copy, distr\
+ibute and/or mod\
+ify it.\x0a\x0a  For t\
+he developers' a\
+nd authors' prot\
+ection, the GPL \
+clearly explains\
+\x0athat there is n\
+o warranty for t\
+his free softwar\
+e.  For both use\
+rs' and\x0aauthors'\
+ sake, the GPL r\
+equires that mod\
+ified versions b\
+e marked as\x0achan\
+ged, so that the\
+ir problems will\
+ not be attribut\
+ed erroneously t\
+o\x0aauthors of pre\
+vious versions.\x0a\
+\x0a  Some devices \
+are designed to \
+deny users acces\
+s to install or \
+run\x0amodified ver\
+sions of the sof\
+tware inside the\
+m, although the \
+manufacturer\x0acan\
+ do so.  This is\
+ fundamentally i\
+ncompatible with\
+ the aim of\x0aprot\
+ecting users' fr\
+eedom to change \
+the software.  T\
+he systematic\x0apa\
+ttern of such ab\
+use occurs in th\
+e area of produc\
+ts for individua\
+ls to\x0ause, which\
+ is precisely wh\
+ere it is most u\
+nacceptable.  Th\
+erefore, we\x0ahave\
+ designed this v\
+ersion of the GP\
+L to prohibit th\
+e practice for t\
+hose\x0aproducts.  \
+If such problems\
+ arise substanti\
+ally in other do\
+mains, we\x0astand \
+ready to extend \
+this provision t\
+o those domains \
+in future versio\
+ns\x0aof the GPL, a\
+s needed to prot\
+ect the freedom \
+of users.\x0a\x0a  Fin\
+ally, every prog\
+ram is threatene\
+d constantly by \
+software patents\
+.\x0aStates should \
+not allow patent\
+s to restrict de\
+velopment and us\
+e of\x0asoftware on\
+ general-purpose\
+ computers, but \
+in those that do\
+, we wish to\x0aavo\
+id the special d\
+anger that paten\
+ts applied to a \
+free program cou\
+ld\x0amake it effec\
+tively proprieta\
+ry.  To prevent \
+this, the GPL as\
+sures that\x0apaten\
+ts cannot be use\
+d to render the \
+program non-free\
+.\x0a\x0a  The precise\
+ terms and condi\
+tions for copyin\
+g, distribution \
+and\x0amodification\
+ follow.\x0a\x0a      \
+                \
+ TERMS AND CONDI\
+TIONS\x0a\x0a  0. Defi\
+nitions.\x0a\x0a  \x22Thi\
+s License\x22 refer\
+s to version 3 o\
+f the GNU Genera\
+l Public License\
+.\x0a\x0a  \x22Copyright\x22\
+ also means copy\
+right-like laws \
+that apply to ot\
+her kinds of\x0awor\
+ks, such as semi\
+conductor masks.\
+\x0a\x0a  \x22The Program\
+\x22 refers to any \
+copyrightable wo\
+rk licensed unde\
+r this\x0aLicense. \
+ Each licensee i\
+s addressed as \x22\
+you\x22.  \x22Licensee\
+s\x22 and\x0a\x22recipien\
+ts\x22 may be indiv\
+iduals or organi\
+zations.\x0a\x0a  To \x22\
+modify\x22 a work m\
+eans to copy fro\
+m or adapt all o\
+r part of the wo\
+rk\x0ain a fashion \
+requiring copyri\
+ght permission, \
+other than the m\
+aking of an\x0aexac\
+t copy.  The res\
+ulting work is c\
+alled a \x22modifie\
+d version\x22 of th\
+e\x0aearlier work o\
+r a work \x22based \
+on\x22 the earlier \
+work.\x0a\x0a  A \x22cove\
+red work\x22 means \
+either the unmod\
+ified Program or\
+ a work based\x0aon\
+ the Program.\x0a\x0a \
+ To \x22propagate\x22 \
+a work means to \
+do anything with\
+ it that, withou\
+t\x0apermission, wo\
+uld make you dir\
+ectly or seconda\
+rily liable for\x0a\
+infringement und\
+er applicable co\
+pyright law, exc\
+ept executing it\
+ on a\x0acomputer o\
+r modifying a pr\
+ivate copy.  Pro\
+pagation include\
+s copying,\x0adistr\
+ibution (with or\
+ without modific\
+ation), making a\
+vailable to the\x0a\
+public, and in s\
+ome countries ot\
+her activities a\
+s well.\x0a\x0a  To \x22c\
+onvey\x22 a work me\
+ans any kind of \
+propagation that\
+ enables other\x0ap\
+arties to make o\
+r receive copies\
+.  Mere interact\
+ion with a user \
+through\x0aa comput\
+er network, with\
+ no transfer of \
+a copy, is not c\
+onveying.\x0a\x0a  An \
+interactive user\
+ interface displ\
+ays \x22Appropriate\
+ Legal Notices\x22\x0a\
+to the extent th\
+at it includes a\
+ convenient and \
+prominently visi\
+ble\x0afeature that\
+ (1) displays an\
+ appropriate cop\
+yright notice, a\
+nd (2)\x0atells the\
+ user that there\
+ is no warranty \
+for the work (ex\
+cept to the\x0aexte\
+nt that warranti\
+es are provided)\
+, that licensees\
+ may convey the\x0a\
+work under this \
+License, and how\
+ to view a copy \
+of this License.\
+  If\x0athe interfa\
+ce presents a li\
+st of user comma\
+nds or options, \
+such as a\x0amenu, \
+a prominent item\
+ in the list mee\
+ts this criterio\
+n.\x0a\x0a  1. Source \
+Code.\x0a\x0a  The \x22so\
+urce code\x22 for a\
+ work means the \
+preferred form o\
+f the work\x0afor m\
+aking modificati\
+ons to it.  \x22Obj\
+ect code\x22 means \
+any non-source\x0af\
+orm of a work.\x0a\x0a\
+  A \x22Standard In\
+terface\x22 means a\
+n interface that\
+ either is an of\
+ficial\x0astandard \
+defined by a rec\
+ognized standard\
+s body, or, in t\
+he case of\x0ainter\
+faces specified \
+for a particular\
+ programming lan\
+guage, one that\x0a\
+is widely used a\
+mong developers \
+working in that \
+language.\x0a\x0a  The\
+ \x22System Librari\
+es\x22 of an execut\
+able work includ\
+e anything, othe\
+r\x0athan the work \
+as a whole, that\
+ (a) is included\
+ in the normal f\
+orm of\x0apackaging\
+ a Major Compone\
+nt, but which is\
+ not part of tha\
+t Major\x0aComponen\
+t, and (b) serve\
+s only to enable\
+ use of the work\
+ with that\x0aMajor\
+ Component, or t\
+o implement a St\
+andard Interface\
+ for which an\x0aim\
+plementation is \
+available to the\
+ public in sourc\
+e code form.  A\x0a\
+\x22Major Component\
+\x22, in this conte\
+xt, means a majo\
+r essential comp\
+onent\x0a(kernel, w\
+indow system, an\
+d so on) of the \
+specific operati\
+ng system\x0a(if an\
+y) on which the \
+executable work \
+runs, or a compi\
+ler used to\x0aprod\
+uce the work, or\
+ an object code \
+interpreter used\
+ to run it.\x0a\x0a  T\
+he \x22Correspondin\
+g Source\x22 for a \
+work in object c\
+ode form means a\
+ll\x0athe source co\
+de needed to gen\
+erate, install, \
+and (for an exec\
+utable\x0awork) run\
+ the object code\
+ and to modify t\
+he work, includi\
+ng scripts to\x0aco\
+ntrol those acti\
+vities.  However\
+, it does not in\
+clude the work's\
+\x0aSystem Librarie\
+s, or general-pu\
+rpose tools or g\
+enerally availab\
+le free\x0aprograms\
+ which are used \
+unmodified in pe\
+rforming those a\
+ctivities but\x0awh\
+ich are not part\
+ of the work.  F\
+or example, Corr\
+esponding Source\
+\x0aincludes interf\
+ace definition f\
+iles associated \
+with source file\
+s for\x0athe work, \
+and the source c\
+ode for shared l\
+ibraries and dyn\
+amically\x0alinked \
+subprograms that\
+ the work is spe\
+cifically design\
+ed to require,\x0as\
+uch as by intima\
+te data communic\
+ation or control\
+ flow between th\
+ose\x0asubprograms \
+and other parts \
+of the work.\x0a\x0a  \
+The Correspondin\
+g Source need no\
+t include anythi\
+ng that users\x0aca\
+n regenerate aut\
+omatically from \
+other parts of t\
+he Corresponding\
+\x0aSource.\x0a\x0a  The \
+Corresponding So\
+urce for a work \
+in source code f\
+orm is that\x0asame\
+ work.\x0a\x0a  2. Bas\
+ic Permissions.\x0a\
+\x0a  All rights gr\
+anted under this\
+ License are gra\
+nted for the ter\
+m of\x0acopyright o\
+n the Program, a\
+nd are irrevocab\
+le provided the \
+stated\x0acondition\
+s are met.  This\
+ License explici\
+tly affirms your\
+ unlimited\x0apermi\
+ssion to run the\
+ unmodified Prog\
+ram.  The output\
+ from running a\x0a\
+covered work is \
+covered by this \
+License only if \
+the output, give\
+n its\x0acontent, c\
+onstitutes a cov\
+ered work.  This\
+ License acknowl\
+edges your\x0aright\
+s of fair use or\
+ other equivalen\
+t, as provided b\
+y copyright law.\
+\x0a\x0a  You may make\
+, run and propag\
+ate covered work\
+s that you do no\
+t\x0aconvey, withou\
+t conditions so \
+long as your lic\
+ense otherwise r\
+emains\x0ain force.\
+  You may convey\
+ covered works t\
+o others for the\
+ sole purpose\x0aof\
+ having them mak\
+e modifications \
+exclusively for \
+you, or provide \
+you\x0awith facilit\
+ies for running \
+those works, pro\
+vided that you c\
+omply with\x0athe t\
+erms of this Lic\
+ense in conveyin\
+g all material f\
+or which you do\x0a\
+not control copy\
+right.  Those th\
+us making or run\
+ning the covered\
+ works\x0afor you m\
+ust do so exclus\
+ively on your be\
+half, under your\
+ direction\x0aand c\
+ontrol, on terms\
+ that prohibit t\
+hem from making \
+any copies of\x0ayo\
+ur copyrighted m\
+aterial outside \
+their relationsh\
+ip with you.\x0a\x0a  \
+Conveying under \
+any other circum\
+stances is permi\
+tted solely unde\
+r\x0athe conditions\
+ stated below.  \
+Sublicensing is \
+not allowed; sec\
+tion 10\x0amakes it\
+ unnecessary.\x0a\x0a \
+ 3. Protecting U\
+sers' Legal Righ\
+ts From Anti-Cir\
+cumvention Law.\x0a\
+\x0a  No covered wo\
+rk shall be deem\
+ed part of an ef\
+fective technolo\
+gical\x0ameasure un\
+der any applicab\
+le law fulfillin\
+g obligations un\
+der article\x0a11 o\
+f the WIPO copyr\
+ight treaty adop\
+ted on 20 Decemb\
+er 1996, or\x0asimi\
+lar laws prohibi\
+ting or restrict\
+ing circumventio\
+n of such\x0ameasur\
+es.\x0a\x0a  When you \
+convey a covered\
+ work, you waive\
+ any legal power\
+ to forbid\x0acircu\
+mvention of tech\
+nological measur\
+es to the extent\
+ such circumvent\
+ion\x0ais effected \
+by exercising ri\
+ghts under this \
+License with res\
+pect to\x0athe cove\
+red work, and yo\
+u disclaim any i\
+ntention to limi\
+t operation or\x0am\
+odification of t\
+he work as a mea\
+ns of enforcing,\
+ against the wor\
+k's\x0ausers, your \
+or third parties\
+' legal rights t\
+o forbid circumv\
+ention of\x0atechno\
+logical measures\
+.\x0a\x0a  4. Conveyin\
+g Verbatim Copie\
+s.\x0a\x0a  You may co\
+nvey verbatim co\
+pies of the Prog\
+ram's source cod\
+e as you\x0areceive\
+ it, in any medi\
+um, provided tha\
+t you conspicuou\
+sly and\x0aappropri\
+ately publish on\
+ each copy an ap\
+propriate copyri\
+ght notice;\x0akeep\
+ intact all noti\
+ces stating that\
+ this License an\
+d any\x0anon-permis\
+sive terms added\
+ in accord with \
+section 7 apply \
+to the code;\x0akee\
+p intact all not\
+ices of the abse\
+nce of any warra\
+nty; and give al\
+l\x0arecipients a c\
+opy of this Lice\
+nse along with t\
+he Program.\x0a\x0a  Y\
+ou may charge an\
+y price or no pr\
+ice for each cop\
+y that you conve\
+y,\x0aand you may o\
+ffer support or \
+warranty protect\
+ion for a fee.\x0a\x0a\
+  5. Conveying M\
+odified Source V\
+ersions.\x0a\x0a  You \
+may convey a wor\
+k based on the P\
+rogram, or the m\
+odifications to\x0a\
+produce it from \
+the Program, in \
+the form of sour\
+ce code under th\
+e\x0aterms of secti\
+on 4, provided t\
+hat you also mee\
+t all of these c\
+onditions:\x0a\x0a    \
+a) The work must\
+ carry prominent\
+ notices stating\
+ that you modifi\
+ed\x0a    it, and g\
+iving a relevant\
+ date.\x0a\x0a    b) T\
+he work must car\
+ry prominent not\
+ices stating tha\
+t it is\x0a    rele\
+ased under this \
+License and any \
+conditions added\
+ under section\x0a \
+   7.  This requ\
+irement modifies\
+ the requirement\
+ in section 4 to\
+\x0a    \x22keep intac\
+t all notices\x22.\x0a\
+\x0a    c) You must\
+ license the ent\
+ire work, as a w\
+hole, under this\
+\x0a    License to \
+anyone who comes\
+ into possession\
+ of a copy.  Thi\
+s\x0a    License wi\
+ll therefore app\
+ly, along with a\
+ny applicable se\
+ction 7\x0a    addi\
+tional terms, to\
+ the whole of th\
+e work, and all \
+its parts,\x0a    r\
+egardless of how\
+ they are packag\
+ed.  This Licens\
+e gives no\x0a    p\
+ermission to lic\
+ense the work in\
+ any other way, \
+but it does not\x0a\
+    invalidate s\
+uch permission i\
+f you have separ\
+ately received i\
+t.\x0a\x0a    d) If th\
+e work has inter\
+active user inte\
+rfaces, each mus\
+t display\x0a    Ap\
+propriate Legal \
+Notices; however\
+, if the Program\
+ has interactive\
+\x0a    interfaces \
+that do not disp\
+lay Appropriate \
+Legal Notices, y\
+our\x0a    work nee\
+d not make them \
+do so.\x0a\x0a  A comp\
+ilation of a cov\
+ered work with o\
+ther separate an\
+d independent\x0awo\
+rks, which are n\
+ot by their natu\
+re extensions of\
+ the covered wor\
+k,\x0aand which are\
+ not combined wi\
+th it such as to\
+ form a larger p\
+rogram,\x0ain or on\
+ a volume of a s\
+torage or distri\
+bution medium, i\
+s called an\x0a\x22agg\
+regate\x22 if the c\
+ompilation and i\
+ts resulting cop\
+yright are not\x0au\
+sed to limit the\
+ access or legal\
+ rights of the c\
+ompilation's use\
+rs\x0abeyond what t\
+he individual wo\
+rks permit.  Inc\
+lusion of a cove\
+red work\x0ain an a\
+ggregate does no\
+t cause this Lic\
+ense to apply to\
+ the other\x0aparts\
+ of the aggregat\
+e.\x0a\x0a  6. Conveyi\
+ng Non-Source Fo\
+rms.\x0a\x0a  You may \
+convey a covered\
+ work in object \
+code form under \
+the terms\x0aof sec\
+tions 4 and 5, p\
+rovided that you\
+ also convey the\
+\x0amachine-readabl\
+e Corresponding \
+Source under the\
+ terms of this L\
+icense,\x0ain one o\
+f these ways:\x0a\x0a \
+   a) Convey the\
+ object code in,\
+ or embodied in,\
+ a physical prod\
+uct\x0a    (includi\
+ng a physical di\
+stribution mediu\
+m), accompanied \
+by the\x0a    Corre\
+sponding Source \
+fixed on a durab\
+le physical medi\
+um\x0a    customari\
+ly used for soft\
+ware interchange\
+.\x0a\x0a    b) Convey\
+ the object code\
+ in, or embodied\
+ in, a physical \
+product\x0a    (inc\
+luding a physica\
+l distribution m\
+edium), accompan\
+ied by a\x0a    wri\
+tten offer, vali\
+d for at least t\
+hree years and v\
+alid for as\x0a    \
+long as you offe\
+r spare parts or\
+ customer suppor\
+t for that produ\
+ct\x0a    model, to\
+ give anyone who\
+ possesses the o\
+bject code eithe\
+r (1) a\x0a    copy\
+ of the Correspo\
+nding Source for\
+ all the softwar\
+e in the\x0a    pro\
+duct that is cov\
+ered by this Lic\
+ense, on a durab\
+le physical\x0a    \
+medium customari\
+ly used for soft\
+ware interchange\
+, for a price no\
+\x0a    more than y\
+our reasonable c\
+ost of physicall\
+y performing thi\
+s\x0a    conveying \
+of source, or (2\
+) access to copy\
+ the\x0a    Corresp\
+onding Source fr\
+om a network ser\
+ver at no charge\
+.\x0a\x0a    c) Convey\
+ individual copi\
+es of the object\
+ code with a cop\
+y of the\x0a    wri\
+tten offer to pr\
+ovide the Corres\
+ponding Source. \
+ This\x0a    altern\
+ative is allowed\
+ only occasional\
+ly and noncommer\
+cially, and\x0a    \
+only if you rece\
+ived the object \
+code with such a\
+n offer, in acco\
+rd\x0a    with subs\
+ection 6b.\x0a\x0a    \
+d) Convey the ob\
+ject code by off\
+ering access fro\
+m a designated\x0a \
+   place (gratis\
+ or for a charge\
+), and offer equ\
+ivalent access t\
+o the\x0a    Corres\
+ponding Source i\
+n the same way t\
+hrough the same \
+place at no\x0a    \
+further charge. \
+ You need not re\
+quire recipients\
+ to copy the\x0a   \
+ Corresponding S\
+ource along with\
+ the object code\
+.  If the place \
+to\x0a    copy the \
+object code is a\
+ network server,\
+ the Correspondi\
+ng Source\x0a    ma\
+y be on a differ\
+ent server (oper\
+ated by you or a\
+ third party)\x0a  \
+  that supports \
+equivalent copyi\
+ng facilities, p\
+rovided you main\
+tain\x0a    clear d\
+irections next t\
+o the object cod\
+e saying where t\
+o find the\x0a    C\
+orresponding Sou\
+rce.  Regardless\
+ of what server \
+hosts the\x0a    Co\
+rresponding Sour\
+ce, you remain o\
+bligated to ensu\
+re that it is\x0a  \
+  available for \
+as long as neede\
+d to satisfy the\
+se requirements.\
+\x0a\x0a    e) Convey \
+the object code \
+using peer-to-pe\
+er transmission,\
+ provided\x0a    yo\
+u inform other p\
+eers where the o\
+bject code and C\
+orresponding\x0a   \
+ Source of the w\
+ork are being of\
+fered to the gen\
+eral public at n\
+o\x0a    charge und\
+er subsection 6d\
+.\x0a\x0a  A separable\
+ portion of the \
+object code, who\
+se source code i\
+s excluded\x0afrom \
+the Correspondin\
+g Source as a Sy\
+stem Library, ne\
+ed not be\x0ainclud\
+ed in conveying \
+the object code \
+work.\x0a\x0a  A \x22User\
+ Product\x22 is eit\
+her (1) a \x22consu\
+mer product\x22, wh\
+ich means any\x0ata\
+ngible personal \
+property which i\
+s normally used \
+for personal, fa\
+mily,\x0aor househo\
+ld purposes, or \
+(2) anything des\
+igned or sold fo\
+r incorporation\x0a\
+into a dwelling.\
+  In determining\
+ whether a produ\
+ct is a consumer\
+ product,\x0adoubtf\
+ul cases shall b\
+e resolved in fa\
+vor of coverage.\
+  For a particul\
+ar\x0aproduct recei\
+ved by a particu\
+lar user, \x22norma\
+lly used\x22 refers\
+ to a\x0atypical or\
+ common use of t\
+hat class of pro\
+duct, regardless\
+ of the status\x0ao\
+f the particular\
+ user or of the \
+way in which the\
+ particular user\
+\x0aactually uses, \
+or expects or is\
+ expected to use\
+, the product.  \
+A product\x0ais a c\
+onsumer product \
+regardless of wh\
+ether the produc\
+t has substantia\
+l\x0acommercial, in\
+dustrial or non-\
+consumer uses, u\
+nless such uses \
+represent\x0athe on\
+ly significant m\
+ode of use of th\
+e product.\x0a\x0a  \x22I\
+nstallation Info\
+rmation\x22 for a U\
+ser Product mean\
+s any methods,\x0ap\
+rocedures, autho\
+rization keys, o\
+r other informat\
+ion required to \
+install\x0aand exec\
+ute modified ver\
+sions of a cover\
+ed work in that \
+User Product fro\
+m\x0aa modified ver\
+sion of its Corr\
+esponding Source\
+.  The informati\
+on must\x0asuffice \
+to ensure that t\
+he continued fun\
+ctioning of the \
+modified object\x0a\
+code is in no ca\
+se prevented or \
+interfered with \
+solely because\x0am\
+odification has \
+been made.\x0a\x0a  If\
+ you convey an o\
+bject code work \
+under this secti\
+on in, or with, \
+or\x0aspecifically \
+for use in, a Us\
+er Product, and \
+the conveying oc\
+curs as\x0apart of \
+a transaction in\
+ which the right\
+ of possession a\
+nd use of the\x0aUs\
+er Product is tr\
+ansferred to the\
+ recipient in pe\
+rpetuity or for \
+a\x0afixed term (re\
+gardless of how \
+the transaction \
+is characterized\
+), the\x0aCorrespon\
+ding Source conv\
+eyed under this \
+section must be \
+accompanied\x0aby t\
+he Installation \
+Information.  Bu\
+t this requireme\
+nt does not appl\
+y\x0aif neither you\
+ nor any third p\
+arty retains the\
+ ability to inst\
+all\x0amodified obj\
+ect code on the \
+User Product (fo\
+r example, the w\
+ork has\x0abeen ins\
+talled in ROM).\x0a\
+\x0a  The requireme\
+nt to provide In\
+stallation Infor\
+mation does not \
+include a\x0arequir\
+ement to continu\
+e to provide sup\
+port service, wa\
+rranty, or updat\
+es\x0afor a work th\
+at has been modi\
+fied or installe\
+d by the recipie\
+nt, or for\x0athe U\
+ser Product in w\
+hich it has been\
+ modified or ins\
+talled.  Access \
+to a\x0anetwork may\
+ be denied when \
+the modification\
+ itself material\
+ly and\x0aadversely\
+ affects the ope\
+ration of the ne\
+twork or violate\
+s the rules and\x0a\
+protocols for co\
+mmunication acro\
+ss the network.\x0a\
+\x0a  Corresponding\
+ Source conveyed\
+, and Installati\
+on Information p\
+rovided,\x0ain acco\
+rd with this sec\
+tion must be in \
+a format that is\
+ publicly\x0adocume\
+nted (and with a\
+n implementation\
+ available to th\
+e public in\x0asour\
+ce code form), a\
+nd must require \
+no special passw\
+ord or key for\x0au\
+npacking, readin\
+g or copying.\x0a\x0a \
+ 7. Additional T\
+erms.\x0a\x0a  \x22Additi\
+onal permissions\
+\x22 are terms that\
+ supplement the \
+terms of this\x0aLi\
+cense by making \
+exceptions from \
+one or more of i\
+ts conditions.\x0aA\
+dditional permis\
+sions that are a\
+pplicable to the\
+ entire Program \
+shall\x0abe treated\
+ as though they \
+were included in\
+ this License, t\
+o the extent\x0atha\
+t they are valid\
+ under applicabl\
+e law.  If addit\
+ional permission\
+s\x0aapply only to \
+part of the Prog\
+ram, that part m\
+ay be used separ\
+ately\x0aunder thos\
+e permissions, b\
+ut the entire Pr\
+ogram remains go\
+verned by\x0athis L\
+icense without r\
+egard to the add\
+itional permissi\
+ons.\x0a\x0a  When you\
+ convey a copy o\
+f a covered work\
+, you may at you\
+r option\x0aremove \
+any additional p\
+ermissions from \
+that copy, or fr\
+om any part of\x0ai\
+t.  (Additional \
+permissions may \
+be written to re\
+quire their own\x0a\
+removal in certa\
+in cases when yo\
+u modify the wor\
+k.)  You may pla\
+ce\x0aadditional pe\
+rmissions on mat\
+erial, added by \
+you to a covered\
+ work,\x0afor which\
+ you have or can\
+ give appropriat\
+e copyright perm\
+ission.\x0a\x0a  Notwi\
+thstanding any o\
+ther provision o\
+f this License, \
+for material you\
+\x0aadd to a covere\
+d work, you may \
+(if authorized b\
+y the copyright \
+holders of\x0athat \
+material) supple\
+ment the terms o\
+f this License w\
+ith terms:\x0a\x0a    \
+a) Disclaiming w\
+arranty or limit\
+ing liability di\
+fferently from t\
+he\x0a    terms of \
+sections 15 and \
+16 of this Licen\
+se; or\x0a\x0a    b) R\
+equiring preserv\
+ation of specifi\
+ed reasonable le\
+gal notices or\x0a \
+   author attrib\
+utions in that m\
+aterial or in th\
+e Appropriate Le\
+gal\x0a    Notices \
+displayed by wor\
+ks containing it\
+; or\x0a\x0a    c) Pro\
+hibiting misrepr\
+esentation of th\
+e origin of that\
+ material, or\x0a  \
+  requiring that\
+ modified versio\
+ns of such mater\
+ial be marked in\
+\x0a    reasonable \
+ways as differen\
+t from the origi\
+nal version; or\x0a\
+\x0a    d) Limiting\
+ the use for pub\
+licity purposes \
+of names of lice\
+nsors or\x0a    aut\
+hors of the mate\
+rial; or\x0a\x0a    e)\
+ Declining to gr\
+ant rights under\
+ trademark law f\
+or use of some\x0a \
+   trade names, \
+trademarks, or s\
+ervice marks; or\
+\x0a\x0a    f) Requiri\
+ng indemnificati\
+on of licensors \
+and authors of t\
+hat\x0a    material\
+ by anyone who c\
+onveys the mater\
+ial (or modified\
+ versions of\x0a   \
+ it) with contra\
+ctual assumption\
+s of liability t\
+o the recipient,\
+ for\x0a    any lia\
+bility that thes\
+e contractual as\
+sumptions direct\
+ly impose on\x0a   \
+ those licensors\
+ and authors.\x0a\x0a \
+ All other non-p\
+ermissive additi\
+onal terms are c\
+onsidered \x22furth\
+er\x0arestrictions\x22\
+ within the mean\
+ing of section 1\
+0.  If the Progr\
+am as you\x0areceiv\
+ed it, or any pa\
+rt of it, contai\
+ns a notice stat\
+ing that it is\x0ag\
+overned by this \
+License along wi\
+th a term that i\
+s a further\x0arest\
+riction, you may\
+ remove that ter\
+m.  If a license\
+ document contai\
+ns\x0aa further res\
+triction but per\
+mits relicensing\
+ or conveying un\
+der this\x0aLicense\
+, you may add to\
+ a covered work \
+material governe\
+d by the terms\x0ao\
+f that license d\
+ocument, provide\
+d that the furth\
+er restriction d\
+oes\x0anot survive \
+such relicensing\
+ or conveying.\x0a\x0a\
+  If you add ter\
+ms to a covered \
+work in accord w\
+ith this section\
+, you\x0amust place\
+, in the relevan\
+t source files, \
+a statement of t\
+he\x0aadditional te\
+rms that apply t\
+o those files, o\
+r a notice indic\
+ating\x0awhere to f\
+ind the applicab\
+le terms.\x0a\x0a  Add\
+itional terms, p\
+ermissive or non\
+-permissive, may\
+ be stated in th\
+e\x0aform of a sepa\
+rately written l\
+icense, or state\
+d as exceptions;\
+\x0athe above requi\
+rements apply ei\
+ther way.\x0a\x0a  8. \
+Termination.\x0a\x0a  \
+You may not prop\
+agate or modify \
+a covered work e\
+xcept as express\
+ly\x0aprovided unde\
+r this License. \
+ Any attempt oth\
+erwise to propag\
+ate or\x0amodify it\
+ is void, and wi\
+ll automatically\
+ terminate your \
+rights under\x0athi\
+s License (inclu\
+ding any patent \
+licenses granted\
+ under the third\
+\x0aparagraph of se\
+ction 11).\x0a\x0a  Ho\
+wever, if you ce\
+ase all violatio\
+n of this Licens\
+e, then your\x0alic\
+ense from a part\
+icular copyright\
+ holder is reins\
+tated (a)\x0aprovis\
+ionally, unless \
+and until the co\
+pyright holder e\
+xplicitly and\x0afi\
+nally terminates\
+ your license, a\
+nd (b) permanent\
+ly, if the copyr\
+ight\x0aholder fail\
+s to notify you \
+of the violation\
+ by some reasona\
+ble means\x0aprior \
+to 60 days after\
+ the cessation.\x0a\
+\x0a  Moreover, you\
+r license from a\
+ particular copy\
+right holder is\x0a\
+reinstated perma\
+nently if the co\
+pyright holder n\
+otifies you of t\
+he\x0aviolation by \
+some reasonable \
+means, this is t\
+he first time yo\
+u have\x0areceived \
+notice of violat\
+ion of this Lice\
+nse (for any wor\
+k) from that\x0acop\
+yright holder, a\
+nd you cure the \
+violation prior \
+to 30 days after\
+\x0ayour receipt of\
+ the notice.\x0a\x0a  \
+Termination of y\
+our rights under\
+ this section do\
+es not terminate\
+ the\x0alicenses of\
+ parties who hav\
+e received copie\
+s or rights from\
+ you under\x0athis \
+License.  If you\
+r rights have be\
+en terminated an\
+d not permanentl\
+y\x0areinstated, yo\
+u do not qualify\
+ to receive new \
+licenses for the\
+ same\x0amaterial u\
+nder section 10.\
+\x0a\x0a  9. Acceptanc\
+e Not Required f\
+or Having Copies\
+.\x0a\x0a  You are not\
+ required to acc\
+ept this License\
+ in order to rec\
+eive or\x0arun a co\
+py of the Progra\
+m.  Ancillary pr\
+opagation of a c\
+overed work\x0aoccu\
+rring solely as \
+a consequence of\
+ using peer-to-p\
+eer transmission\
+\x0ato receive a co\
+py likewise does\
+ not require acc\
+eptance.  Howeve\
+r,\x0anothing other\
+ than this Licen\
+se grants you pe\
+rmission to prop\
+agate or\x0amodify \
+any covered work\
+.  These actions\
+ infringe copyri\
+ght if you do\x0ano\
+t accept this Li\
+cense.  Therefor\
+e, by modifying \
+or propagating a\
+\x0acovered work, y\
+ou indicate your\
+ acceptance of t\
+his License to d\
+o so.\x0a\x0a  10. Aut\
+omatic Licensing\
+ of Downstream R\
+ecipients.\x0a\x0a  Ea\
+ch time you conv\
+ey a covered wor\
+k, the recipient\
+ automatically\x0ar\
+eceives a licens\
+e from the origi\
+nal licensors, t\
+o run, modify an\
+d\x0apropagate that\
+ work, subject t\
+o this License. \
+ You are not res\
+ponsible\x0afor enf\
+orcing complianc\
+e by third parti\
+es with this Lic\
+ense.\x0a\x0a  An \x22ent\
+ity transaction\x22\
+ is a transactio\
+n transferring c\
+ontrol of an\x0aorg\
+anization, or su\
+bstantially all \
+assets of one, o\
+r subdividing an\
+\x0aorganization, o\
+r merging organi\
+zations.  If pro\
+pagation of a co\
+vered\x0awork resul\
+ts from an entit\
+y transaction, e\
+ach party to tha\
+t\x0atransaction wh\
+o receives a cop\
+y of the work al\
+so receives what\
+ever\x0alicenses to\
+ the work the pa\
+rty's predecesso\
+r in interest ha\
+d or could\x0agive \
+under the previo\
+us paragraph, pl\
+us a right to po\
+ssession of the\x0a\
+Corresponding So\
+urce of the work\
+ from the predec\
+essor in interes\
+t, if\x0athe predec\
+essor has it or \
+can get it with \
+reasonable effor\
+ts.\x0a\x0a  You may n\
+ot impose any fu\
+rther restrictio\
+ns on the exerci\
+se of the\x0arights\
+ granted or affi\
+rmed under this \
+License.  For ex\
+ample, you may\x0an\
+ot impose a lice\
+nse fee, royalty\
+, or other charg\
+e for exercise o\
+f\x0arights granted\
+ under this Lice\
+nse, and you may\
+ not initiate li\
+tigation\x0a(includ\
+ing a cross-clai\
+m or counterclai\
+m in a lawsuit) \
+alleging that\x0aan\
+y patent claim i\
+s infringed by m\
+aking, using, se\
+lling, offering \
+for\x0asale, or imp\
+orting the Progr\
+am or any portio\
+n of it.\x0a\x0a  11. \
+Patents.\x0a\x0a  A \x22c\
+ontributor\x22 is a\
+ copyright holde\
+r who authorizes\
+ use under this\x0a\
+License of the P\
+rogram or a work\
+ on which the Pr\
+ogram is based. \
+ The\x0awork thus l\
+icensed is calle\
+d the contributo\
+r's \x22contributor\
+ version\x22.\x0a\x0a  A \
+contributor's \x22e\
+ssential patent \
+claims\x22 are all \
+patent claims\x0aow\
+ned or controlle\
+d by the contrib\
+utor, whether al\
+ready acquired o\
+r\x0ahereafter acqu\
+ired, that would\
+ be infringed by\
+ some manner, pe\
+rmitted\x0aby this \
+License, of maki\
+ng, using, or se\
+lling its contri\
+butor version,\x0ab\
+ut do not includ\
+e claims that wo\
+uld be infringed\
+ only as a\x0aconse\
+quence of furthe\
+r modification o\
+f the contributo\
+r version.  For\x0a\
+purposes of this\
+ definition, \x22co\
+ntrol\x22 includes \
+the right to gra\
+nt\x0apatent sublic\
+enses in a manne\
+r consistent wit\
+h the requiremen\
+ts of\x0athis Licen\
+se.\x0a\x0a  Each cont\
+ributor grants y\
+ou a non-exclusi\
+ve, worldwide, r\
+oyalty-free\x0apate\
+nt license under\
+ the contributor\
+'s essential pat\
+ent claims, to\x0am\
+ake, use, sell, \
+offer for sale, \
+import and other\
+wise run, modify\
+ and\x0apropagate t\
+he contents of i\
+ts contributor v\
+ersion.\x0a\x0a  In th\
+e following thre\
+e paragraphs, a \
+\x22patent license\x22\
+ is any express\x0a\
+agreement or com\
+mitment, however\
+ denominated, no\
+t to enforce a p\
+atent\x0a(such as a\
+n express permis\
+sion to practice\
+ a patent or cov\
+enant not to\x0asue\
+ for patent infr\
+ingement).  To \x22\
+grant\x22 such a pa\
+tent license to \
+a\x0aparty means to\
+ make such an ag\
+reement or commi\
+tment not to enf\
+orce a\x0apatent ag\
+ainst the party.\
+\x0a\x0a  If you conve\
+y a covered work\
+, knowingly rely\
+ing on a patent \
+license,\x0aand the\
+ Corresponding S\
+ource of the wor\
+k is not availab\
+le for anyone\x0ato\
+ copy, free of c\
+harge and under \
+the terms of thi\
+s License, throu\
+gh a\x0apublicly av\
+ailable network \
+server or other \
+readily accessib\
+le means,\x0athen y\
+ou must either (\
+1) cause the Cor\
+responding Sourc\
+e to be so\x0aavail\
+able, or (2) arr\
+ange to deprive \
+yourself of the \
+benefit of the\x0ap\
+atent license fo\
+r this particula\
+r work, or (3) a\
+rrange, in a man\
+ner\x0aconsistent w\
+ith the requirem\
+ents of this Lic\
+ense, to extend \
+the patent\x0alicen\
+se to downstream\
+ recipients.  \x22K\
+nowingly relying\
+\x22 means you have\
+\x0aactual knowledg\
+e that, but for \
+the patent licen\
+se, your conveyi\
+ng the\x0acovered w\
+ork in a country\
+, or your recipi\
+ent's use of the\
+ covered work\x0ain\
+ a country, woul\
+d infringe one o\
+r more identifia\
+ble patents in t\
+hat\x0acountry that\
+ you have reason\
+ to believe are \
+valid.\x0a\x0a  If, pu\
+rsuant to or in \
+connection with \
+a single transac\
+tion or\x0aarrangem\
+ent, you convey,\
+ or propagate by\
+ procuring conve\
+yance of, a\x0acove\
+red work, and gr\
+ant a patent lic\
+ense to some of \
+the parties\x0arece\
+iving the covere\
+d work authorizi\
+ng them to use, \
+propagate, modif\
+y\x0aor convey a sp\
+ecific copy of t\
+he covered work,\
+ then the patent\
+ license\x0ayou gra\
+nt is automatica\
+lly extended to \
+all recipients o\
+f the covered\x0awo\
+rk and works bas\
+ed on it.\x0a\x0a  A p\
+atent license is\
+ \x22discriminatory\
+\x22 if it does not\
+ include within\x0a\
+the scope of its\
+ coverage, prohi\
+bits the exercis\
+e of, or is\x0acond\
+itioned on the n\
+on-exercise of o\
+ne or more of th\
+e rights that ar\
+e\x0aspecifically g\
+ranted under thi\
+s License.  You \
+may not convey a\
+ covered\x0awork if\
+ you are a party\
+ to an arrangeme\
+nt with a third \
+party that is\x0ain\
+ the business of\
+ distributing so\
+ftware, under wh\
+ich you make pay\
+ment\x0ato the thir\
+d party based on\
+ the extent of y\
+our activity of \
+conveying\x0athe wo\
+rk, and under wh\
+ich the third pa\
+rty grants, to a\
+ny of the\x0apartie\
+s who would rece\
+ive the covered \
+work from you, a\
+ discriminatory\x0a\
+patent license (\
+a) in connection\
+ with copies of \
+the covered work\
+\x0aconveyed by you\
+ (or copies made\
+ from those copi\
+es), or (b) prim\
+arily\x0afor and in\
+ connection with\
+ specific produc\
+ts or compilatio\
+ns that\x0acontain \
+the covered work\
+, unless you ent\
+ered into that a\
+rrangement,\x0aor t\
+hat patent licen\
+se was granted, \
+prior to 28 Marc\
+h 2007.\x0a\x0a  Nothi\
+ng in this Licen\
+se shall be cons\
+trued as excludi\
+ng or limiting\x0aa\
+ny implied licen\
+se or other defe\
+nses to infringe\
+ment that may\x0aot\
+herwise be avail\
+able to you unde\
+r applicable pat\
+ent law.\x0a\x0a  12. \
+No Surrender of \
+Others' Freedom.\
+\x0a\x0a  If condition\
+s are imposed on\
+ you (whether by\
+ court order, ag\
+reement or\x0aother\
+wise) that contr\
+adict the condit\
+ions of this Lic\
+ense, they do no\
+t\x0aexcuse you fro\
+m the conditions\
+ of this License\
+.  If you cannot\
+ convey a\x0acovere\
+d work so as to \
+satisfy simultan\
+eously your obli\
+gations under th\
+is\x0aLicense and a\
+ny other pertine\
+nt obligations, \
+then as a conseq\
+uence you may\x0ano\
+t convey it at a\
+ll.  For example\
+, if you agree t\
+o terms that obl\
+igate you\x0ato col\
+lect a royalty f\
+or further conve\
+ying from those \
+to whom you conv\
+ey\x0athe Program, \
+the only way you\
+ could satisfy b\
+oth those terms \
+and this\x0aLicense\
+ would be to ref\
+rain entirely fr\
+om conveying the\
+ Program.\x0a\x0a  13.\
+ Use with the GN\
+U Affero General\
+ Public License.\
+\x0a\x0a  Notwithstand\
+ing any other pr\
+ovision of this \
+License, you hav\
+e\x0apermission to \
+link or combine \
+any covered work\
+ with a work lic\
+ensed\x0aunder vers\
+ion 3 of the GNU\
+ Affero General \
+Public License i\
+nto a single\x0acom\
+bined work, and \
+to convey the re\
+sulting work.  T\
+he terms of this\
+\x0aLicense will co\
+ntinue to apply \
+to the part whic\
+h is the covered\
+ work,\x0abut the s\
+pecial requireme\
+nts of the GNU A\
+ffero General Pu\
+blic License,\x0ase\
+ction 13, concer\
+ning interaction\
+ through a netwo\
+rk will apply to\
+ the\x0acombination\
+ as such.\x0a\x0a  14.\
+ Revised Version\
+s of this Licens\
+e.\x0a\x0a  The Free S\
+oftware Foundati\
+on may publish r\
+evised and/or ne\
+w versions of\x0ath\
+e GNU General Pu\
+blic License fro\
+m time to time. \
+ Such new versio\
+ns will\x0abe simil\
+ar in spirit to \
+the present vers\
+ion, but may dif\
+fer in detail to\
+\x0aaddress new pro\
+blems or concern\
+s.\x0a\x0a  Each versi\
+on is given a di\
+stinguishing ver\
+sion number.  If\
+ the\x0aProgram spe\
+cifies that a ce\
+rtain numbered v\
+ersion of the GN\
+U General\x0aPublic\
+ License \x22or any\
+ later version\x22 \
+applies to it, y\
+ou have the\x0aopti\
+on of following \
+the terms and co\
+nditions either \
+of that numbered\
+\x0aversion or of a\
+ny later version\
+ published by th\
+e Free Software\x0a\
+Foundation.  If \
+the Program does\
+ not specify a v\
+ersion number of\
+ the\x0aGNU General\
+ Public License,\
+ you may choose \
+any version ever\
+ published\x0aby th\
+e Free Software \
+Foundation.\x0a\x0a  I\
+f the Program sp\
+ecifies that a p\
+roxy can decide \
+which future\x0aver\
+sions of the GNU\
+ General Public \
+License can be u\
+sed, that proxy'\
+s\x0apublic stateme\
+nt of acceptance\
+ of a version pe\
+rmanently author\
+izes you\x0ato choo\
+se that version \
+for the Program.\
+\x0a\x0a  Later licens\
+e versions may g\
+ive you addition\
+al or different\x0a\
+permissions.  Ho\
+wever, no additi\
+onal obligations\
+ are imposed on \
+any\x0aauthor or co\
+pyright holder a\
+s a result of yo\
+ur choosing to f\
+ollow a\x0alater ve\
+rsion.\x0a\x0a  15. Di\
+sclaimer of Warr\
+anty.\x0a\x0a  THERE I\
+S NO WARRANTY FO\
+R THE PROGRAM, T\
+O THE EXTENT PER\
+MITTED BY\x0aAPPLIC\
+ABLE LAW.  EXCEP\
+T WHEN OTHERWISE\
+ STATED IN WRITI\
+NG THE COPYRIGHT\
+\x0aHOLDERS AND/OR \
+OTHER PARTIES PR\
+OVIDE THE PROGRA\
+M \x22AS IS\x22 WITHOU\
+T WARRANTY\x0aOF AN\
+Y KIND, EITHER E\
+XPRESSED OR IMPL\
+IED, INCLUDING, \
+BUT NOT LIMITED \
+TO,\x0aTHE IMPLIED \
+WARRANTIES OF ME\
+RCHANTABILITY AN\
+D FITNESS FOR A \
+PARTICULAR\x0aPURPO\
+SE.  THE ENTIRE \
+RISK AS TO THE Q\
+UALITY AND PERFO\
+RMANCE OF THE PR\
+OGRAM\x0aIS WITH YO\
+U.  SHOULD THE P\
+ROGRAM PROVE DEF\
+ECTIVE, YOU ASSU\
+ME THE COST OF\x0aA\
+LL NECESSARY SER\
+VICING, REPAIR O\
+R CORRECTION.\x0a\x0a \
+ 16. Limitation \
+of Liability.\x0a\x0a \
+ IN NO EVENT UNL\
+ESS REQUIRED BY \
+APPLICABLE LAW O\
+R AGREED TO IN W\
+RITING\x0aWILL ANY \
+COPYRIGHT HOLDER\
+, OR ANY OTHER P\
+ARTY WHO MODIFIE\
+S AND/OR CONVEYS\
+\x0aTHE PROGRAM AS \
+PERMITTED ABOVE,\
+ BE LIABLE TO YO\
+U FOR DAMAGES, I\
+NCLUDING ANY\x0aGEN\
+ERAL, SPECIAL, I\
+NCIDENTAL OR CON\
+SEQUENTIAL DAMAG\
+ES ARISING OUT O\
+F THE\x0aUSE OR INA\
+BILITY TO USE TH\
+E PROGRAM (INCLU\
+DING BUT NOT LIM\
+ITED TO LOSS OF\x0a\
+DATA OR DATA BEI\
+NG RENDERED INAC\
+CURATE OR LOSSES\
+ SUSTAINED BY YO\
+U OR THIRD\x0aPARTI\
+ES OR A FAILURE \
+OF THE PROGRAM T\
+O OPERATE WITH A\
+NY OTHER PROGRAM\
+S),\x0aEVEN IF SUCH\
+ HOLDER OR OTHER\
+ PARTY HAS BEEN \
+ADVISED OF THE P\
+OSSIBILITY OF\x0aSU\
+CH DAMAGES.\x0a\x0a  1\
+7. Interpretatio\
+n of Sections 15\
+ and 16.\x0a\x0a  If t\
+he disclaimer of\
+ warranty and li\
+mitation of liab\
+ility provided\x0aa\
+bove cannot be g\
+iven local legal\
+ effect accordin\
+g to their terms\
+,\x0areviewing cour\
+ts shall apply l\
+ocal law that mo\
+st closely appro\
+ximates\x0aan absol\
+ute waiver of al\
+l civil liabilit\
+y in connection \
+with the\x0aProgram\
+, unless a warra\
+nty or assumptio\
+n of liability a\
+ccompanies a\x0acop\
+y of the Program\
+ in return for a\
+ fee.\x0a\x0a         \
+            END \
+OF TERMS AND CON\
+DITIONS\x0a\x0a       \
+     How to Appl\
+y These Terms to\
+ Your New Progra\
+ms\x0a\x0a  If you dev\
+elop a new progr\
+am, and you want\
+ it to be of the\
+ greatest\x0apossib\
+le use to the pu\
+blic, the best w\
+ay to achieve th\
+is is to make it\
+\x0afree software w\
+hich everyone ca\
+n redistribute a\
+nd change under \
+these terms.\x0a\x0a  \
+To do so, attach\
+ the following n\
+otices to the pr\
+ogram.  It is sa\
+fest\x0ato attach t\
+hem to the start\
+ of each source \
+file to most eff\
+ectively\x0astate t\
+he exclusion of \
+warranty; and ea\
+ch file should h\
+ave at least\x0athe\
+ \x22copyright\x22 lin\
+e and a pointer \
+to where the ful\
+l notice is foun\
+d.\x0a\x0a    <one lin\
+e to give the pr\
+ogram's name and\
+ a brief idea of\
+ what it does.>\x0a\
+    Copyright (C\
+) <year>  <name \
+of author>\x0a\x0a    \
+This program is \
+free software: y\
+ou can redistrib\
+ute it and/or mo\
+dify\x0a    it unde\
+r the terms of t\
+he GNU General P\
+ublic License as\
+ published by\x0a  \
+  the Free Softw\
+are Foundation, \
+either version 3\
+ of the License,\
+ or\x0a    (at your\
+ option) any lat\
+er version.\x0a\x0a   \
+ This program is\
+ distributed in \
+the hope that it\
+ will be useful,\
+\x0a    but WITHOUT\
+ ANY WARRANTY; w\
+ithout even the \
+implied warranty\
+ of\x0a    MERCHANT\
+ABILITY or FITNE\
+SS FOR A PARTICU\
+LAR PURPOSE.  Se\
+e the\x0a    GNU Ge\
+neral Public Lic\
+ense for more de\
+tails.\x0a\x0a    You \
+should have rece\
+ived a copy of t\
+he GNU General P\
+ublic License\x0a  \
+  along with thi\
+s program.  If n\
+ot, see <https:/\
+/www.gnu.org/lic\
+enses/>.\x0a\x0aAlso a\
+dd information o\
+n how to contact\
+ you by electron\
+ic and paper mai\
+l.\x0a\x0a  If the pro\
+gram does termin\
+al interaction, \
+make it output a\
+ short\x0anotice li\
+ke this when it \
+starts in an int\
+eractive mode:\x0a\x0a\
+    <program>  C\
+opyright (C) <ye\
+ar>  <name of au\
+thor>\x0a    This p\
+rogram comes wit\
+h ABSOLUTELY NO \
+WARRANTY; for de\
+tails type `show\
+ w'.\x0a    This is\
+ free software, \
+and you are welc\
+ome to redistrib\
+ute it\x0a    under\
+ certain conditi\
+ons; type `show \
+c' for details.\x0a\
+\x0aThe hypothetica\
+l commands `show\
+ w' and `show c'\
+ should show the\
+ appropriate\x0apar\
+ts of the Genera\
+l Public License\
+.  Of course, yo\
+ur program's com\
+mands\x0amight be d\
+ifferent; for a \
+GUI interface, y\
+ou would use an \
+\x22about box\x22.\x0a\x0a  \
+You should also \
+get your employe\
+r (if you work a\
+s a programmer) \
+or school,\x0aif an\
+y, to sign a \x22co\
+pyright disclaim\
+er\x22 for the prog\
+ram, if necessar\
+y.\x0aFor more info\
+rmation on this,\
+ and how to appl\
+y and follow the\
+ GNU GPL, see\x0a<h\
+ttps://www.gnu.o\
+rg/licenses/>.\x0a\x0a\
+  The GNU Genera\
+l Public License\
+ does not permit\
+ incorporating y\
+our program\x0ainto\
+ proprietary pro\
+grams.  If your \
+program is a sub\
+routine library,\
+ you\x0amay conside\
+r it more useful\
+ to permit linki\
+ng proprietary a\
+pplications with\
+\x0athe library.  I\
+f this is what y\
+ou want to do, u\
+se the GNU Lesse\
+r General\x0aPublic\
+ License instead\
+ of this License\
+.  But first, pl\
+ease read\x0a<https\
+://www.gnu.org/l\
+icenses/why-not-\
+lgpl.html>.\x0a\
+\x00\x00,]\
+\x0a\
+                \
+                \
+ Apache License\x0a\
+                \
+           Versi\
+on 2.0, January \
+2004\x0a           \
+             htt\
+p://www.apache.o\
+rg/licenses/\x0a\x0a  \
+ TERMS AND CONDI\
+TIONS FOR USE, R\
+EPRODUCTION, AND\
+ DISTRIBUTION\x0a\x0a \
+  1. Definitions\
+.\x0a\x0a      \x22Licens\
+e\x22 shall mean th\
+e terms and cond\
+itions for use, \
+reproduction,\x0a  \
+    and distribu\
+tion as defined \
+by Sections 1 th\
+rough 9 of this \
+document.\x0a\x0a     \
+ \x22Licensor\x22 shal\
+l mean the copyr\
+ight owner or en\
+tity authorized \
+by\x0a      the cop\
+yright owner tha\
+t is granting th\
+e License.\x0a\x0a    \
+  \x22Legal Entity\x22\
+ shall mean the \
+union of the act\
+ing entity and a\
+ll\x0a      other e\
+ntities that con\
+trol, are contro\
+lled by, or are \
+under common\x0a   \
+   control with \
+that entity. For\
+ the purposes of\
+ this definition\
+,\x0a      \x22control\
+\x22 means (i) the \
+power, direct or\
+ indirect, to ca\
+use the\x0a      di\
+rection or manag\
+ement of such en\
+tity, whether by\
+ contract or\x0a   \
+   otherwise, or\
+ (ii) ownership \
+of fifty percent\
+ (50%) or more o\
+f the\x0a      outs\
+tanding shares, \
+or (iii) benefic\
+ial ownership of\
+ such entity.\x0a\x0a \
+     \x22You\x22 (or \x22\
+Your\x22) shall mea\
+n an individual \
+or Legal Entity\x0a\
+      exercising\
+ permissions gra\
+nted by this Lic\
+ense.\x0a\x0a      \x22So\
+urce\x22 form shall\
+ mean the prefer\
+red form for mak\
+ing modification\
+s,\x0a      includi\
+ng but not limit\
+ed to software s\
+ource code, docu\
+mentation\x0a      \
+source, and conf\
+iguration files.\
+\x0a\x0a      \x22Object\x22\
+ form shall mean\
+ any form result\
+ing from mechani\
+cal\x0a      transf\
+ormation or tran\
+slation of a Sou\
+rce form, includ\
+ing but\x0a      no\
+t limited to com\
+piled object cod\
+e, generated doc\
+umentation,\x0a    \
+  and conversion\
+s to other media\
+ types.\x0a\x0a      \x22\
+Work\x22 shall mean\
+ the work of aut\
+horship, whether\
+ in Source or\x0a  \
+    Object form,\
+ made available \
+under the Licens\
+e, as indicated \
+by a\x0a      copyr\
+ight notice that\
+ is included in \
+or attached to t\
+he work\x0a      (a\
+n example is pro\
+vided in the App\
+endix below).\x0a\x0a \
+     \x22Derivative\
+ Works\x22 shall me\
+an any work, whe\
+ther in Source o\
+r Object\x0a      f\
+orm, that is bas\
+ed on (or derive\
+d from) the Work\
+ and for which t\
+he\x0a      editori\
+al revisions, an\
+notations, elabo\
+rations, or othe\
+r modifications\x0a\
+      represent,\
+ as a whole, an \
+original work of\
+ authorship. For\
+ the purposes\x0a  \
+    of this Lice\
+nse, Derivative \
+Works shall not \
+include works th\
+at remain\x0a      \
+separable from, \
+or merely link (\
+or bind by name)\
+ to the interfac\
+es of,\x0a      the\
+ Work and Deriva\
+tive Works there\
+of.\x0a\x0a      \x22Cont\
+ribution\x22 shall \
+mean any work of\
+ authorship, inc\
+luding\x0a      the\
+ original versio\
+n of the Work an\
+d any modificati\
+ons or additions\
+\x0a      to that W\
+ork or Derivativ\
+e Works thereof,\
+ that is intenti\
+onally\x0a      sub\
+mitted to Licens\
+or for inclusion\
+ in the Work by \
+the copyright ow\
+ner\x0a      or by \
+an individual or\
+ Legal Entity au\
+thorized to subm\
+it on behalf of\x0a\
+      the copyri\
+ght owner. For t\
+he purposes of t\
+his definition, \
+\x22submitted\x22\x0a    \
+  means any form\
+ of electronic, \
+verbal, or writt\
+en communication\
+ sent\x0a      to t\
+he Licensor or i\
+ts representativ\
+es, including bu\
+t not limited to\
+\x0a      communica\
+tion on electron\
+ic mailing lists\
+, source code co\
+ntrol systems,\x0a \
+     and issue t\
+racking systems \
+that are managed\
+ by, or on behal\
+f of, the\x0a      \
+Licensor for the\
+ purpose of disc\
+ussing and impro\
+ving the Work, b\
+ut\x0a      excludi\
+ng communication\
+ that is conspic\
+uously marked or\
+ otherwise\x0a     \
+ designated in w\
+riting by the co\
+pyright owner as\
+ \x22Not a Contribu\
+tion.\x22\x0a\x0a      \x22C\
+ontributor\x22 shal\
+l mean Licensor \
+and any individu\
+al or Legal Enti\
+ty\x0a      on beha\
+lf of whom a Con\
+tribution has be\
+en received by L\
+icensor and\x0a    \
+  subsequently i\
+ncorporated with\
+in the Work.\x0a\x0a  \
+ 2. Grant of Cop\
+yright License. \
+Subject to the t\
+erms and conditi\
+ons of\x0a      thi\
+s License, each \
+Contributor here\
+by grants to You\
+ a perpetual,\x0a  \
+    worldwide, n\
+on-exclusive, no\
+-charge, royalty\
+-free, irrevocab\
+le\x0a      copyrig\
+ht license to re\
+produce, prepare\
+ Derivative Work\
+s of,\x0a      publ\
+icly display, pu\
+blicly perform, \
+sublicense, and \
+distribute the\x0a \
+     Work and su\
+ch Derivative Wo\
+rks in Source or\
+ Object form.\x0a\x0a \
+  3. Grant of Pa\
+tent License. Su\
+bject to the ter\
+ms and condition\
+s of\x0a      this \
+License, each Co\
+ntributor hereby\
+ grants to You a\
+ perpetual,\x0a    \
+  worldwide, non\
+-exclusive, no-c\
+harge, royalty-f\
+ree, irrevocable\
+\x0a      (except a\
+s stated in this\
+ section) patent\
+ license to make\
+, have made,\x0a   \
+   use, offer to\
+ sell, sell, imp\
+ort, and otherwi\
+se transfer the \
+Work,\x0a      wher\
+e such license a\
+pplies only to t\
+hose patent clai\
+ms licensable\x0a  \
+    by such Cont\
+ributor that are\
+ necessarily inf\
+ringed by their\x0a\
+      Contributi\
+on(s) alone or b\
+y combination of\
+ their Contribut\
+ion(s)\x0a      wit\
+h the Work to wh\
+ich such Contrib\
+ution(s) was sub\
+mitted. If You\x0a \
+     institute p\
+atent litigation\
+ against any ent\
+ity (including a\
+\x0a      cross-cla\
+im or countercla\
+im in a lawsuit)\
+ alleging that t\
+he Work\x0a      or\
+ a Contribution \
+incorporated wit\
+hin the Work con\
+stitutes direct\x0a\
+      or contrib\
+utory patent inf\
+ringement, then \
+any patent licen\
+ses\x0a      grante\
+d to You under t\
+his License for \
+that Work shall \
+terminate\x0a      \
+as of the date s\
+uch litigation i\
+s filed.\x0a\x0a   4. \
+Redistribution. \
+You may reproduc\
+e and distribute\
+ copies of the\x0a \
+     Work or Der\
+ivative Works th\
+ereof in any med\
+ium, with or wit\
+hout\x0a      modif\
+ications, and in\
+ Source or Objec\
+t form, provided\
+ that You\x0a      \
+meet the followi\
+ng conditions:\x0a\x0a\
+      (a) You mu\
+st give any othe\
+r recipients of \
+the Work or\x0a    \
+      Derivative\
+ Works a copy of\
+ this License; a\
+nd\x0a\x0a      (b) Yo\
+u must cause any\
+ modified files \
+to carry promine\
+nt notices\x0a     \
+     stating tha\
+t You changed th\
+e files; and\x0a\x0a  \
+    (c) You must\
+ retain, in the \
+Source form of a\
+ny Derivative Wo\
+rks\x0a          th\
+at You distribut\
+e, all copyright\
+, patent, tradem\
+ark, and\x0a       \
+   attribution n\
+otices from the \
+Source form of t\
+he Work,\x0a       \
+   excluding tho\
+se notices that \
+do not pertain t\
+o any part of\x0a  \
+        the Deri\
+vative Works; an\
+d\x0a\x0a      (d) If \
+the Work include\
+s a \x22NOTICE\x22 tex\
+t file as part o\
+f its\x0a          \
+distribution, th\
+en any Derivativ\
+e Works that You\
+ distribute must\
+\x0a          inclu\
+de a readable co\
+py of the attrib\
+ution notices co\
+ntained\x0a        \
+  within such NO\
+TICE file, exclu\
+ding those notic\
+es that do not\x0a \
+         pertain\
+ to any part of \
+the Derivative W\
+orks, in at leas\
+t one\x0a          \
+of the following\
+ places: within \
+a NOTICE text fi\
+le distributed\x0a \
+         as part\
+ of the Derivati\
+ve Works; within\
+ the Source form\
+ or\x0a          do\
+cumentation, if \
+provided along w\
+ith the Derivati\
+ve Works; or,\x0a  \
+        within a\
+ display generat\
+ed by the Deriva\
+tive Works, if a\
+nd\x0a          whe\
+rever such third\
+-party notices n\
+ormally appear. \
+The contents\x0a   \
+       of the NO\
+TICE file are fo\
+r informational \
+purposes only an\
+d\x0a          do n\
+ot modify the Li\
+cense. You may a\
+dd Your own attr\
+ibution\x0a        \
+  notices within\
+ Derivative Work\
+s that You distr\
+ibute, alongside\
+\x0a          or as\
+ an addendum to \
+the NOTICE text \
+from the Work, p\
+rovided\x0a        \
+  that such addi\
+tional attributi\
+on notices canno\
+t be construed\x0a \
+         as modi\
+fying the Licens\
+e.\x0a\x0a      You ma\
+y add Your own c\
+opyright stateme\
+nt to Your modif\
+ications and\x0a   \
+   may provide a\
+dditional or dif\
+ferent license t\
+erms and conditi\
+ons\x0a      for us\
+e, reproduction,\
+ or distribution\
+ of Your modific\
+ations, or\x0a     \
+ for any such De\
+rivative Works a\
+s a whole, provi\
+ded Your use,\x0a  \
+    reproduction\
+, and distributi\
+on of the Work o\
+therwise complie\
+s with\x0a      the\
+ conditions stat\
+ed in this Licen\
+se.\x0a\x0a   5. Submi\
+ssion of Contrib\
+utions. Unless Y\
+ou explicitly st\
+ate otherwise,\x0a \
+     any Contrib\
+ution intentiona\
+lly submitted fo\
+r inclusion in t\
+he Work\x0a      by\
+ You to the Lice\
+nsor shall be un\
+der the terms an\
+d conditions of\x0a\
+      this Licen\
+se, without any \
+additional terms\
+ or conditions.\x0a\
+      Notwithsta\
+nding the above,\
+ nothing herein \
+shall supersede \
+or modify\x0a      \
+the terms of any\
+ separate licens\
+e agreement you \
+may have execute\
+d\x0a      with Lic\
+ensor regarding \
+such Contributio\
+ns.\x0a\x0a   6. Trade\
+marks. This Lice\
+nse does not gra\
+nt permission to\
+ use the trade\x0a \
+     names, trad\
+emarks, service \
+marks, or produc\
+t names of the L\
+icensor,\x0a      e\
+xcept as require\
+d for reasonable\
+ and customary u\
+se in describing\
+ the\x0a      origi\
+n of the Work an\
+d reproducing th\
+e content of the\
+ NOTICE file.\x0a\x0a \
+  7. Disclaimer \
+of Warranty. Unl\
+ess required by \
+applicable law o\
+r\x0a      agreed t\
+o in writing, Li\
+censor provides \
+the Work (and ea\
+ch\x0a      Contrib\
+utor provides it\
+s Contributions)\
+ on an \x22AS IS\x22 B\
+ASIS,\x0a      WITH\
+OUT WARRANTIES O\
+R CONDITIONS OF \
+ANY KIND, either\
+ express or\x0a    \
+  implied, inclu\
+ding, without li\
+mitation, any wa\
+rranties or cond\
+itions\x0a      of \
+TITLE, NON-INFRI\
+NGEMENT, MERCHAN\
+TABILITY, or FIT\
+NESS FOR A\x0a     \
+ PARTICULAR PURP\
+OSE. You are sol\
+ely responsible \
+for determining \
+the\x0a      approp\
+riateness of usi\
+ng or redistribu\
+ting the Work an\
+d assume any\x0a   \
+   risks associa\
+ted with Your ex\
+ercise of permis\
+sions under this\
+ License.\x0a\x0a   8.\
+ Limitation of L\
+iability. In no \
+event and under \
+no legal theory,\
+\x0a      whether i\
+n tort (includin\
+g negligence), c\
+ontract, or othe\
+rwise,\x0a      unl\
+ess required by \
+applicable law (\
+such as delibera\
+te and grossly\x0a \
+     negligent a\
+cts) or agreed t\
+o in writing, sh\
+all any Contribu\
+tor be\x0a      lia\
+ble to You for d\
+amages, includin\
+g any direct, in\
+direct, special,\
+\x0a      incidenta\
+l, or consequent\
+ial damages of a\
+ny character ari\
+sing as a\x0a      \
+result of this L\
+icense or out of\
+ the use or inab\
+ility to use the\
+\x0a      Work (inc\
+luding but not l\
+imited to damage\
+s for loss of go\
+odwill,\x0a      wo\
+rk stoppage, com\
+puter failure or\
+ malfunction, or\
+ any and all\x0a   \
+   other commerc\
+ial damages or l\
+osses), even if \
+such Contributor\
+\x0a      has been \
+advised of the p\
+ossibility of su\
+ch damages.\x0a\x0a   \
+9. Accepting War\
+ranty or Additio\
+nal Liability. W\
+hile redistribut\
+ing\x0a      the Wo\
+rk or Derivative\
+ Works thereof, \
+You may choose t\
+o offer,\x0a      a\
+nd charge a fee \
+for, acceptance \
+of support, warr\
+anty, indemnity,\
+\x0a      or other \
+liability obliga\
+tions and/or rig\
+hts consistent w\
+ith this\x0a      L\
+icense. However,\
+ in accepting su\
+ch obligations, \
+You may act only\
+\x0a      on Your o\
+wn behalf and on\
+ Your sole respo\
+nsibility, not o\
+n behalf\x0a      o\
+f any other Cont\
+ributor, and onl\
+y if You agree t\
+o indemnify,\x0a   \
+   defend, and h\
+old each Contrib\
+utor harmless fo\
+r any liability\x0a\
+      incurred b\
+y, or claims ass\
+erted against, s\
+uch Contributor \
+by reason\x0a      \
+of your acceptin\
+g any such warra\
+nty or additiona\
+l liability.\x0a\x0a  \
+ END OF TERMS AN\
+D CONDITIONS\x0a\x0a  \
+ APPENDIX: How t\
+o apply the Apac\
+he License to yo\
+ur work.\x0a\x0a      \
+To apply the Apa\
+che License to y\
+our work, attach\
+ the following\x0a \
+     boilerplate\
+ notice, with th\
+e fields enclose\
+d by brackets \x22[\
+]\x22\x0a      replace\
+d with your own \
+identifying info\
+rmation. (Don't \
+include\x0a      th\
+e brackets!)  Th\
+e text should be\
+ enclosed in the\
+ appropriate\x0a   \
+   comment synta\
+x for the file f\
+ormat. We also r\
+ecommend that a\x0a\
+      file or cl\
+ass name and des\
+cription of purp\
+ose be included \
+on the\x0a      sam\
+e \x22printed page\x22\
+ as the copyrigh\
+t notice for eas\
+ier\x0a      identi\
+fication within \
+third-party arch\
+ives.\x0a\x0a   Copyri\
+ght [yyyy] [name\
+ of copyright ow\
+ner]\x0a\x0a   License\
+d under the Apac\
+he License, Vers\
+ion 2.0 (the \x22Li\
+cense\x22);\x0a   you \
+may not use this\
+ file except in \
+compliance with \
+the License.\x0a   \
+You may obtain a\
+ copy of the Lic\
+ense at\x0a\x0a       \
+http://www.apach\
+e.org/licenses/L\
+ICENSE-2.0\x0a\x0a   U\
+nless required b\
+y applicable law\
+ or agreed to in\
+ writing, softwa\
+re\x0a   distribute\
+d under the Lice\
+nse is distribut\
+ed on an \x22AS IS\x22\
+ BASIS,\x0a   WITHO\
+UT WARRANTIES OR\
+ CONDITIONS OF A\
+NY KIND, either \
+express or impli\
+ed.\x0a   See the L\
+icense for the s\
+pecific language\
+ governing permi\
+ssions and\x0a   li\
+mitations under \
+the License.\
+\x00\x00\x04\x88\
+C\
+opyright (c) 201\
+2  University of\
+ North Carolina \
+at Chapel Hill\x0aL\
+uke Campagnola  \
+  ('luke.campagn\
+ola@%s.com' % 'g\
+mail')\x0a\x0aThe MIT \
+License\x0aPermissi\
+on is hereby gra\
+nted, free of ch\
+arge, to any per\
+son obtaining a \
+copy of this sof\
+tware and associ\
+ated documentati\
+on files (the \x22S\
+oftware\x22), to de\
+al in the Softwa\
+re without restr\
+iction, includin\
+g without limita\
+tion the rights \
+to use, copy, mo\
+dify, merge, pub\
+lish, distribute\
+, sublicense, an\
+d/or sell copies\
+ of the Software\
+, and to permit \
+persons to whom \
+the Software is \
+furnished to do \
+so, subject to t\
+he following con\
+ditions:\x0a\x0aThe ab\
+ove copyright no\
+tice and this pe\
+rmission notice \
+shall be include\
+d in all copies \
+or substantial p\
+ortions of the S\
+oftware.\x0a\x0aTHE SO\
+FTWARE IS PROVID\
+ED \x22AS IS\x22, WITH\
+OUT WARRANTY OF \
+ANY KIND, EXPRES\
+S OR IMPLIED, IN\
+CLUDING BUT NOT \
+LIMITED TO THE W\
+ARRANTIES OF MER\
+CHANTABILITY, FI\
+TNESS FOR A PART\
+ICULAR PURPOSE A\
+ND NONINFRINGEME\
+NT. IN NO EVENT \
+SHALL THE AUTHOR\
+S OR COPYRIGHT H\
+OLDERS BE LIABLE\
+ FOR ANY CLAIM, \
+DAMAGES OR OTHER\
+ LIABILITY, WHET\
+HER IN AN ACTION\
+ OF CONTRACT, TO\
+RT OR OTHERWISE,\
+ ARISING FROM, O\
+UT OF OR IN CONN\
+ECTION WITH THE \
+SOFTWARE OR THE \
+USE OR OTHER DEA\
+LINGS IN THE SOF\
+TWARE.\x0a\
 \x00\x0094\
 \x89\
 PNG\x0d\x0a\x1a\x0a\x00\x00\x00\x0dIHDR\x00\
@@ -295246,6 +302968,65 @@ qt_resource_name = b"\
 \x07\x03}\xc3\
 \x00i\
 \x00m\x00a\x00g\x00e\x00s\
+\x00\x08\
+\x0f\x9cW\x83\
+\x00l\
+\x00i\x00c\x00e\x00n\x00s\x00e\x00s\
+\x00\x0c\
+\x00\x0b\xc5\xd4\
+\x00L\
+\x00G\x00P\x00L\x00-\x003\x00.\x000\x00.\x00t\x00x\x00t\
+\x00\x0a\
+\x0fnZ\xb4\
+\x00p\
+\x00y\x00t\x00h\x00o\x00n\x00.\x00t\x00x\x00t\
+\x00\x11\
+\x00\xc6,t\
+\x00p\
+\x00y\x00q\x00t\x00d\x00a\x00r\x00k\x00t\x00h\x00e\x00m\x00e\x00.\x00t\x00x\x00t\
+\
+\x00\x0c\
+\x00~b\xf4\
+\x00p\
+\x00y\x00s\x00e\x00r\x00i\x00a\x00l\x00.\x00t\x00x\x00t\
+\x00\x0d\
+\x0e\xdc\xf7T\
+\x00q\
+\x00t\x00_\x00n\x00o\x00t\x00i\x00c\x00e\x00.\x00t\x00x\x00t\
+\x00\x0c\
+\x04\xbb\x10\xb4\
+\x00d\
+\x002\x00c\x00o\x00d\x00i\x00n\x00g\x00.\x00t\x00x\x00t\
+\x00\x0e\
+\x0a\x84\x18\x14\
+\x00d\
+\x00a\x00r\x00k\x00d\x00e\x00t\x00e\x00c\x00t\x00.\x00t\x00x\x00t\
+\x00\x09\
+\x04|\xb0t\
+\x00n\
+\x00u\x00m\x00p\x00y\x00.\x00t\x00x\x00t\
+\x00\x14\
+\x09\xb3AT\
+\x00f\
+\x00t\x00d\x00i\x00_\x00d\x002\x00x\x00x\x00_\x00d\x00r\x00i\x00v\x00e\x00r\x00.\
+\x00t\x00x\x00t\
+\x00\x0a\
+\x09\xf6\xef\x14\
+\x00f\
+\x00t\x00d\x002\x00x\x00x\x00.\x00t\x00x\x00t\
+\x00\x0b\
+\x06\x8b\xc5\xf4\
+\x00G\
+\x00P\x00L\x00-\x003\x00.\x000\x00.\x00t\x00x\x00t\
+\x00\x12\
+\x084V\xb4\
+\x00m\
+\x00a\x00t\x00e\x00r\x00i\x00a\x00l\x00_\x00i\x00c\x00o\x00n\x00s\x00.\x00t\x00x\
+\x00t\
+\x00\x0d\
+\x08z\x07\x14\
+\x00p\
+\x00y\x00q\x00t\x00g\x00r\x00a\x00p\x00h\x00.\x00t\x00x\x00t\
 \x00\x0e\
 \x0d\x9a3g\
 \x00f\
@@ -295292,33 +303073,61 @@ qt_resource_name = b"\
 qt_resource_struct = b"\
 \x00\x00\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\x01\
 \x00\x00\x00\x00\x00\x00\x00\x00\
-\x00\x00\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x02\
+\x00\x00\x00\x00\x00\x02\x00\x00\x00\x04\x00\x00\x00\x02\
 \x00\x00\x00\x00\x00\x00\x00\x00\
-\x00\x00\x00&\x00\x02\x00\x00\x00\x02\x00\x00\x00\x0d\
+\x00\x00\x00&\x00\x02\x00\x00\x00\x02\x00\x00\x00\x1b\
 \x00\x00\x00\x00\x00\x00\x00\x00\
-\x00\x00\x00\x16\x00\x02\x00\x00\x00\x01\x00\x00\x00\x0c\
+\x00\x00\x00\x16\x00\x02\x00\x00\x00\x01\x00\x00\x00\x1a\
 \x00\x00\x00\x00\x00\x00\x00\x00\
-\x00\x00\x006\x00\x02\x00\x00\x00\x07\x00\x00\x00\x05\
+\x00\x00\x006\x00\x02\x00\x00\x00\x07\x00\x00\x00\x13\
 \x00\x00\x00\x00\x00\x00\x00\x00\
-\x00\x00\x00\x8c\x00\x00\x00\x00\x00\x01\x00\x00~\xa7\
+\x00\x00\x00H\x00\x02\x00\x00\x00\x0d\x00\x00\x00\x06\
+\x00\x00\x00\x00\x00\x00\x00\x00\
+\x00\x00\x00^\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\
+\x00\x00\x01\xa0\x89\x9d\xc1\x9b\
+\x00\x00\x00\xbe\x00\x00\x00\x00\x00\x01\x00\x00J+\
+\x00\x00\x01\xa0\x89\x9d\xc2\x15\
+\x00\x00\x00\x96\x00\x00\x00\x00\x00\x01\x00\x00E\xf2\
+\x00\x00\x01\xa0\x89\x9d\xc20\
+\x00\x00\x01<\x00\x00\x00\x00\x00\x01\x00\x00l\x82\
+\x00\x00\x01\xa0\x89\x9d\xc1\xf8\
+\x00\x00\x00\xfc\x00\x00\x00\x00\x00\x01\x00\x00U\x04\
+\x00\x00\x01\xa0\x89\x9f{S\
+\x00\x00\x01\x9c\x00\x00\x00\x00\x00\x01\x00\x01&\xa2\
+\x00\x00\x01\xa0\x89\x9d\xc1\xbb\
+\x00\x00\x01\xb8\x00\x00\x00\x00\x00\x01\x00\x01\xaf\xf3\
+\x00\x00\x01\xa0\x89\x9d\xc2\x8b\
+\x00\x00\x01\xe2\x00\x00\x00\x00\x00\x01\x00\x01\xdcT\
+\x00\x00\x01\xa0\x89\x9d\xc1\xdc\
+\x00\x00\x01T\x00\x00\x00\x00\x00\x01\x00\x01\x1f\x8d\
+\x00\x00\x01\xa0\x89\x9e\xd0\xc7\
+\x00\x00\x01\x82\x00\x00\x00\x00\x00\x01\x00\x01\x22q\
+\x00\x00\x01\xa0\x89\x9d\xc2o\
+\x00\x00\x01\x1a\x00\x00\x00\x00\x00\x01\x00\x00f\xa7\
+\x00\x00\x01\xa0\x89\x9d\xc2Q\
+\x00\x00\x00\xdc\x00\x00\x00\x00\x00\x01\x00\x00Q\x8d\
+\x00\x00\x01\xa0\x89\x9e\xd0\xb1\
+\x00\x00\x00|\x00\x01\x00\x00\x00\x01\x00\x00\x1d\xe8\
+\x00\x00\x01\xa0\x89\x9d\xc2\xa8\
+\x00\x00\x02F\x00\x00\x00\x00\x00\x01\x00\x02_\x87\
 \x00\x00\x01\x97]\x96\xfa(\
-\x00\x00\x01\x10\x00\x00\x00\x00\x00\x01\x00\x02x\xd4\
+\x00\x00\x02\xca\x00\x00\x00\x00\x00\x01\x00\x04Y\xb4\
 \x00\x00\x01\x97]\x96\xa8 \
-\x00\x00\x00\xee\x00\x00\x00\x00\x00\x01\x00\x02F\x22\
+\x00\x00\x02\xa8\x00\x00\x00\x00\x00\x01\x00\x04'\x02\
 \x00\x00\x01\x89\xb0\xba\xa3\xe8\
-\x00\x00\x00H\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\
+\x00\x00\x02\x02\x00\x00\x00\x00\x00\x01\x00\x01\xe0\xe0\
 \x00\x00\x01\x8f\x85\xabsH\
-\x00\x00\x00j\x00\x00\x00\x00\x00\x01\x00\x0098\
+\x00\x00\x02$\x00\x00\x00\x00\x00\x01\x00\x02\x1a\x18\
 \x00\x00\x01\x89\xb0\xbf\x82\x00\
-\x00\x00\x00\xaa\x00\x00\x00\x00\x00\x01\x00\x00\x98\x98\
+\x00\x00\x02d\x00\x00\x00\x00\x00\x01\x00\x02yx\
 \x00\x00\x01\x8f\x85\xa9\xec\xa8\
-\x00\x00\x00\xcc\x00\x00\x00\x00\x00\x01\x00\x00\xe22\
+\x00\x00\x02\x86\x00\x00\x00\x00\x00\x01\x00\x02\xc3\x12\
 \x00\x00\x01\x89\xb0\xb0\x95\xb0\
-\x00\x00\x01\x88\x00\x01\x00\x00\x00\x01\x00G\xf8@\
+\x00\x00\x03B\x00\x01\x00\x00\x00\x01\x00I\xd9 \
 \x00\x00\x01}U\x87\xc90\
-\x00\x00\x01j\x00\x00\x00\x00\x00\x01\x00\x08\x19H\
+\x00\x00\x03$\x00\x00\x00\x00\x00\x01\x00\x09\xfa(\
 \x00\x00\x01\x93\x91\x19y\x10\
-\x00\x00\x012\x00\x00\x00\x00\x00\x01\x00\x02\xa7\x5c\
+\x00\x00\x02\xec\x00\x00\x00\x00\x00\x01\x00\x04\x88<\
 \x00\x00\x01\x9c\xadU0\x08\
 "
 

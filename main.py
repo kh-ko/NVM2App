@@ -54,7 +54,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName(app_info.APP_NAME)
     app.setApplicationVersion(app_info.APP_VERSION)
-    app.setOrganizationName(app_info.APP_AUTHOR)
+    app.setOrganizationName(app_info.APP_COMPANY)
 
     # stderr 후킹 후 시작 로그 — 로그 파일만 봐도 실행 버전을 알 수 있게 한다
     AppLogManager().install_stderr_hook()

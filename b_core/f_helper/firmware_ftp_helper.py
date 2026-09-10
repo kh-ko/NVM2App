@@ -3,7 +3,7 @@
 ver1 은 FTP 호스트/계정/경로가 윈도우 클래스 상수와 메서드 본문에 두 벌로
 하드코딩되어 있었다. ver2 는 접속 정보/설정 파일 읽기를 ftp_helper 가 맡고,
 이 모듈은 펌웨어 저장소의 경로 규칙과 파일 전송만 안다:
-- 저장소 경로는 ftp_connection.json 의 FTP_PATH 키 (없으면 DEFAULT_PATH).
+- 저장소 경로는 ftp_connection.json 의 FTP_FIRMWARE_PATH 키 (없으면 DEFAULT_PATH).
 - 저장소 파일 규칙 (ver1 과 동일):
     {FTP_PATH}/version.txt                                   버전 목록 (한 줄에 하나)
     {FTP_PATH}/{ver}/VALVE_CPU1_{ver}_FLASH.txt              RS232 어댑터용 CPU1 앱
@@ -22,14 +22,14 @@ import os
 from b_core.f_helper import ftp_helper
 from b_core.f_helper.ftp_helper import FtpSetting, ProgressCallback
 
-PATH_KEY = "FTP_PATH"
+PATH_KEY = "FTP_FIRMWARE_PATH"
 DEFAULT_PATH = "/HDD1/FIRMWARE/VALVE/BASIC"
 
 VERSION_FILE = "version.txt"
 
 
 def load_setting() -> FtpSetting:
-    """펌웨어 저장소용 FtpSetting (접속 정보 공통 + FTP_PATH)."""
+    """펌웨어 저장소용 FtpSetting (접속 정보 공통 + FTP_FIRMWARE_PATH)."""
     return ftp_helper.load_setting(PATH_KEY, DEFAULT_PATH)
 
 

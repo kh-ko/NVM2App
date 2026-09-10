@@ -31,6 +31,7 @@ from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
 from c_ui.c_window_ver2.c_analysis.sensor_analysis_win import SensorAnalysisWin
 from c_ui.c_window_ver2.g_factory.factory_firmware_update_win import FactoryFirmwareUpdateWin
 from c_ui.c_window_ver2.h_help.help_nvm_update_win import HelpNvmUpdateWin
+from c_ui.c_window_ver2.h_help.help_about_win import HelpAboutWin
 
 from c_ui.c_window_ver2.log_view_win import LogViewWin
 from c_ui.c_window_ver2.x_message.connection_message_box import ask_disconnect
@@ -600,6 +601,9 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
     def on_clicked_help_update(self):
         WinManager().show_window(win_class=HelpNvmUpdateWin, win_name="Application Update", win_id="ParamWin_ApplicationUpdate", parent=self, is_modal=False)
 
+    def on_clicked_help_about(self):
+        WinManager().show_window(win_class=HelpAboutWin, win_name="About", win_id="ParamWin_About", parent=self, is_modal=False)
+
     def on_clicked_cluster_monitor(self):
         show_not_ready(self)
 
@@ -608,9 +612,6 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
 
     def on_clicked_iface_trace(self):
         show_not_ready(self)
-
-    def on_clicked_help_about(self):
-        show_not_ready(self) 
 
     def on_clicked_analysis_terminal(self):
         show_not_ready(self)

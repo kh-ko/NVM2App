@@ -1,0 +1,17 @@
+FTDI D2XX Driver (ftd2xx.dll)
+=============================
+
+This application includes the FTDI D2XX direct driver library (ftd2xx.dll),
+which is used to control the USB firmware-update adapter.
+
+ftd2xx.dll is Copyright (C) Future Technology Devices International Limited
+(FTDI). It is NOT open source software. It is redistributed under the FTDI
+Driver Licence Terms, which permit its distribution and use only in
+conjunction with FTDI devices (products incorporating FTDI silicon or
+FTDI-licensed IP).
+
+The FTDI Driver Licence Terms are published by FTDI at:
+  https://ftdichip.com/driver-licence-terms/
+
+FTDI provides the driver "as is" without warranty of any kind. Use of the
+driver with non-FTDI devices is not permitted by FTDI.
