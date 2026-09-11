@@ -41,6 +41,12 @@ ver1 에서 달라진 점:
   모니터링 라운드에서는 다시 조회하지 않는다. 등록부에 없으면 그 param 은
   요청 없이 Not Support 로 두고 건너뛴다.
 - 쓰기는 pending 을 write spec 기준으로 묶어 spec 당 요청 1건을 만든다.
+
+2026-09-11 도메인 중립화 (3단계):
+- write() 의 값은 도메인 값(백분율, Torr 등 — 숫자 또는 그 문자열)이고 선로 문자열은
+  spec 의 codec 이 만든다. 문맥 미준비로 encode 가 None 이면 그 작업은 건너뛴다.
+- refresh() 는 목록 param 의 codec 이 읽는 문맥 param 을 큐 맨 앞에 한 번 넣는다
+  (모니터링 목록에는 넣지 않는다 — 사용자 결정). 문맥이 바뀌어도 값은 재디코드하지 않는다.
 """
 
 from enum import Enum, auto
@@ -372,6 +378,10 @@ class ParameterRunWorker(QObject):
         params += [p for p in self.write_param_list if p.acc != ParamAccType.WO]
         params += self.read_param_list
 
+        # 문맥 param(codec 이 읽는 스케일링·센서 구성)을 맨 앞에 한 번 읽어, 뒤따르는 param 의
+        # decode 시점에 문맥이 최신임을 보장한다. 재디코드는 하지 않는다 (3단계 결정 E)
+        params = self._registry.get_context_params(params) + params
+
         jobs = [_Job(_JobOp.READ, spec) for spec in self._read_specs_of(params)]
 
         if not jobs:
@@ -567,8 +577,20 @@ class ParameterRunWorker(QObject):
         self._send_current_job()
 
     def _send_current_job(self):
-        job = self._jobs[self._job_index]
-        self.sig_request.emit(self._seq, job.spec.build_request(job.values), job.spec)
+        # 쓰기 요청은 codec 문맥이 없으면 만들 수 없다(None) — 그 작업은 건너뛰고 로그만 남긴다
+        while self._job_index < len(self._jobs):
+            job = self._jobs[self._job_index]
+            packet = job.spec.build_request(job.values)
+            if packet is not None:
+                self.sig_request.emit(self._seq, packet, job.spec)
+                return
+
+            self._log.error(f"encode failed (codec context not ready) - write skipped: "
+                            f"{job.spec.describe()} values={job.values}")
+            self._job_index += 1
+            self.progress = int((self._job_index / len(self._jobs)) * 100)
+
+        self._finish_sequence()
 
     @Slot(int, str, str, object, SvcPortErrType)
     def _handle_result(self, seq: int, packet: str, response: str,

@@ -24,7 +24,11 @@ path 기준으로 보유한다 — Parameter 는 spec 객체를 참조하지 않
   프로토콜이 NV2 식별자를 쓰므로 역조회만 남긴다)
 - 미사용 필드 len / rreq / rres / wreq / wres / proto_type 제거
 - enable / visible 조건의 참조가 NV2 id 에서 전체 경로(ref_path)로 바뀌었다
-값 형 변환은 set_text_value() 하나로 모았다 (spec 과 set_force_value 가 공유).
+
+2026-09-11 (3단계, 도메인 중립화): value 는 프로토콜과 무관한 도메인 값이다 — 위치는 백분율,
+압력은 Torr, 배율 값은 화면 기준. 선로 문자열 ↔ 도메인 값 변환은 g_protocol/codec 이 맡고,
+선로 원문은 str_value 에 남는다. 형 변환 메서드(set_text_value / set_force_value)는 codec 으로
+이사했다 — 선로 문자열을 param 에 넣을 일은 SpecRegistry.apply_line_text() 로.
 """
 
 
@@ -274,31 +278,3 @@ class Parameter(QObject):
     def set_visible_condition(self, condition: ParamCondition | None):
         self.visible_condition = condition
 
-    def set_text_value(self, text: str) -> bool:
-        """전송 문자열을 data_type 규칙으로 변환해 값으로 확정한다. 변환 실패면 False.
-        spec 의 응답 반영과 set_force_value 가 공유한다.
-
-        [기존 동작 유지] str_value 는 변환 전에 대입되므로 실패해도 그 문자열이 남는다
-        (구 set_read_response_packet / set_force_value 와 동일). 실패 시 되돌리는 쪽이
-        맞아 보이지만 1단계는 동작 변화 없음이 원칙이라 그대로 둔다 — 정리 후보."""
-        self.str_value = text
-        try:
-            if self.data_type in self.INT_TYPES:
-                self.value = int(text)
-            elif self.data_type in self.FLOAT_TYPES:
-                self.value = float(text)
-            elif self.data_type in self.STR_TYPES:
-                self.value = text
-            elif self.data_type in self.BASE36_TYPES:
-                self.value = int(text, 36)
-            else:
-                return False
-        except ValueError:
-            return False
-        return True
-
-    def set_force_value(self, new_val: str):
-        if self.set_text_value(new_val):
-            self.is_err = False
-        else:
-            _log.error(f"set_force_value() 설정 값이 잘못 되었습니다: {self.path}, {self.name}, {new_val}")

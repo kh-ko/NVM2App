@@ -6,8 +6,6 @@ from b_core.b_datatype.param_enum import DescriptionEnum
 
 from b_core.f_helper.float_util import to_sig_str, to_str_with_decimal_places
 
-from c_ui.a_converter.position_converter_manager import PosiConverterManager
-from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 from c_ui.b_control_ver2.b_base.labels import BaseLabel, CheckLabel
 from c_ui.b_control_ver2.b_base.containers import BaseValueBox
 from c_ui.b_control_ver2.c_values.base_value import ValueWidget

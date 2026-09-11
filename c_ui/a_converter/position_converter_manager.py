@@ -1,13 +1,27 @@
-from b_core.c_manager.local_setting_manager import LocalSettingManager
+"""위치 표시 보조 (도메인 = 백분율, 3단계 도메인 중립화 이후).
+
+선로값 ↔ 백분율 변환은 g_protocol 의 PosiCodec 이 맡고 Parameter.value 는 이미 백분율이다.
+이 관리자는 화면 쪽 일만 남았다:
+- 소수점 자릿수(LocalSetting.posi_decimal_places) 표시 포맷
+- 로컬 설정점(pfs) ↔ 백분율 변환. pfs 는 "백분율 ÷ 100" (0 닫힘 ~ 1 열림) 으로 정의한다 —
+  인터페이스 단위와 무관한 물리 비율이라 저장과 표시가 서로 역함수다 (2026-09-11 사용자 결정).
+  [구 코드는 저장 dp ÷ Open값, 표시 codec(Open값 × pfs) 로 식이 어긋나 0-100 외 단위에서 왕복이
+  틀렸다 — 3단계에서 수정]. 설정점 버튼이 눌리면 백분율이 그대로 쓰기 값이 되고, 현재 인터페이스
+  단위의 선로값(예: 0-100000 에서 100 % → 100000)은 spec 의 PosiCodec 이 만든다.
+- 자릿수가 바뀌면 sig_posi_range_changed — 설정점 버튼처럼 다시 그려야 하는 화면용.
+  Parameter 값은 재디코드하지 않는다.
+
+주의: 시그널 연결 기반이므로 UI 스레드 전용이다.
+"""
+
 import threading
-import math
 
 from decimal import Decimal
 from PySide6.QtCore import Signal, QObject
 
-from b_core.b_datatype import param_enum as p_enum
-from b_core.c_manager.parameter_manager import ParamManager
+from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.f_helper.float_util import to_sig_str
+
 
 class PosiConverterManager(QObject):
     _instance = None
@@ -32,154 +46,48 @@ class PosiConverterManager(QObject):
 
         self._initialized = True
         self.local_setting = LocalSettingManager()
-
-        self.posi_unit = p_enum.RS232PositionUnitEnum.USER_SPECIFIC.value
-        self.posi_min  = 0.0
-        self.posi_max  = 100.0
         self.posi_decimal_places = 2
 
-        self.posi_unit_param = ParamManager().get_by_full_path("Interface.Scaling.Position.Position Unit"         )
-        self.posi_min_param  = ParamManager().get_by_full_path("Interface.Scaling.Position.Value Closest Position")
-        self.posi_max_param  = ParamManager().get_by_full_path("Interface.Scaling.Position.Value Open Position"   )     
-        
-        self.posi_unit_param.sig_value_changed.connect(self.handle_posi_range_changed)
-        self.posi_min_param.sig_value_changed.connect(self.handle_posi_range_changed)
-        self.posi_max_param.sig_value_changed.connect(self.handle_posi_range_changed)    
-        self.local_setting.sig_posi_decimal_places_changed.connect(self.handle_posi_decimal_places_changed) 
+        self.local_setting.sig_posi_decimal_places_changed.connect(self.handle_posi_decimal_places_changed)
+        self.handle_posi_decimal_places_changed()
 
-        self.handle_posi_decimal_places_changed() 
-
+    # ------------------------------------------------------------ 갱신 트리거
     def handle_posi_decimal_places_changed(self):
         self.posi_decimal_places = self.local_setting.posi_decimal_places
         self.sig_posi_range_changed.emit()
 
-    def handle_posi_range_changed(self):
-        if not self.posi_unit_param.str_value:
-            return
-
-        self.posi_unit = self.posi_unit_param.value
-
-        if self.posi_unit == p_enum.RS232PositionUnitEnum.USER_SPECIFIC.value:
-            if not self.posi_min_param.str_value or not self.posi_max_param.str_value:
-                return
-            self.posi_min  = self.posi_min_param.value
-            self.posi_max  = self.posi_max_param.value
-        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_1.value:
-            self.posi_min = 0.0
-            self.posi_max = 1.0
-        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_10.value:
-            self.posi_min = 0.0
-            self.posi_max = 10.0
-        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_90.value:
-            self.posi_min = 0.0
-            self.posi_max = 90.0
-        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_100.value:
-            self.posi_min = 0.0
-            self.posi_max = 100.0
-        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_1000.value:
-            self.posi_min = 0.0
-            self.posi_max = 1000.0
-        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_10000.value:
-            self.posi_min = 0.0
-            self.posi_max = 10000.0            
-        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_100000.value:
-            self.posi_min = 0.0
-            self.posi_max = 100000.0  
-        else:
-            self.posi_unit = -1
-
-        self.sig_posi_range_changed.emit()
-
-    def convert_posi_to_dp(self, ori_value: float) -> float:
-        if ori_value is None:
-            return None 
-        
-        if self.posi_unit == -1:
+    # ------------------------------------------------------------ 표시 포맷
+    def format_dp(self, value: float | None) -> str | None:
+        """백분율 → 고정 자릿수 문자열. None 은 None."""
+        if value is None:
             return None
-
-        range_value = self.posi_max - self.posi_min
-
-        if range_value == 0:
-            return 0.0
-        else:
-            converted_value = (ori_value - self.posi_min) / range_value * 100
-
-            return converted_value
-
-    def convert_posi_to_dp_str(self, ori_value: float) -> str:
-        converted_value = self.convert_posi_to_dp(ori_value)
-
-        if converted_value is None:
-            return None
-        
         fmt_spec = f".{self.posi_decimal_places}f"
-        return format(Decimal(str(converted_value)), fmt_spec)      
+        return format(Decimal(str(value)), fmt_spec)
 
-    def convert_dp_str_to_posi(self, display_value: str) -> float:
-        if display_value is None:
+    def parse_dp_str(self, text: str | None) -> float | None:
+        if text is None:
             return None
-
         try:
-            dp_value = float(display_value)
+            return float(text)
         except Exception:
             return None
 
-        return self.convert_dp_to_posi(dp_value)       
+    def normalize_dp_str(self, text: str | None) -> str | None:
+        """화면의 백분율 문자열 → 쓰기용 도메인 값 문자열 (유효숫자 6자리). 해석 불가는 None."""
+        return to_sig_str(self.parse_dp_str(text))
 
-    def convert_dp_str_to_posi_str(self, display_value: str) -> str:
+    # ------------------------------------------------------------ 로컬 설정점 (pfs = 백분율 ÷ 100)
+    def convert_dp_to_pfs(self, display_value: float) -> float | None:
         if display_value is None:
             return None
-
-        try:
-            dp_value = float(display_value)
-        except Exception:
-            return None
-
-        return self.convert_dp_to_posi_str(dp_value)          
-
-    def convert_dp_to_posi(self, display_value: float) -> float:
-        if self.posi_unit == -1 or display_value is None:
-            return None
-
-        range_value = self.posi_max - self.posi_min
-
-        if range_value == 0:
-            return self.posi_min
-        else:
-            ori_value = (display_value / 100.0) * range_value + self.posi_min
-            return ori_value
-
-    def convert_dp_to_posi_str(self, display_value: float) -> str:
-        if self.posi_unit == -1 or display_value is None:
-            return None
-
-        result_value = 0
-
-        range_value = self.posi_max - self.posi_min
-
-        if range_value != 0:
-            result_value = (display_value / 100.0) * range_value + self.posi_min
-        
-        return to_sig_str(result_value)
-
-    def convert_dp_to_pfs(self, display_value: float) -> float:
-        if self.posi_max == 0:
-            return 0.0
-        
-        return display_value / self.posi_max
-
-
-    def convert_pfs_to_dp_str(self, value):
-        if value == None:
-            return ""
-
-        converted_value = self.posi_max * value
-
-        return self.convert_posi_to_dp_str(converted_value)
+        return display_value / 100.0
 
     def convert_pfs_to_dp(self, value):
+        if value is None:
+            return None
+        return value * 100.0
 
-        converted_value = self.posi_max * value
-
-        return self.convert_posi_to_dp(converted_value)
-
+    def convert_pfs_to_dp_str(self, value):
+        if value is None:
+            return ""
+        return self.format_dp(self.convert_pfs_to_dp(value))

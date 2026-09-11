@@ -37,6 +37,7 @@ _app = QCoreApplication.instance() or QCoreApplication(sys.argv)
 from b_core.b_datatype.general_enum import (PARAM_DISPLAY_TYPE_MAP, ParamAccType,  # noqa: E402
                                             ParamDataType, ParamDisplayType, ParamParseErrType)
 from b_core.c_manager.parameter_manager import ParamManager  # noqa: E402
+from b_core.g_protocol.codec import TextCodec  # noqa: E402
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 
 NUM_TYPO_PATH = "Interface RS232/RS485.Settings.Address"  # "num " → "num" 의도된 편차
@@ -185,7 +186,11 @@ def main() -> int:
         if rs is None or ws is None:
             continue
         rep.check(rs.build_request() == f"p:0B{o.id}{o.index:02X}", f"{tag}: read req {rs.build_request()}")
-        rep.check(ws.build_request({n: "1"}) == f"p:01{o.id}{o.index:02X}1", f"{tag}: write req")
+        # 3단계: 쓰기 값은 도메인 값이라 codec param 은 선로 문자열이 달라진다 — 선로 원문 경로
+        # (build_request_line, 백업 파일용)로 틀을 대조하고, 형 변환만 하는 param 은 값 경로도 같아야 한다
+        rep.check(ws.build_request_line("1") == f"p:01{o.id}{o.index:02X}1", f"{tag}: write req (line)")
+        if isinstance(reg.get_param_codec(n), TextCodec):
+            rep.check(ws.build_request({n: "1"}) == f"p:01{o.id}{o.index:02X}1", f"{tag}: write req")
         rep.check(rs.expected_response_prefix == f"p:000B{o.id}{o.index:02X}", f"{tag}: read prefix")
         rep.check(ws.expected_response_prefix == f"p:0001{o.id}{o.index:02X}", f"{tag}: write prefix")
         rep.check(rs.params == (n,) and ws.params == (n,), f"{tag}: spec.params")
@@ -202,17 +207,28 @@ def main() -> int:
 
     # ---------------------------------------------------------------- 5. 응답 차등
     cases = 0
+    codec_cases = 0
     for o, n in zip(olds, news):
         tag = f"{o.path}.{o.name}"
         rs, ws = reg.get_read_spec(n), reg.get_write_spec(n)
         if rs is None or ws is None or tag == NUM_TYPO_PATH:
             continue
+        # 3단계: codec 이 붙은 param(posi/pres/scale)은 value 가 도메인 값이라 구 값(선로 숫자)과
+        # 다르다 — 그 param 은 value 를 codec.from_line(구 값) 과 비교한다 (문맥 없는 테스트라 None)
+        codec = reg.get_param_codec(n)
+        is_text = isinstance(codec, TextCodec)
         for name, resp in read_cases(o.id, o.index, o.data_type):
             reset(o); reset(n)
             r_old = o.set_read_response_packet(resp)
             r_new = rs.apply_response(resp)
-            s_old = (r_old, o.is_err, o.is_not_support, o.value, o.str_value)
-            s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
+            if is_text:
+                s_old = (r_old, o.is_err, o.is_not_support, o.value, o.str_value)
+                s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
+            else:
+                expected_value = codec.from_line(o.value) if o.value is not None else None
+                s_old = (r_old, o.is_err, o.is_not_support, expected_value, o.str_value)
+                s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
+                codec_cases += 1
             rep.check(s_old == s_new, f"{tag}: read/{name} {s_old} != {s_new}")
             cases += 1
         for name, resp in write_cases(o.id, o.index):
@@ -223,7 +239,7 @@ def main() -> int:
             s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
             rep.check(s_old == s_new, f"{tag}: write/{name} {s_old} != {s_new}")
             cases += 1
-    rep.notes.append(f"응답 차등 {cases:,} 케이스")
+    rep.notes.append(f"응답 차등 {cases:,} 케이스 (그중 codec param 읽기 {codec_cases:,} 건은 value 를 codec.from_line(구 값) 과 대조)")
 
     # ---------------------------------------------------------------- 6. 워커 큐 구성
     # 구 워커(61025d3)의 규칙을 그대로 기대값으로 쓴다:
@@ -275,7 +291,11 @@ def main() -> int:
         rep.check(w.refresh() == StartResult.OK, "refresh OK")
         actual = [j.spec.build_request(j.values) for j in w._jobs]
         w._stop_all()
-        expected = ([old_read(p) for p in init_params]
+        # 3단계: codec 문맥 param 이 맨 앞에 붙는다 (이 목록의 param 은 문맥이 없어 빈 목록)
+        listed = init_params + [p for p in write_params if p.acc != ParamAccType.WO] + read_params
+        ctx = reg.get_context_params(listed)
+        expected = ([old_read(p) for p in ctx]
+                    + [old_read(p) for p in init_params]
                     + [old_read(p) for p in write_params if p.acc != ParamAccType.WO]
                     + [old_read(p) for p in read_params])
         rep.check(actual == expected, f"refresh 큐 순서\n    구: {expected}\n    신: {actual}")

@@ -219,15 +219,17 @@ class ParamReadWriteRealValueWidget(ParamWidget, ReadWriteFloatValueWidget):
         self._bind_param()
 
 class ParamReadOnlyScaleValueWidget(ParamWidget, ReadOnlyScaleValueWidget):
+    # 배율(×100 / ×10000)은 spec 의 ScaleCodec 이 적용해 param.value 가 이미 화면 기준 값이다
+    # (3단계 도메인 중립화) — 위젯 배율은 1
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
         label_text = self._resolve_param(param_full_path, force_label_text)
-        super().__init__(label_text=label_text, scale=100.0, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
+        super().__init__(label_text=label_text, scale=1.0, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
         self._bind_param()
 
 class ParamReadWriteScaleValueWidget(ParamWidget, ReadWriteScaleValueWidget):
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
         label_text = self._resolve_param(param_full_path, force_label_text)
-        super().__init__(label_text=label_text, scale=100.0, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
+        super().__init__(label_text=label_text, scale=1.0, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
 
         # SCALE param 의 스키마 min/max 는 표시 범위 기준(예: 0~100(%)) —
         # set_range 계약도 표시값이므로 그대로 적용한다.
@@ -241,7 +243,7 @@ class ParamReadWriteScaleValueWidget(ParamWidget, ReadWriteScaleValueWidget):
 class ParamReadWriteIFaceGainValueWidget(ParamWidget, ReadWriteScaleValueWidget):
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
         label_text = self._resolve_param(param_full_path, force_label_text)
-        super().__init__(label_text=label_text, scale=10000.0, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
+        super().__init__(label_text=label_text, scale=1.0, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
 
         # SCALE param 의 스키마 min/max 는 표시 범위 기준(예: 0~100(%)) —
         # set_range 계약도 표시값이므로 그대로 적용한다.
@@ -253,12 +255,16 @@ class ParamReadWriteIFaceGainValueWidget(ParamWidget, ReadWriteScaleValueWidget)
         self._bind_param()
 
 class ParamReadOnlyPosiValueWidget(ParamWidget, ReadOnlyTextValueWidget):
+    """위치 표시 — param.value 는 이미 백분율(도메인)이다 (3단계). 위젯은 LocalSetting 의
+    소수점 자릿수로 포맷만 한다. 선로 ↔ 백분율 변환은 spec 의 PosiCodec 몫."""
+
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
         self.converter = PosiConverterManager()
         label_text = self._resolve_param(param_full_path, force_label_text)
         super().__init__(label_text=label_text, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
-        self._bind_param() 
+        self._bind_param()
 
+        # 자릿수 변경 시 재표시 (문맥 변경 시에도 발화하지만 값은 재디코드하지 않으므로 표시만 같다)
         self.converter.sig_posi_range_changed.connect(self.handle_posi_range_changed)
         self.handle_posi_range_changed()
 
@@ -267,13 +273,10 @@ class ParamReadOnlyPosiValueWidget(ParamWidget, ReadOnlyTextValueWidget):
         self.commit()
 
     def set_value(self, value):
-        converted_value = self.converter.convert_posi_to_dp_str(value)
-        super().set_value(converted_value)
+        super().set_value(self.converter.format_dp(value))
 
     def get_value(self):
-        value = super().get_value()
-        converted_value = self.converter.convert_dp_str_to_posi(value)
-        return converted_value
+        return self.converter.parse_dp_str(super().get_value())
 
     def import_backup_value(self, value, unit=None):
         # posi 표시값은 단위 설정과 무관하게 항상 백분율 — unit 은 사용하지 않는다
@@ -286,7 +289,8 @@ class ParamReadWritePosiValueWidget(ParamWidget, ReadWriteFloatValueWidget):
     """ReadWriteFloatValueWidget(라인에딧) 기반 posi 입력 — 스핀박스 버전과 달리
     '값 없음'(Unknown placeholder) / Not Support 표시를 지원한다.
 
-    스키마 min/max 는 표시 범위 기준이라 변환 없이 그대로 적용한다 (스펙)."""
+    스키마 min/max 는 표시 범위 기준이라 변환 없이 그대로 적용한다 (스펙).
+    param.value 는 백분율(도메인)이라 값 변환이 없다 — 자릿수만 LocalSetting 을 따른다 (3단계)."""
 
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
         self.converter = PosiConverterManager()
@@ -307,15 +311,6 @@ class ParamReadWritePosiValueWidget(ParamWidget, ReadWriteFloatValueWidget):
         self.set_value(self.param.value)
         self.commit()
 
-    def set_value(self, value):
-        converted_value = self.converter.convert_posi_to_dp(value)
-        super().set_value(converted_value)
-
-    def get_value(self):
-        value = super().get_value()
-        converted_value = self.converter.convert_dp_to_posi(value)
-        return converted_value
-
     def import_backup_value(self, value, unit=None):
         # posi 표시값은 단위 설정과 무관하게 항상 백분율 — unit 은 사용하지 않는다
         super().set_value(value)
@@ -335,18 +330,10 @@ class ParamReadWritePosiValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinB
         self.handle_posi_range_changed()
 
     def handle_posi_range_changed(self):
+        # param.value 는 백분율(도메인) — 값 변환 없이 자릿수만 갱신 (3단계)
         self.set_decimals(self.converter.posi_decimal_places)
         self.set_value(self.param.value)
         self.commit()
-
-    def set_value(self, value):
-        converted_value = self.converter.convert_posi_to_dp(value)
-        super().set_value(converted_value)
-
-    def get_value(self):
-        value = super().get_value()
-        converted_value = self.converter.convert_dp_to_posi(value)
-        return converted_value
 
     def import_backup_value(self, value, unit=None):
         # posi 표시값은 단위 설정과 무관하게 항상 백분율 — unit 은 사용하지 않는다
@@ -356,10 +343,13 @@ class ParamReadWritePosiValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinB
         return super().get_value()
 
 class ParamReadOnlyPresValueWidget(ParamWidget, ReadOnlyTextValueWidget):
-    def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, is_visible_unit = True, convert_type = None, parent = None):
+    """압력 표시 — param.value 는 Torr(도메인)이다 (3단계). 위젯은 LocalSetting 표시 단위로
+    환산하고 자릿수를 적용한다. 어느 센서 기준으로 푸는가(auto / 1 / 2)는 param 의 codec 이
+    정하므로 위젯은 모른다 (구 convert_type 인자 제거)."""
+
+    def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, is_visible_unit = True, parent = None):
         self.converter = PresConverterManager()
         self.local_setting_manager = LocalSettingManager()
-        self.convert_type = convert_type
         self.is_visible_unit = is_visible_unit
         self.base_label_text = self._resolve_param(param_full_path, force_label_text)
 
@@ -384,13 +374,10 @@ class ParamReadOnlyPresValueWidget(ParamWidget, ReadOnlyTextValueWidget):
         self.commit()
 
     def set_value(self, value):
-        converted_value = self.converter.convert_iface_pres_to_dp_pres_str(value, self.convert_type)
-        super().set_value(converted_value)
+        super().set_value(self.converter.to_display_str(value))
 
     def get_value(self):
-        value = super().get_value()
-        converted_value = self.converter.convert_dp_pres_str_to_iface_pres(value, self.convert_type)
-        return converted_value
+        return self.converter.from_display_str(super().get_value())
 
     def import_backup_value(self, value, unit=None):
         # 저장 당시 표시 단위가 현재와 다르면 현재 표시 단위로 환산해 넣는다
@@ -410,10 +397,9 @@ class ParamReadOnlyPresValueWidget(ParamWidget, ReadOnlyTextValueWidget):
         return self.converter.local_setting.pres_unit
 
 class ParamReadWritePresValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinBoxWidget):
-    def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, is_visible_unit = True, convert_type = None, parent = None):
+    def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, is_visible_unit = True, parent = None):
         self.converter = PresConverterManager()
         self.local_setting_manager = LocalSettingManager()
-        self.convert_type = convert_type
         self.is_visible_unit = is_visible_unit
         self.base_label_text = self._resolve_param(param_full_path, force_label_text)
         super().__init__(label_text=self._make_label_text(), label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
@@ -439,13 +425,12 @@ class ParamReadWritePresValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinB
         self.commit()
 
     def set_value(self, value):
-        converted_value = self.converter.convert_iface_pres_to_dp_pres(value, self.convert_type)
-        super().set_value(converted_value)
+        # param.value(Torr) → 표시 단위
+        super().set_value(self.converter.to_display(value))
 
     def get_value(self):
-        value = super().get_value()
-        converted_value = self.converter.convert_dp_pres_to_iface_pres(value, self.convert_type)
-        return converted_value
+        # 표시 단위 → Torr (도메인). 쓰기 시 선로 문자열은 spec 의 codec 이 만든다
+        return self.converter.from_display(super().get_value())
 
     def import_backup_value(self, value, unit=None):
         # 저장 당시 표시 단위가 현재와 다르면 현재 표시 단위로 환산해 넣는다
@@ -464,14 +449,12 @@ class ParamReadWritePresValueWidget(ParamWidget, ReadWriteFloatValueWidget):
     """ReadWriteFloatValueWidget(라인에딧) 기반 pres 입력 — 스핀박스 버전과 달리
     '값 없음'(Unknown placeholder) / Not Support 표시를 지원한다.
 
-    스핀박스 버전과 동일하게 convert_type(센서 기준 선택)과 라벨 단위 표기
-    (is_visible_unit)를 지원하고, 스키마 min/max 는 표시 범위 기준이라 변환
-    없이 그대로 적용한다."""
+    스핀박스 버전과 동일하게 라벨 단위 표기(is_visible_unit)를 지원하고, 스키마
+    min/max 는 표시 범위 기준이라 변환 없이 그대로 적용한다."""
 
-    def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, is_visible_unit = True, convert_type = None, parent = None):
+    def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, is_visible_unit = True, parent = None):
         self.converter = PresConverterManager()
         self.local_setting_manager = LocalSettingManager()
-        self.convert_type = convert_type
         self.is_visible_unit = is_visible_unit
         self.base_label_text = self._resolve_param(param_full_path, force_label_text)
         super().__init__(label_text=self._make_label_text(), label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
@@ -501,13 +484,12 @@ class ParamReadWritePresValueWidget(ParamWidget, ReadWriteFloatValueWidget):
         self.commit()
 
     def set_value(self, value):
-        converted_value = self.converter.convert_iface_pres_to_dp_pres(value, self.convert_type)
-        super().set_value(converted_value)
+        # param.value(Torr) → 표시 단위
+        super().set_value(self.converter.to_display(value))
 
     def get_value(self):
-        value = super().get_value()
-        converted_value = self.converter.convert_dp_pres_to_iface_pres(value, self.convert_type)
-        return converted_value
+        # 표시 단위 → Torr (도메인). 쓰기 시 선로 문자열은 spec 의 codec 이 만든다
+        return self.converter.from_display(super().get_value())
 
     def import_backup_value(self, value, unit=None):
         # 저장 당시 표시 단위가 현재와 다르면 현재 표시 단위로 환산해 넣는다

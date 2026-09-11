@@ -6,7 +6,8 @@ from PySide6.QtCore import Signal
 from b_core.b_datatype.param_enum import SensUnitEnum
 from b_core.b_datatype.general_enum import ParamDisplayType
 from b_core.c_manager.local_setting_manager import LocalSettingManager
-from c_ui.a_converter.pressure_converter_manager import PresConverterManager, PresConvertType
+from c_ui.a_converter.pressure_converter_manager import PresConverterManager
+from c_ui.b_control_ver2.c_values.read_only_values import ReadOnlyTextValueWidget
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.b_base.icons import GLYPH_EDIT
@@ -87,7 +88,7 @@ class MainPressurePanel(PanelWidget):
         self._actual_posi_param = param
 
         t = tokens()
-        widget = ParamReadOnlyPresValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Pres. Actual", is_visible_unit = False, is_vertical_mode = True, convert_type = PresConvertType.AUTO)
+        widget = ParamReadOnlyPresValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Pres. Actual", is_visible_unit = False, is_vertical_mode = True)
         widget.value_widget.set_boxed(True)
         widget.value_widget.set_colors(text=t.panel_pres_text, bg=t.panel_pres_bg, border=t.panel_pres_border)
         self.left_layout.insertWidget(0, widget)
@@ -96,23 +97,31 @@ class MainPressurePanel(PanelWidget):
         self._target_posi_used_param = param
         
         t = tokens()
-        widget = ParamReadOnlyPresValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Pres. Used Target", is_visible_unit = False, is_vertical_mode = True, convert_type = PresConvertType.AUTO)
+        widget = ParamReadOnlyPresValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Pres. Used Target", is_visible_unit = False, is_vertical_mode = True)
         widget.value_widget.set_boxed(True)
         widget.value_widget.set_colors(text=t.panel_pres_text, bg=t.panel_pres_bg, border=t.panel_pres_border)
         self.left_layout.insertWidget(1, widget)
 
     def set_max_pres_param(self, param):
-        
+        # Value Pressure Sensor Full Scale 은 압력이 아니라 인터페이스 눈금(real param)이라
+        # 압력 위젯에 직접 묶을 수 없다 — 컨버터가 auto codec 으로 풀어 준 만압(표시 단위)을
+        # 텍스트 위젯에 표시하고, 문맥/단위/자릿수 변경 시 함께 갱신한다 (3단계)
         t = tokens()
-        widget = ParamReadOnlyPresValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Max Pres. Max", label_width=150, is_visible_unit = False, is_vertical_mode = True, convert_type = PresConvertType.AUTO)
-        widget.value_widget.set_boxed(True)
-        widget.value_widget.set_colors(text=t.panel_pres_text, bg=t.panel_pres_bg, border=t.panel_pres_border)
-        self.left_layout.insertWidget(2, widget)
+        self.max_pres_widget = ReadOnlyTextValueWidget(label_text="Max Pres. Max", label_width=150, is_vertical_mode = True)
+        self.max_pres_widget.value_widget.set_boxed(True)
+        self.max_pres_widget.value_widget.set_colors(text=t.panel_pres_text, bg=t.panel_pres_bg, border=t.panel_pres_border)
+        self.left_layout.insertWidget(2, self.max_pres_widget)
+        self._refresh_max_pres_widget()
+
+    def _refresh_max_pres_widget(self):
+        widget = getattr(self, "max_pres_widget", None)
+        if widget is not None:
+            widget.set_value(self.converter.get_dp_max_pres_str())
 
     def set_target_pres_param(self, param):
         self._target_pres_param = param
 
-        self.target_pres_widget = ParamReadWritePresValueSpinBoxWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Pres. Target", is_visible_unit = False, is_vertical_mode = True, convert_type = PresConvertType.AUTO)
+        self.target_pres_widget = ParamReadWritePresValueSpinBoxWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Pres. Target", is_visible_unit = False, is_vertical_mode = True)
         self.target_pres_widget.sig_edited_by_enter.connect(self._on_target_pres_edited_by_enter)
         self.right_layout.insertWidget(0, self.target_pres_widget)
 
@@ -126,38 +135,39 @@ class MainPressurePanel(PanelWidget):
         self.target_pres_widget.commit()
 
     def _on_point_01_clicked(self):
-        value = self.converter.convert_dp_pres_str_to_iface_pres_str(self.point_01_btn.text(), PresConvertType.AUTO)
+        value = self.converter.convert_dp_str_to_domain_str(self.point_01_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_02_clicked(self):
-        value = self.converter.convert_dp_pres_str_to_iface_pres_str(self.point_02_btn.text(), PresConvertType.AUTO)
+        value = self.converter.convert_dp_str_to_domain_str(self.point_02_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_03_clicked(self):
-        value = self.converter.convert_dp_pres_str_to_iface_pres_str(self.point_03_btn.text(), PresConvertType.AUTO)
+        value = self.converter.convert_dp_str_to_domain_str(self.point_03_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_04_clicked(self):
-        value = self.converter.convert_dp_pres_str_to_iface_pres_str(self.point_04_btn.text(), PresConvertType.AUTO)
+        value = self.converter.convert_dp_str_to_domain_str(self.point_04_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_05_clicked(self):
-        value = self.converter.convert_dp_pres_str_to_iface_pres_str(self.point_05_btn.text(), PresConvertType.AUTO)
+        value = self.converter.convert_dp_str_to_domain_str(self.point_05_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_06_clicked(self):
-        value = self.converter.convert_dp_pres_str_to_iface_pres_str(self.point_06_btn.text(), PresConvertType.AUTO)
+        value = self.converter.convert_dp_str_to_domain_str(self.point_06_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _handle_pres_range_changed(self):
         self.unit_widget.set_value(self.local_setting_manager.pres_unit)
         self.unit_widget.commit()
+        self._refresh_max_pres_widget()
         self._handle_pres_setpoint01_changed()
         self._handle_pres_setpoint02_changed()
         self._handle_pres_setpoint03_changed()
@@ -166,7 +176,7 @@ class MainPressurePanel(PanelWidget):
         self._handle_pres_setpoint06_changed()
 
     def _handle_pres_setpoint01_changed(self):
-        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint01, PresConvertType.AUTO)
+        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint01)
         if value:
             self.point_01_btn.setText(value)
             self.point_01_btn.setEnabled(True)
@@ -175,7 +185,7 @@ class MainPressurePanel(PanelWidget):
             self.point_01_btn.setEnabled(False)
 
     def _handle_pres_setpoint02_changed(self):
-        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint02, PresConvertType.AUTO)
+        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint02)
         if value:
             self.point_02_btn.setText(value)
             self.point_02_btn.setEnabled(True)
@@ -184,7 +194,7 @@ class MainPressurePanel(PanelWidget):
             self.point_02_btn.setEnabled(False)
 
     def _handle_pres_setpoint03_changed(self):
-        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint03, PresConvertType.AUTO)
+        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint03)
         if value:
             self.point_03_btn.setText(value)
             self.point_03_btn.setEnabled(True)
@@ -193,7 +203,7 @@ class MainPressurePanel(PanelWidget):
             self.point_03_btn.setEnabled(False)
 
     def _handle_pres_setpoint04_changed(self):
-        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint04, PresConvertType.AUTO)
+        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint04)
         if value:
             self.point_04_btn.setText(value)
             self.point_04_btn.setEnabled(True)
@@ -202,7 +212,7 @@ class MainPressurePanel(PanelWidget):
             self.point_04_btn.setEnabled(False)
 
     def _handle_pres_setpoint05_changed(self):
-        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint05, PresConvertType.AUTO)
+        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint05)
         if value:
             self.point_05_btn.setText(value)
             self.point_05_btn.setEnabled(True)
@@ -211,7 +221,7 @@ class MainPressurePanel(PanelWidget):
             self.point_05_btn.setEnabled(False)
 
     def _handle_pres_setpoint06_changed(self):
-        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint06, PresConvertType.AUTO)
+        value = self.converter.convert_sfs_to_dp_pres_str(self.local_setting_manager.pres_setpoint06)
         if value:
             self.point_06_btn.setText(value)
             self.point_06_btn.setEnabled(True)

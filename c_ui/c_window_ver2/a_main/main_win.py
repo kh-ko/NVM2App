@@ -366,6 +366,10 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.pres_panel.set_max_pres_param(self.pres_full_scale_param)
         self.pres_panel.set_target_pres_param(self.target_pres_param)
 
+        # 차트가 Compound 샘플(선로값)을 해석할 참조 param — _COMPOUND_REF_PATHS [2]~[5] 와 같은 순서
+        self.chart_panel.set_source_params(self.act_posi_param, self.target_used_posi_param,
+                                           self.act_pres_param, self.target_used_pres_param)
+
     # 쓰기 정책/refresh (single_param_write / multiple_param_write /
     # start_param_refresh)는 ParamWorkerWinMixin 이 제공한다
 

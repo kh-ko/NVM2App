@@ -40,7 +40,8 @@ from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper
 
 from c_ui.a_converter.position_converter_manager import PosiConverterManager
-from c_ui.a_converter.pressure_converter_manager import PresConverterManager, PresConvertType
+from c_ui.a_converter.pressure_converter_manager import PresConverterManager
+from b_core.g_protocol.spec_registry import SpecRegistry
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.b_base import icons
 from c_ui.b_control_ver2.b_base.buttons import BaseButton
@@ -72,6 +73,14 @@ class MainChartPanel(PanelWidget):
         self.local_setting = LocalSettingManager()
         self.posi_converter = PosiConverterManager()
         self.pres_converter = PresConverterManager()
+
+        # Compound 폴링 샘플은 선로값이다 — 참조 param 의 codec 으로 도메인 값(백분율 / Torr)을
+        # 만든 뒤 표시 단위를 적용한다 (3단계 결정 K). MainWin 이 set_source_params 로 넘겨준다
+        self._registry = SpecRegistry()
+        self._act_posi_param = None
+        self._tgt_posi_param = None
+        self._act_pres_param = None
+        self._tgt_pres_param = None
 
         # [이중 버퍼] 뒤쪽 절반이 차면 최근 _CAPACITY 개를 앞으로 복사한다.
         # 유효 구간은 항상 [ _end - _size : _end ] 슬라이스 뷰 (복사 없음)
@@ -304,6 +313,18 @@ class MainChartPanel(PanelWidget):
         self._chart_area.addLayout(row)
 
     # ------------------------------------------------------------ 데이터 수신
+    def set_source_params(self, act_posi, tgt_posi, act_pres, tgt_pres):
+        """Compound 샘플 4열이 어느 param 의 선로값인지 — 그 param 의 codec 으로 해석한다."""
+        self._act_posi_param = act_posi
+        self._tgt_posi_param = tgt_posi
+        self._act_pres_param = act_pres
+        self._tgt_pres_param = tgt_pres
+
+    def _decode(self, param, line_value):
+        if param is None:
+            return None
+        return self._registry.decode_line(param, line_value)
+
     def update_chart(self, data_list):
         """MainWin 이 200ms 주기로 전달하는 CompoundData 배치를 버퍼에 추가하고 1회 다시 그린다."""
         if not data_list:
@@ -324,10 +345,10 @@ class MainChartPanel(PanelWidget):
                 self._buf[:, :_CAPACITY] = self._buf[:, capacity2 - _CAPACITY:capacity2]
                 self._end = _CAPACITY
 
-            posi_act = self._to_plot(self.posi_converter.convert_posi_to_dp(data.act_posi))
-            posi_tgt = self._to_plot(self.posi_converter.convert_posi_to_dp(data.target_posi))
-            pres_act = self._to_plot(self.pres_converter.convert_iface_pres_to_dp_pres(data.act_pres, PresConvertType.AUTO))
-            pres_tgt = self._to_plot(self.pres_converter.convert_iface_pres_to_dp_pres(data.target_pres, PresConvertType.AUTO))
+            posi_act = self._to_plot(self._decode(self._act_posi_param, data.act_posi))
+            posi_tgt = self._to_plot(self._decode(self._tgt_posi_param, data.target_posi))
+            pres_act = self._to_plot(self.pres_converter.to_display(self._decode(self._act_pres_param, data.act_pres)))
+            pres_tgt = self._to_plot(self.pres_converter.to_display(self._decode(self._tgt_pres_param, data.target_pres)))
 
             i = self._end
             self._buf[_ROW_TIME, i] = (data.timestamp - self._t0_ms) / 1000.0
@@ -587,7 +608,7 @@ class MainChartPanel(PanelWidget):
             self.local_setting.posi_chart_range_custom_max)
 
     def handle_pres_range_setting_changed(self):
-        full_max = self.pres_converter.get_dp_max_pres(PresConvertType.AUTO)
+        full_max = self.pres_converter.get_dp_max_pres()
         if full_max is None:
             full_max = 100.0  # 컨버터 미준비 시 대체값 (스펙)
 

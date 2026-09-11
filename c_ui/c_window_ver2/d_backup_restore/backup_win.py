@@ -299,7 +299,8 @@ class BackupWin(ParamWin):
         else:
             self._log.info(f"[Success]: Parameter = {param.path}.{param.name}")
             value = resp_msg[len(resp_check_prefix):]
-            content = f"{param.path}.{param.name}, {write_spec.build_request({param: value})}"
+            # 백업 파일은 선로 원문 그대로 — codec 을 거치지 않는 build_request_line (복원 독립성)
+            content = f"{param.path}.{param.name}, {write_spec.build_request_line(value)}"
             self.backup_contents.append(content)
 
         try:

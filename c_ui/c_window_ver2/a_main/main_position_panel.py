@@ -117,32 +117,32 @@ class MainPositionPanel(PanelWidget):
         self.target_posi_widget.commit()
 
     def _on_point_01_clicked(self):
-        value = self.converter.convert_dp_str_to_posi_str(self.point_01_btn.text())
+        value = self.converter.normalize_dp_str(self.point_01_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_02_clicked(self):
-        value = self.converter.convert_dp_str_to_posi_str(self.point_02_btn.text())
+        value = self.converter.normalize_dp_str(self.point_02_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_03_clicked(self):
-        value = self.converter.convert_dp_str_to_posi_str(self.point_03_btn.text())
+        value = self.converter.normalize_dp_str(self.point_03_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_04_clicked(self):
-        value = self.converter.convert_dp_str_to_posi_str(self.point_04_btn.text())
+        value = self.converter.normalize_dp_str(self.point_04_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_05_clicked(self):
-        value = self.converter.convert_dp_str_to_posi_str(self.point_05_btn.text())
+        value = self.converter.normalize_dp_str(self.point_05_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_06_clicked(self):
-        value = self.converter.convert_dp_str_to_posi_str(self.point_06_btn.text())
+        value = self.converter.normalize_dp_str(self.point_06_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 

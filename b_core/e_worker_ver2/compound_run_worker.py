@@ -307,8 +307,9 @@ class CompoundRunWorker(QObject):
     def pop_all_data(self) -> list:
         """큐의 샘플을 전부 회수해 반환한다 (UI 스레드에서 호출).
 
-        마지막 샘플의 원시 문자열 값으로 ref param 들을 set_force_value 갱신한다
-        — param 변경 시그널이 UI 스레드에서 발화되도록 여기서 수행."""
+        마지막 샘플의 원시 문자열 값으로 ref param 들을 갱신한다 — 선로 문자열 → 도메인 값
+        변환은 그 param 의 codec(SpecRegistry.apply_line_text) 이 맡는다.
+        param 변경 시그널이 UI 스레드에서 발화되도록 여기서 수행."""
         if self._thread is None:
             return []
 
@@ -320,10 +321,11 @@ class CompoundRunWorker(QObject):
         if not items:
             return []
 
+        registry = SpecRegistry()
         _, last_values = items[-1]
         for i, (_, ref) in enumerate(self._pairs):
             if ref is not None and i < len(last_values):
-                ref.set_force_value(last_values[i])
+                registry.apply_line_text(ref, last_values[i])
 
         return [sample for sample, _ in items]
 

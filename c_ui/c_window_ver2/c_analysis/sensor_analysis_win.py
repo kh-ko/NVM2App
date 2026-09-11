@@ -2,7 +2,7 @@
 
 세 압력 값을 하나의 Y축(표시 압력 단위)에 실시간 곡선으로 그린다:
 - Pressure Control.Basic.Actual Pressure : MainWin 의 compound 폴링이
-  set_force_value 로 계속 갱신한다 — 이 창은 읽기 등록 없이 값만 샘플링
+  Compound 폴링(SpecRegistry.apply_line_text)으로 계속 갱신한다 — 이 창은 읽기 등록 없이 값만 샘플링
 - Sensor.Sensor 1/2.Basic.Actual Pressure Value : 이 창의 param_worker
   read 목록에 등록 — 유휴 모니터링이 주기적으로 읽어 값을 갱신한다
   (ServicePort 가 뮤텍스로 트랜잭션을 직렬화하므로 MainWin 폴링과 공존)
@@ -28,7 +28,7 @@ from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from b_core.b_datatype import param_enum as p_enum
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 
-from c_ui.a_converter.pressure_converter_manager import PresConverterManager, PresConvertType
+from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.b_base.inputs import BaseCheckBox
@@ -274,14 +274,16 @@ class SensorAnalysisWin(ParamWin):
 
         i = self._end
         self._buf[_ROW_TIME, i] = now - self._t0
+        # param.value 는 Torr(도메인) — 센서 기준 해석은 각 param 의 codec 이 이미 했다.
+        # 여기서는 표시 단위 환산만 (3단계)
         self._buf[_ROW_ACT, i] = self._to_plot(
-            self.pres_converter.convert_iface_pres_to_dp_pres(self.act_pres_param.value, PresConvertType.AUTO)
+            self.pres_converter.to_display(self.act_pres_param.value)
             if self.act_pres_param is not None else None)
         self._buf[_ROW_SENS1, i] = self._to_plot(
-            self.pres_converter.convert_iface_pres_to_dp_pres(self.sens1_pres_param.value, PresConvertType.SENSOR1)
+            self.pres_converter.to_display(self.sens1_pres_param.value)
             if self.sens1_pres_param is not None else None)
         self._buf[_ROW_SENS2, i] = self._to_plot(
-            self.pres_converter.convert_iface_pres_to_dp_pres(self.sens2_pres_param.value, PresConvertType.SENSOR2)
+            self.pres_converter.to_display(self.sens2_pres_param.value)
             if self.sens2_pres_param is not None else None)
 
         self._end += 1
@@ -431,7 +433,7 @@ class SensorAnalysisWin(ParamWin):
         viewbox.disableAutoRange(axis=pg.ViewBox.YAxis)
 
         if self._range_mode == p_enum.ChartRangeModeEnum.FULL.value:
-            full_max = self.pres_converter.get_dp_max_pres(PresConvertType.AUTO)
+            full_max = self.pres_converter.get_dp_max_pres()
             y_min, y_max = 0.0, full_max if full_max is not None else 100.0  # 컨버터 미준비 시 대체값
         else:  # CUSTOM
             y_min, y_max = self._range_min, self._range_max

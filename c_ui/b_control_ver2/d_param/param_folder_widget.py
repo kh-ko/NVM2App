@@ -3,7 +3,6 @@ from typing import List
 from b_core.b_datatype.general_enum import ParamAccType
 from b_core.b_datatype.general_enum import ParamDisplayType
 from b_core.c_manager.parameter_manager import ParamManager
-from c_ui.a_converter.pressure_converter_manager import PresConvertType
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.d_param.param_values import (ParamWriteOnlyButtonValueWidget, ParamReadWriteHexValueWidget, ParamReadWriteEnumValueWidget, 
                                                     ParamReadOnlyTextValueWidget, ParamReadOnlyNumValueWidget, ParamReadWriteNumValueWidget, 
@@ -97,23 +96,23 @@ class ParamFolderWidget(PanelWidget):
                     pass
             elif param.display_type == ParamDisplayType.SENS_PRES:
                 if param.acc == ParamAccType.RO:
-                    component = ParamReadOnlyPresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True, convert_type = PresConvertType.AUTO)
+                    component = ParamReadOnlyPresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)
                 elif param.acc == ParamAccType.RW:
-                    component = ParamReadWritePresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True, convert_type = PresConvertType.AUTO)
+                    component = ParamReadWritePresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)
                 elif param.acc == ParamAccType.WO:
                     pass
             elif param.display_type == ParamDisplayType.SENS1_PRES:
                 if param.acc == ParamAccType.RO:
-                    component = ParamReadOnlyPresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True, convert_type = PresConvertType.SENSOR1)
+                    component = ParamReadOnlyPresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)
                 elif param.acc == ParamAccType.RW:
-                    component = ParamReadWritePresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True, convert_type = PresConvertType.SENSOR1)
+                    component = ParamReadWritePresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)
                 elif param.acc == ParamAccType.WO:
                     pass
             elif param.display_type == ParamDisplayType.SENS2_PRES:
                 if param.acc == ParamAccType.RO:
-                    component = ParamReadOnlyPresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True, convert_type = PresConvertType.SENSOR2)
+                    component = ParamReadOnlyPresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)
                 elif param.acc == ParamAccType.RW:
-                    component = ParamReadWritePresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True, convert_type = PresConvertType.SENSOR2)
+                    component = ParamReadWritePresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)
                 elif param.acc == ParamAccType.WO:
                     pass
             elif param.display_type == ParamDisplayType.SCALE:
@@ -132,9 +131,9 @@ class ParamFolderWidget(PanelWidget):
                     pass
             elif param.display_type == ParamDisplayType.PRESS_SLOPE:
                 if param.acc == ParamAccType.RO:
-                    component = ParamReadOnlyPresSlopeValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True, convert_type = PresConvertType.AUTO)
+                    component = ParamReadOnlyPresSlopeValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)
                 elif param.acc == ParamAccType.RW:
-                    component = ParamReadWritePresSlopeValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True, convert_type = PresConvertType.AUTO)
+                    component = ParamReadWritePresSlopeValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)
                 elif param.acc == ParamAccType.WO:
                     pass
 

@@ -8,7 +8,7 @@
 
 기존 Parameter.check_error / set_read_response_packet / set_write_response_packet
 의 로직을 그대로 옮겼다 (1단계 = 동작 변화 없음). 값의 형 변환은 Parameter 의
-영역이므로 param.set_text_value() 에 맡긴다.
+영역이 아니라 spec 에 붙은 codec 의 영역이다 (3단계: 선로 문자열 ↔ 도메인 값).
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from b_core.b_datatype.general_enum import ParamAccType, ParamDataType, ParamParseErrType
+from b_core.g_protocol.codec import Codec
 from b_core.g_protocol.packet_spec import PacketSpec
 
 if TYPE_CHECKING:
@@ -73,20 +74,21 @@ class _Nv2Spec(PacketSpec):
     SVC_CODE = ""  # 하위 클래스가 지정 (0B / 01)
 
     def __init__(self, param: "Parameter", id_code: str, index: int,
-                 req_template: str, res_prefix_template: str):
+                 req_template: str, res_prefix_template: str, codec: Codec):
         super().__init__((param,))
         self.param = param
         self.id = id_code
         self.index = index
         self._req_template = req_template
         self._res_prefix_template = res_prefix_template
+        self.codec = codec  # 선로 문자열 ↔ 도메인 값 (3단계). 문맥은 codec.context_params
 
     @property
     def expected_response_prefix(self) -> str:
         return self._res_prefix_template.format(id=self.id, idx=self.index)
 
     def describe(self) -> str:
-        return f"{self.param.path}.{self.param.name} [NV2 {self.id}/{self.index}]"
+        return f"{self.param.path}.{self.param.name} [NV2 {self.id}/{self.index} {self.codec.name}]"
 
     def _check_response(self, resp: str | None, is_read: bool) -> tuple[ParamParseErrType, bool]:
         """기존 Parameter.check_error 와 동일한 판정 순서/결과."""
@@ -150,23 +152,43 @@ class Nv2ReadSpec(_Nv2Spec):
         if err != ParamParseErrType.NONE:
             return err, need_retry
 
-        # 기존 set_read_response_packet 의 값 반영 부분
+        # 값 반영: 선로 원문은 str_value 에, codec 이 푼 도메인 값은 value 에.
+        # [기존 동작 유지] str_value 는 변환 전에 대입되므로 형식 불량이어도 그 문자열이 남는다
         if len(resp) > HEADER_LEN:
-            if not self.param.set_text_value(resp[HEADER_LEN:]):
-                return ParamParseErrType.DATA_TYPE_ERROR, True
+            text = resp[HEADER_LEN:]
         elif self.param.data_type is ParamDataType.STR and len(resp) == HEADER_LEN:
-            self.param.set_text_value("")  # 빈 문자열 값
+            text = ""  # 빈 문자열 값
         else:
             return ParamParseErrType.WRONG_PARAM_LENGTH, True
 
+        self.param.str_value = text
+        try:
+            value = self.codec.decode(text)
+        except ValueError:
+            return ParamParseErrType.DATA_TYPE_ERROR, True
+
+        # 문맥 미준비(None)도 값으로 반영한다 — 화면은 Unknown. 재디코드는 하지 않고 다음 읽기가 갱신
+        self.param.value = value
         return ParamParseErrType.NONE, False
 
 
 class Nv2WriteSpec(_Nv2Spec):
     SVC_CODE = SVC_WRITE
 
-    def build_request(self, values) -> str:
-        return self._req_template.format(id=self.id, idx=self.index, value=values[self.param])
+    def build_request(self, values) -> str | None:
+        """values[param] 은 도메인 값(숫자 또는 그 문자열). codec 문맥 미준비면 None —
+        워커는 그 작업을 건너뛰고 로그를 남긴다."""
+        try:
+            text = self.codec.encode(values[self.param])
+        except (ValueError, TypeError):
+            return None
+        if text is None:
+            return None
+        return self.build_request_line(text)
+
+    def build_request_line(self, line_text: str) -> str:
+        """이미 선로 문자열인 값으로 요청을 만든다 — 백업 파일(선로 원문 보존)용."""
+        return self._req_template.format(id=self.id, idx=self.index, value=line_text)
 
     def apply_response(self, resp: str | None) -> tuple[ParamParseErrType, bool]:
         return self._check_response(resp, is_read=False)
