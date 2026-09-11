@@ -36,23 +36,26 @@ def parse_header(line: str) -> Optional[dict]:
     return info
 
 
-def parse_item_line(line: str) -> Optional[tuple[str, int, str]]:
-    """백업 항목 행 -> (param id, index, 쓰기 패킷). 형식 불량이면 None.
+def parse_item_line(line: str) -> Optional[tuple[str, str]]:
+    """백업 항목 행 -> (표시 이름 '<path>.<name>', 쓰기 패킷). 형식 불량이면 None.
 
     빈 행과 주석('#') 행도 None 을 반환한다 — 호출측은 형식 불량과 구분이
-    필요하면 먼저 걸러낼 것."""
+    필요하면 먼저 걸러낼 것. 패킷 내용은 해석하지 않는다 (프로토콜 무관)."""
     line = line.strip()
     if not line or line.startswith("#"):
         return None
 
-    _, sep, packet = line.rpartition(", ")
-    if not sep or not packet.startswith("p:01") or len(packet) < 14:
+    name, separator, packet = line.rpartition(", ")
+    if not separator or not name or not packet:
         return None
 
-    id_code = packet[4:12]
-    try:
-        index = int(packet[12:14], 16)
-    except ValueError:
-        return None
+    return name, packet
 
-    return id_code, index, packet
+
+def expected_write_response_prefix(packet: str) -> Optional[str]:
+    """쓰기 요청 패킷의 성공 응답 접두어. 판정 규칙이 정의된 프로토콜만 —
+    'p:01' 요청은 'p:0001' + id(8) + index(2) 로 응답한다.
+    그 외 형식은 None (응답 내용 판정 안 함, 통신 오류만 확인)."""
+    if packet.startswith("p:01") and len(packet) >= 14:
+        return "p:0001" + packet[4:14]
+    return None

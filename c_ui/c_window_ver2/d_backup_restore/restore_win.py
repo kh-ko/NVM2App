@@ -1,26 +1,37 @@
+from dataclasses import dataclass
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QTreeWidgetItem
 
 from b_core.b_datatype import param_enum as p_enum
-from b_core.b_datatype.general_enum import ParamAccType, SvcPortErrType
-from b_core.b_datatype.parameter import Parameter
+from b_core.b_datatype.general_enum import SvcPortErrType
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.f_helper import backup_file_helper
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
 from c_ui.b_control_ver2.d_param.param_win import ParamWin
 
 
+@dataclass
+class RestoreItem:
+    """백업 파일 한 행 = 복원 작업 하나."""
+    name: str                                # 파일에 기재된 '<path>.<name>' (표시/로그용)
+    packet: str                              # 그대로 전송할 쓰기 패킷
+    tree_item: QTreeWidgetItem | None = None # 체크박스 트리의 대응 아이템
+
+
 class RestoreWin(ParamWin):
     """백업 파일(backup_win.py 가 저장한 형식)을 장비로 복원하는 창.
 
     파일의 각 행 뒷부분이 그대로 전송 가능한 쓰기 패킷이므로, 체크된 항목을
-    파일 순서대로 raw_write_request 로 재생한다.
+    파일 순서대로 raw_write_request 로 재생한다. 행 내용은 스키마와 대조하지
+    않는다 — 장비가 거부하는 항목은 쓰기 실패로 로그에 남는다.
     - 복원 시작 시 Access Mode 를 Local 로 전환한다 (raw 쓰기는 기존 Apply
       의 Local 전환 정책을 우회하므로 여기서 직접 수행. REMOTE 복원은 기존
       쓰기 정책과 동일하게 하지 않는다)
     - 항목 실패는 RETRY_MAX 회 재시도 후 로그에 남기고 계속 진행, 완료 시
       실패 목록을 요약 표시한다
-    - 검증은 쓰기 응답(p:0001...) 확인만 — read-back 은 하지 않는다
+    - 검증은 쓰기 응답 접두어 확인만 (backup_file_helper.expected_write_response_prefix)
+      — read-back 은 하지 않는다
 
     is_fu_restore=True (펌웨어 업데이트 후 복원 모드):
     - initial_file_path 가 있으면 창이 뜬 직후 그 파일을 자동 로드한다
@@ -38,8 +49,8 @@ class RestoreWin(ParamWin):
         super().__init__(parent=parent, win_name = win_name, paths = [], filter_param_paths = [], is_editblock_win=False, label_width=210, folder_max_width=None)
         self.is_fu_restore = is_fu_restore
         self._initial_file_path = initial_file_path
-        self.loaded_items: list[tuple[Parameter, str]] = []   # 파일 순서의 (param, 쓰기 패킷)
-        self.restore_jobs: list[tuple[Parameter, str]] = []   # 실행 스냅샷 (Local 전환 포함)
+        self.loaded_items: list[RestoreItem] = []   # 파일 순서
+        self.restore_jobs: list[RestoreItem] = []   # 실행 스냅샷 (Local 전환 포함)
         self.failed_items: list[str] = []
         self._job_index = 0
         self._retry_count = 0
@@ -59,7 +70,6 @@ class RestoreWin(ParamWin):
         # 바디: 로드된 백업 파일 내용 체크박스 트리 — 기본 전체 체크,
         # 사용자가 복원 대상을 추가/해제할 수 있다
         self._updating_checks = False  # 코드에 의한 일괄 체크 변경 중 itemChanged 재진입 가드
-        self._item_by_param: dict[Parameter, QTreeWidgetItem] = {}
         self.tree = BaseTreeWidget(self)
         self.tree.itemChanged.connect(self.handle_changed_tree_item)
 
@@ -132,12 +142,9 @@ class RestoreWin(ParamWin):
         if header is None:
             self._log.warning("[Load]: file has no header — device match cannot be verified")
 
-        param_by_key = {(param.id, param.index): param
-                        for param in self.param_manager.get_param_list()}
-
+        # 행 내용은 해석하지 않고 그대로 싣는다 — 형식 불량 행만 건너뛴다
         self.loaded_items = []
-        seen_keys = set()
-        skipped_format = skipped_unknown = skipped_reboot = skipped_acc = skipped_dup = 0
+        skipped_format = 0
 
         for line in lines:
             stripped = line.strip()
@@ -150,46 +157,14 @@ class RestoreWin(ParamWin):
                 skipped_format += 1
                 continue
 
-            id_code, index, packet = parsed
-
-            param = param_by_key.get((id_code, index))
-            if param is None:
-                # 현재 스키마에 없는 param (버전 차이 등)
-                self._log.error(f"[Load Skip]: unknown param (id={id_code}, index={index}) = {stripped}")
-                skipped_unknown += 1
-                continue
-
-            if param.acc != ParamAccType.RW:
-                self._log.error(f"[Load Skip]: not restorable (acc={param.acc.name}) = {param.path}.{param.name}")
-                skipped_acc += 1
-                continue
-
-            if param.is_need_reconnect:
-                # 재부팅 유발 param 은 복원 대상에서 제외한다 (합의된 정책) —
-                # 필요 시 해당 설정 창에서 개별 변경
-                self._log.error(f"[Load Skip]: reboot-causing param excluded = {param.path}.{param.name}")
-                skipped_reboot += 1
-                continue
-
-            if (id_code, index) in seen_keys:
-                # 스키마가 같은 물리 param 을 두 경로에 등록해 백업 파일에 같은
-                # (id, index) 줄이 2개 생기는 경우 — 값은 한 번만 쓰면 되므로
-                # 첫 줄만 채택한다. 예상되는 중복이라 WARN (ERROR 아님)
-                self._log.warning(f"[Load Skip]: duplicated param (first kept) = {param.path}.{param.name}")
-                skipped_dup += 1
-                continue
-
-            seen_keys.add((id_code, index))
-            self.loaded_items.append((param, packet))
+            name, packet = parsed
+            self.loaded_items.append(RestoreItem(name, packet))
 
         self._rebuild_restore_tree()
 
-        skipped_total = skipped_format + skipped_unknown + skipped_reboot + skipped_acc + skipped_dup
         summary = f"Loaded {len(self.loaded_items)} items."
-        if skipped_total:
-            summary += (f"\nSkipped {skipped_total} items "
-                        f"(format: {skipped_format}, unknown: {skipped_unknown}, "
-                        f"reboot: {skipped_reboot}, access: {skipped_acc}, duplicate: {skipped_dup})."
+        if skipped_format:
+            summary += (f"\nSkipped {skipped_format} items (invalid format)."
                         "\nSee Log View for details.")
         if header is None:
             summary += "\n\nNote: this file has no header, so the device match (firmware / interface) was not verified."
@@ -242,7 +217,6 @@ class RestoreWin(ParamWin):
         try:
             self.tree.clear()
 
-            self._item_by_param = {}
             folder_items: dict[str, QTreeWidgetItem] = {}
 
             def get_folder_item(folder_path: str) -> QTreeWidgetItem:
@@ -250,13 +224,13 @@ class RestoreWin(ParamWin):
                 if item is not None:
                     return item
 
-                head, sep, name = folder_path.rpartition(".")
+                head, separator, name = folder_path.rpartition(".")
 
-                item = QTreeWidgetItem([name if sep else folder_path])
+                item = QTreeWidgetItem([name if separator else folder_path])
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(0, Qt.CheckState.Unchecked)
 
-                if sep:
+                if separator:
                     get_folder_item(head).addChild(item)
                 else:
                     self.tree.addTopLevelItem(item)
@@ -265,13 +239,21 @@ class RestoreWin(ParamWin):
                 return item
 
             # 파일 등장 순서 그대로 구성 — 복원 순서의 기준이 된다.
+            # 파일의 '<path>.<name>' 을 마지막 '.' 기준으로 폴더/항목명으로 나눈다.
             # 기본은 전체 체크 (파일에 든 것 = 복원할 것)
-            for param, _packet in self.loaded_items:
-                item = QTreeWidgetItem([param.name])
+            for entry in self.loaded_items:
+                folder, separator, name = entry.name.rpartition(".")
+
+                item = QTreeWidgetItem([name if separator else entry.name])
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(0, Qt.CheckState.Checked)
-                get_folder_item(param.path).addChild(item)
-                self._item_by_param[param] = item
+
+                if separator:
+                    get_folder_item(folder).addChild(item)
+                else:
+                    self.tree.addTopLevelItem(item)
+
+                entry.tree_item = item
 
             self.tree.recompute_all_folder_check_states()
         finally:
@@ -295,10 +277,10 @@ class RestoreWin(ParamWin):
 
         self.tree.viewport().update()
 
-    def _get_checked_items(self) -> list[tuple[Parameter, str]]:
+    def _get_checked_items(self) -> list[RestoreItem]:
         # loaded_items 순회로 파일 순서를 유지한다
-        return [(param, packet) for param, packet in self.loaded_items
-                if self._item_by_param[param].checkState(0) == Qt.CheckState.Checked]
+        return [entry for entry in self.loaded_items
+                if entry.tree_item.checkState(0) == Qt.CheckState.Checked]
 
     # ------------------------------------------------------------ 복원 실행
     def on_clicked_restore(self):
@@ -321,10 +303,11 @@ class RestoreWin(ParamWin):
 
         # Local 전환 쓰기를 맨 앞에 (전환 후 REMOTE 복원하지 않는 것은 기존
         # 쓰기 정책과 동일한 의도된 동작)
-        jobs: list[tuple[Parameter, str]] = []
+        jobs: list[RestoreItem] = []
         if self.acc_mode_param is not None:
             acc = self.acc_mode_param
-            jobs.append((acc, f"p:01{acc.id}{acc.index:02X}{p_enum.AccModeEnum.LOCAL.value}"))
+            jobs.append(RestoreItem(f"{acc.path}.{acc.name}",
+                                    f"p:01{acc.id}{acc.index:02X}{p_enum.AccModeEnum.LOCAL.value}"))
 
         jobs += targets
 
@@ -342,8 +325,7 @@ class RestoreWin(ParamWin):
         self._send_current_job()
 
     def _send_current_job(self):
-        _, packet = self.restore_jobs[self._job_index]
-        self.param_worker.raw_write_request(str(self._job_index), packet)
+        self.param_worker.raw_write_request(str(self._job_index), self.restore_jobs[self._job_index].packet)
 
     def handle_changed_connection_info(self, info: str):
         super().handle_changed_connection_info(info)
@@ -367,30 +349,30 @@ class RestoreWin(ParamWin):
         if job_index != self._job_index:
             return  # 중단/재시작 이후 도착한 늦은 응답 폐기
 
-        param, _packet = self.restore_jobs[job_index]
+        job = self.restore_jobs[job_index]
 
-        # 성공 판정: 통신 정상 + 쓰기 성공 응답(p:0001 + id + index) 확인
-        resp_check_prefix = f"p:0001{param.id}{param.index:02X}"
-        is_success = err_type == SvcPortErrType.NONE and resp_msg.startswith(resp_check_prefix)
+        # 성공 판정: 통신 정상 + (판정 규칙이 있는 프로토콜이면) 응답 접두어 확인
+        expected = backup_file_helper.expected_write_response_prefix(job.packet)
+        if err_type != SvcPortErrType.NONE:
+            is_success, err_msg = False, f"err_type = {err_type.name}"
+        elif expected is not None and not resp_msg.startswith(expected):
+            is_success, err_msg = False, f"packet = {resp_msg}"
+        else:
+            is_success, err_msg = True, ""
 
         if not is_success:
-            if err_type != SvcPortErrType.NONE:
-                err_msg = f"err_type = {err_type.name}"
-            else:
-                err_msg = f"packet = {resp_msg}"
-
             if self._retry_count < self.RETRY_MAX:
                 self._retry_count += 1
-                self._log.error(f"[Write Error]: Parameter = {param.path}.{param.name}, {err_msg} "
+                self._log.error(f"[Write Error]: Parameter = {job.name}, {err_msg} "
                                 f"— retry {self._retry_count}/{self.RETRY_MAX}")
                 self._send_current_job()
                 return
 
             # 재시도 소진 — 실패 기록 후 다음 항목으로 진행 (합의된 정책)
-            self._log.error(f"[Write Failed]: Parameter = {param.path}.{param.name}, {err_msg}")
-            self.failed_items.append(f"{param.path}.{param.name}")
+            self._log.error(f"[Write Failed]: Parameter = {job.name}, {err_msg}")
+            self.failed_items.append(job.name)
         else:
-            self._log.info(f"[Success]: Parameter = {param.path}.{param.name}")
+            self._log.info(f"[Success]: Parameter = {job.name}")
 
         self._retry_count = 0
         self._job_index += 1
