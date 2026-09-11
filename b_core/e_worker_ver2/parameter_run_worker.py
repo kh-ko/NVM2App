@@ -25,12 +25,22 @@ ver1 에서 달라진 점:
 - 쓰기 실패는 로그만 남기고 다음 작업으로 진행한다. (로그 뷰로 확인)
 - acc mode 를 LOCAL 로 전환한 뒤 REMOTE 로 복원하지 않는 것은 의도된 동작이다.
 - print -> AppLogManager. (log_source 에 담당 윈도우 이름을 넘길 것)
-- NV1 프로토콜 처리(is_nv1_proto / NV1_GROUP)는 복잡도를 낮추기 위해 일단 제거
-  — 추후 별도 처리 예정. (ver1 parameter_worker.py 참고)
 - write() 는 param.write_str_value 를 내부에서 읽지 않는다. 호출측이
   [(param, value), ...] 쌍을 인자로 넘긴다 — write_str_value 는 누구나 접근
   가능한 공유 필드라, 팝업이 떠 있는 동안 다른 UI 가 같은 param 을 건드릴
   구조적 여지가 있다. 값은 호출 시점에 스냅샷으로 확정한다.
+
+2026-09-10 PacketSpec 도입 (1단계, 동작 변화 없음):
+- 작업 단위가 param 에서 패킷(spec)으로 바뀌었다: _Job(op, spec, values).
+  요청 문자열은 spec.build_request(), 응답 반영은 spec.apply_response() —
+  워커는 NV2/NV1 을 구분하지 않고 "p:" 를 모른다.
+- 읽기 목록은 spec 기준으로 중복을 제거한다. NV2 는 param 마다 spec 이 달라
+  지금과 1:1 이고, 여러 param 이 한 패킷을 공유하는 NV1(2단계)에서 요청이 줄어든다.
+- spec 은 작업 큐를 만드는 시점에 SpecRegistry 에서 param 으로 찾는다
+  (조건부 프로토콜 선택은 NV1 단계). 찾은 spec 은 _Job 에 담기므로 응답 처리와
+  모니터링 라운드에서는 다시 조회하지 않는다. 등록부에 없으면 그 param 은
+  요청 없이 Not Support 로 두고 건너뛴다.
+- 쓰기는 pending 을 write spec 기준으로 묶어 spec 당 요청 1건을 만든다.
 """
 
 from enum import Enum, auto
@@ -46,6 +56,8 @@ from b_core.b_datatype.parameter import Parameter
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.parameter_manager import ParamManager
 from b_core.d_dal.service_port import ServicePort
+from b_core.g_protocol.packet_spec import PacketSpec
+from b_core.g_protocol.spec_registry import SpecRegistry
 
 
 class StartResult(Enum):
@@ -65,8 +77,8 @@ class _JobOp(Enum):
 
 class _Job(NamedTuple):
     op: _JobOp
-    param: Parameter
-    packet: str
+    spec: PacketSpec
+    values: dict | None = None  # WRITE: {param: 값 문자열}
 
 
 class _WorkerState(Enum):
@@ -80,7 +92,7 @@ class _WorkerState(Enum):
 class ParameterThread(QObject):
     """요청 1건을 처리하고 결과를 되돌려주는 워커 스레드 슬롯 모음."""
 
-    sig_result = Signal(int, str, str, object, SvcPortErrType)         # seq, packet, response, param, err
+    sig_result = Signal(int, str, str, object, SvcPortErrType)         # seq, packet, response, spec, err
     sig_single_read_result = Signal(str, str, object, SvcPortErrType)  # packet, response, param, err
     sig_raw_write_result = Signal(str, str, str, SvcPortErrType)       # tag, packet, response, err
     sig_reboot_probe_result = Signal(int, bool, str)                   # seq, success, detail
@@ -88,12 +100,12 @@ class ParameterThread(QObject):
     ERROR_DELAY_MS = 100  # 통신 오류 시 인위적 지연 (즉시 실패 경로의 부하 방지)
 
     @Slot(int, str, object)
-    def process_request(self, seq: int, packet: str, param):
+    def process_request(self, seq: int, packet: str, spec):
         response, err_type = ServicePort().request_string(packet)
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(self.ERROR_DELAY_MS)
 
-        self.sig_result.emit(seq, packet, response, param, err_type)
+        self.sig_result.emit(seq, packet, response, spec, err_type)
 
     @Slot(str, object)
     def process_single_read(self, packet: str, param):
@@ -192,6 +204,8 @@ class ParameterRunWorker(QObject):
 
         self._acc_mode_param: Optional[Parameter] = ParamManager().get_by_full_path("System.Access Mode")
 
+        self._registry = SpecRegistry()  # param -> spec 바인딩 (ParamManager 가 채운다)
+
         # 상태 (문자열 phase 대신 enum + 작업 큐 + 시퀀스 번호)
         self._state = _WorkerState.IDLE
         self._seq = 0
@@ -209,8 +223,9 @@ class ParameterRunWorker(QObject):
         self.read_param_list: list[Parameter] = []
         self.write_param_list: list[Parameter] = []
 
-        # 모니터링 (유휴 시 read_param_list round-robin)
+        # 모니터링 (유휴 시 read_param_list 의 spec 들을 round-robin)
         self.monitor_time_tick = monitor_tick
+        self._monitor_specs: list[PacketSpec] = []  # 라운드 시작 때 read_param_list 에서 다시 만든다
         self._monitor_index = 0
         self._monitor_round = 0
         self.monitor_timer = QTimer(self)
@@ -292,6 +307,7 @@ class ParameterRunWorker(QObject):
             self.read_param_list.clear()
         else:
             del self.read_param_list[start_index:]
+        self._monitor_specs = []
         self._monitor_index = 0
 
     def clear_write_param(self, start_index: Optional[int] = None):
@@ -299,6 +315,44 @@ class ParameterRunWorker(QObject):
             self.write_param_list.clear()
         else:
             del self.write_param_list[start_index:]
+
+    # ------------------------------------------------------------ spec 해석
+    def _read_specs_of(self, params: list[Parameter]) -> list[PacketSpec]:
+        """param 목록 -> 읽기 spec 목록 (등장 순서 유지, 같은 spec 은 한 번만).
+        spec 이 없는 param 은 요청 없이 Not Support 로 두고 건너뛴다."""
+        seen: set[int] = set()
+        specs: list[PacketSpec] = []
+        for param in params:
+            spec = self._registry.get_read_spec(param)
+            if spec is None:
+                if not param.is_not_support:
+                    self._log.error(f"no read spec: {param.path}.{param.name} — marked as not supported")
+                    param.is_not_support = True
+                continue
+            if id(spec) in seen:
+                continue
+            seen.add(id(spec))
+            specs.append(spec)
+        return specs
+
+    def _write_jobs_of(self, pending: list[tuple[Parameter, str]]) -> list[_Job]:
+        """[(param, 값), ...] -> 쓰기 작업 목록. 같은 write spec 을 쓰는 param 들은
+        한 작업으로 묶인다 (NV2 는 항상 1:1)."""
+        jobs: list[_Job] = []
+        job_by_spec: dict[int, _Job] = {}
+        for param, value in pending:
+            spec = self._registry.get_write_spec(param)
+            if spec is None:
+                self._log.error(f"no write spec: {param.path}.{param.name} — write skipped")
+                param.is_not_support = True
+                continue
+            job = job_by_spec.get(id(spec))
+            if job is None:
+                job = _Job(_JobOp.WRITE, spec, {})
+                job_by_spec[id(spec)] = job
+                jobs.append(job)
+            job.values[param] = value
+        return jobs
 
     # ------------------------------------------------------------ 시퀀스 시작
     def refresh(self) -> StartResult:
@@ -313,14 +367,12 @@ class ParameterRunWorker(QObject):
 
         self._stop_all()
 
-        jobs: list[_Job] = []
-        for param in self.init_param_list:
-            jobs.append(self._build_read_job(param))
-        for param in self.write_param_list:
-            if param.acc != ParamAccType.WO:
-                jobs.append(self._build_read_job(param))
-        for param in self.read_param_list:
-            jobs.append(self._build_read_job(param))
+        params: list[Parameter] = []
+        params += self.init_param_list
+        params += [p for p in self.write_param_list if p.acc != ParamAccType.WO]
+        params += self.read_param_list
+
+        jobs = [_Job(_JobOp.READ, spec) for spec in self._read_specs_of(params)]
 
         if not jobs:
             return StartResult.EMPTY
@@ -366,19 +418,13 @@ class ParameterRunWorker(QObject):
 
         # Local 전환 쓰기를 맨 앞에 (전환 후 REMOTE 복원하지 않는 것은 의도된 동작)
         if is_only_local_acc and acc_mode_value == p_enum.AccModeEnum.REMOTE.value and switch_to_local:
-            acc = self._acc_mode_param
-            packet = f"p:01{acc.id}{acc.index:02X}{p_enum.AccModeEnum.LOCAL.value}"
-            jobs.append(_Job(_JobOp.WRITE, acc, packet))
+            jobs += self._write_jobs_of([(self._acc_mode_param, str(p_enum.AccModeEnum.LOCAL.value))])
 
-        for param, value in pending:
-            packet = f"p:01{param.id}{param.index:02X}{value}"
-            jobs.append(_Job(_JobOp.WRITE, param, packet))
+        jobs += self._write_jobs_of(pending)
 
-        for param, _ in pending:
-            if param.acc != ParamAccType.WO:
-                jobs.append(self._build_read_job(param))
-        for param in self.read_param_list:
-            jobs.append(self._build_read_job(param))
+        # 쓰기 후 read-back: 쓴 param(RW) -> 등록 읽기 목록. spec 기준으로 한 번씩만
+        readback = [param for param, _ in pending if param.acc != ParamAccType.WO]
+        jobs += [_Job(_JobOp.READ, spec) for spec in self._read_specs_of(readback + self.read_param_list)]
 
         self._stop_all()
         self._start_sequence(jobs, is_refresh=False)
@@ -398,15 +444,21 @@ class ParameterRunWorker(QObject):
             return
 
         if self._state == _WorkerState.SEQUENCE:
-            self._log.info(f"disconnected — sequence aborted ({self._job_index}/{len(self._jobs)} jobs done)")
+            self._log.info(f"disconnected - sequence aborted ({self._job_index}/{len(self._jobs)} jobs done)")
 
         self._stop_all()
         self._state = _WorkerState.DISCONNECTED
 
     # ------------------------------------------------------------ 단발 요청
     def single_read_request(self, param: Parameter):
-        packet = f"p:0B{param.id}{param.index:02X}"
-        self.sig_single_read_request.emit(packet, param)
+        """param 1개 읽기 요청 — 결과는 sig_single_read_result(packet, response, param, err) 로.
+        응답 해석은 호출측 몫 (SpecRegistry().get_read_spec(param).expected_response_prefix 참고)."""
+        spec = self._registry.get_read_spec(param)
+        if spec is None:
+            self._log.error(f"no read spec: {param.path}.{param.name} — single read skipped")
+            param.is_not_support = True
+            return
+        self.sig_single_read_request.emit(spec.build_request(), param)
 
     def raw_write_request(self, tag: str, packet: str):
         """완성된 패킷을 그대로 전송. 결과는 sig_raw_write_result(tag, ...) 로."""
@@ -444,13 +496,14 @@ class ParameterRunWorker(QObject):
         """port_setting 이 None 이면(쓰기 경로) 현재 ServicePort 설정을 백업한 뒤
         닫는다. 주어지면(외부 시작 경로) 그 값을 재연결에 쓴다."""
         sn = ParamManager().get_by_full_path("System.Identification.Serial Number")
-        if sn is None:
-            self._log.error("reboot: Serial Number param not found — abort")
+        sn_spec = self._registry.get_read_spec(sn) if sn is not None else None
+        if sn_spec is None:
+            self._log.error("reboot: Serial Number param (or its read spec) not found - abort")
             self._stop_all()
             self.sig_reboot_finished.emit(False)
             return False
 
-        self._reboot_probe_packet = f"p:0B{sn.id}{sn.index:02X}"
+        self._reboot_probe_packet = sn_spec.build_request()
 
         if port_setting is None:
             # 포트 설정을 백업한 뒤 닫는다. 재부팅 대기 동안 ServicePort 는 닫힌 채
@@ -503,10 +556,6 @@ class ParameterRunWorker(QObject):
         ServicePort().open(*setting)
 
     # ------------------------------------------------------------ 작업 큐 처리
-    def _build_read_job(self, param: Parameter) -> _Job:
-        packet = f"p:0B{param.id}{param.index:02X}"
-        return _Job(_JobOp.READ, param, packet)
-
     def _start_sequence(self, jobs: list[_Job], is_refresh: bool):
         self._seq += 1
         self._jobs = jobs
@@ -519,58 +568,59 @@ class ParameterRunWorker(QObject):
 
     def _send_current_job(self):
         job = self._jobs[self._job_index]
-        self.sig_request.emit(self._seq, job.packet, job.param)
+        self.sig_request.emit(self._seq, job.spec.build_request(job.values), job.spec)
 
     @Slot(int, str, str, object, SvcPortErrType)
     def _handle_result(self, seq: int, packet: str, response: str,
-                       param: Parameter, err_type: SvcPortErrType):
+                       spec: PacketSpec, err_type: SvcPortErrType):
         # 이전 시퀀스의 늦은 응답은 폐기
         if seq != self._seq:
             return
 
         if self._state == _WorkerState.SEQUENCE:
-            self._handle_sequence_result(packet, response, param, err_type)
+            self._handle_sequence_result(packet, response, spec, err_type)
         elif self._state == _WorkerState.MONITOR:
-            self._handle_monitor_result(packet, response, param, err_type)
+            self._handle_monitor_result(packet, response, spec, err_type)
         # REBOOT 상태는 ServicePort 요청을 보내지 않으므로 (probe 전용) 여기로 오지 않는다
 
-    def _handle_sequence_result(self, packet, response, param, err_type):
+    def _handle_sequence_result(self, packet, response, spec: PacketSpec, err_type):
         job = self._jobs[self._job_index]
 
         if job.op is _JobOp.READ:
-            param_err_type, need_retry = param.set_read_response_packet(response)
+            param_err_type, need_retry = spec.apply_response(response)
 
             if err_type != SvcPortErrType.NONE:
                 # 읽기 통신 오류 — 같은 작업 무한 재시도 (의도된 동작, 모듈 주석 참고)
-                self._log_transaction(packet, response, param, err_type.name, is_error=True)
+                self._log_transaction(packet, response, spec, err_type.name, is_error=True)
                 self._send_current_job()
                 return
 
             if param_err_type != ParamParseErrType.NONE:
-                self._log_transaction(packet, response, param, param_err_type.name, is_error=True)
+                self._log_transaction(packet, response, spec, param_err_type.name, is_error=True)
                 if need_retry:
                     self._send_current_job()
                     return
             else:
-                self._log_transaction(packet, response, param)
+                self._log_transaction(packet, response, spec)
 
                 # refresh 읽기 성공 = 장비 값으로 동기화 확정 → 값이 안 변해도 통지하여
                 # UI 의 dirty 를 클리어하게 한다. write 후 read-back 은 제외 —
                 # 값이 그대로면 쓰기가 반영되지 않은 것이므로 dirty 가 유지되어야 한다.
                 if self._seq_is_refresh:
-                    param.notify_synced()
+                    for param in spec.params:
+                        param.notify_synced()
 
         else:  # WRITE — 실패해도 로그만 남기고 계속 진행
-            param_err_type, _ = param.set_write_response_packet(response)
+            param_err_type, _ = spec.apply_response(response)
 
             if err_type != SvcPortErrType.NONE:
-                self._log_transaction(packet, response, param, err_type.name, is_error=True)
+                self._log_transaction(packet, response, spec, err_type.name, is_error=True)
             elif param_err_type != ParamParseErrType.NONE:
-                self._log_transaction(packet, response, param, param_err_type.name, is_error=True)
+                self._log_transaction(packet, response, spec, param_err_type.name, is_error=True)
             else:
-                self._log_transaction(packet, response, param)
+                self._log_transaction(packet, response, spec)
 
-            if param.is_need_reconnect:
+            if any(param.is_need_reconnect for param in spec.params):
                 self._start_reboot()
                 return
 
@@ -594,6 +644,7 @@ class ParameterRunWorker(QObject):
         # 유휴 -> read_param_list 모니터링 시작
         if self.read_param_list:
             self._state = _WorkerState.MONITOR
+            self._monitor_specs = []
             self._monitor_index = 0
             self._monitor_round = 0
             self.monitor_timer.start(self.monitor_time_tick)
@@ -616,31 +667,38 @@ class ParameterRunWorker(QObject):
             self.monitor_timer.start(self.monitor_time_tick)
             return
 
-        if self._monitor_index >= len(self.read_param_list):
+        # 라운드 시작마다 read_param_list 에서 spec 목록을 다시 만든다 —
+        # 목록 변경(clear/add)과 조건부 spec 전환이 다음 라운드에 반영된다
+        if self._monitor_index >= len(self._monitor_specs):
+            self._monitor_specs = self._read_specs_of(self.read_param_list)
             self._monitor_index = 0
             # 정상 로그 샘플링용 라운드 카운트 (MONITOR_LOG_ROUNDS 라운드당 1 라운드 기록)
             self._monitor_round += 1
             if self._monitor_round > self.MONITOR_LOG_ROUNDS:
                 self._monitor_round = 0
 
-        job = self._build_read_job(self.read_param_list[self._monitor_index])
-        self.sig_request.emit(self._seq, job.packet, job.param)
+            if not self._monitor_specs:
+                self.monitor_timer.start(self.monitor_time_tick)
+                return
 
-    def _handle_monitor_result(self, packet, response, param, err_type):
-        param_err_type, need_retry = param.set_read_response_packet(response)
+        spec = self._monitor_specs[self._monitor_index]
+        self.sig_request.emit(self._seq, spec.build_request(), spec)
+
+    def _handle_monitor_result(self, packet, response, spec: PacketSpec, err_type):
+        param_err_type, need_retry = spec.apply_response(response)
 
         if err_type != SvcPortErrType.NONE:
-            self._log_transaction(packet, response, param, err_type.name, is_error=True, is_monitor=True)
-            self.monitor_timer.start(self.monitor_time_tick)  # 같은 param 재시도
+            self._log_transaction(packet, response, spec, err_type.name, is_error=True, is_monitor=True)
+            self.monitor_timer.start(self.monitor_time_tick)  # 같은 spec 재시도
             return
 
         if param_err_type != ParamParseErrType.NONE:
-            self._log_transaction(packet, response, param, param_err_type.name, is_error=True, is_monitor=True)
+            self._log_transaction(packet, response, spec, param_err_type.name, is_error=True, is_monitor=True)
             if need_retry:
                 self.monitor_timer.start(self.monitor_time_tick)
                 return
         else:
-            self._log_transaction(packet, response, param, is_monitor=True)
+            self._log_transaction(packet, response, spec, is_monitor=True)
 
         self._monitor_index += 1
         self.monitor_timer.start(self.monitor_time_tick)
@@ -657,15 +715,14 @@ class ParameterRunWorker(QObject):
         self.is_working = False
         self.progress = 0
 
-    def _log_transaction(self, req: str, resp: str, param: Parameter,
+    def _log_transaction(self, req: str, resp: str, spec: PacketSpec,
                          err_msg: str = "", is_error: bool = False, is_monitor: bool = False):
         # 모니터링 로그는 오류 포함 샘플링 라운드에서만 기록
         # (미연결 상태의 100ms 무한 재시도가 로그를 홍수시키는 것을 방지 — ver1 동일)
         if is_monitor and self._monitor_round != self.MONITOR_LOG_ROUNDS:
             return
 
-        msg = (f"Path: {param.path} | Name: {param.name} | Index: {param.index} | "
-               f"Req: {req} | Resp: {resp}")
+        msg = f"Spec: {spec.describe()} | Req: {req} | Resp: {resp}"
         if is_error:
             self._log.error(f"{msg} | ErrMsg: {err_msg}")
         else:

@@ -7,6 +7,7 @@ from b_core.b_datatype import param_enum as p_enum
 from b_core.b_datatype.general_enum import SvcPortErrType
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.f_helper import backup_file_helper
+from b_core.g_protocol.spec_registry import SpecRegistry
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
 from c_ui.b_control_ver2.d_param.param_win import ParamWin
 
@@ -304,10 +305,11 @@ class RestoreWin(ParamWin):
         # Local 전환 쓰기를 맨 앞에 (전환 후 REMOTE 복원하지 않는 것은 기존
         # 쓰기 정책과 동일한 의도된 동작)
         jobs: list[RestoreItem] = []
-        if self.acc_mode_param is not None:
-            acc = self.acc_mode_param
+        acc = self.acc_mode_param
+        acc_write_spec = SpecRegistry().get_write_spec(acc) if acc is not None else None
+        if acc_write_spec is not None:
             jobs.append(RestoreItem(f"{acc.path}.{acc.name}",
-                                    f"p:01{acc.id}{acc.index:02X}{p_enum.AccModeEnum.LOCAL.value}"))
+                                    acc_write_spec.build_request({acc: str(p_enum.AccModeEnum.LOCAL.value)})))
 
         jobs += targets
 

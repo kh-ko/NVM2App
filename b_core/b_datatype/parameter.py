@@ -2,22 +2,39 @@ from typing import Tuple
 from typing import List, Dict, Union, Type
 from PySide6.QtCore import QObject, Signal
 
-from b_core.b_datatype.general_enum import ParamDisplayType, ParamDataType, ParamAccType, ParamParseErrType, PARAM_DISPLAY_TYPE_MAP
+from b_core.b_datatype.general_enum import ParamDisplayType, ParamDataType, ParamAccType, PARAM_DISPLAY_TYPE_MAP
 from b_core.b_datatype import param_enum as p_enum
 from b_core.c_manager.app_log_manager import AppLogManager
 
 # Parameter 인스턴스가 수백 개라 인스턴스별 로거 대신 모듈 로거를 공유한다
 _log = AppLogManager().get_logger("Parameter", is_global=True)
 
+"""값(Parameter) 계층.
+
+Parameter 는 값의 정의와 상태만 갖는다: 경로/이름, 표시 타입, 데이터 타입, 범위,
+enum 참조, 현재 값, 오류 플래그, 변경 시그널. 전송 규약(요청 문자열, 응답 해석,
+NV2 의 id/idx, NV1 의 자리/폭)은 b_core/g_protocol 의 PacketSpec 이 맡는다.
+어떤 param 이 어떤 spec 을 쓰는지는 SpecRegistry(g_protocol/spec_registry) 가
+path 기준으로 보유한다 — Parameter 는 spec 객체를 참조하지 않는다 (결정 A, 2026-09-11).
+
+2026-09-11 (PacketSpec 도입 1단계) 에서 옮겨간 것:
+- check_error / set_read_response_packet / set_write_response_packet / ERR_CODE_MAP
+  -> g_protocol/nv2_spec.py (로직 동일)
+- id / index 필드 -> nv2_spec.json + SpecRegistry.get_nv2_key() (백업 파일/Compound
+  프로토콜이 NV2 식별자를 쓰므로 역조회만 남긴다)
+- 미사용 필드 len / rreq / rres / wreq / wres / proto_type 제거
+- enable / visible 조건의 참조가 NV2 id 에서 전체 경로(ref_path)로 바뀌었다
+값 형 변환은 set_text_value() 하나로 모았다 (spec 과 set_force_value 가 공유).
+"""
+
+
 class ParamCondition(QObject):
-    def __init__(self, parent:QObject):
+    def __init__(self, parent: QObject):
         super().__init__(parent)
 
-        self.ref_id = None
-        self.ref_index = 0
-        self.values : List[Union[int, float, str, None]] = []
-        
-        
+        self.ref_path = None  # 참조 param 의 전체 경로 ("path.name")
+        self.values: List[Union[int, float, str, None]] = []
+
 
 class Parameter(QObject):
     # 값이 변경되었을 때 발생하는 시그널 (새로운 값을 문자열로 전달)
@@ -30,45 +47,6 @@ class Parameter(QObject):
     # 발생시키지 않는다 — 쓰기 미반영/사용자 편집 중 dirty 는 유지되어야 하므로)
     sig_synced = Signal()
 
-    ERR_CODE_MAP = {
-        "0C" : ParamParseErrType.ERR_0C_WRONG_CMD_LEN                                   ,                                  
-        "1C" : ParamParseErrType.ERR_1C_WRONG_CMD_LEN                                  ,
-        "1D" : ParamParseErrType.ERR_1D_VALUE_TOO_LOW                                  ,
-        "20" : ParamParseErrType.ERR_20_RESULTING_ZERO_ADJUST_OFFSET_VALUE_OUT_OF_RANGE,
-        "21" : ParamParseErrType.ERR_21_NOT_VALID_BECAUSE_NO_SENSOR_ENABLED            ,
-        "50" : ParamParseErrType.ERR_50_WRONG_ACCESS_MODE                              ,
-        "51" : ParamParseErrType.ERR_51_TIMEOUT                                        ,
-        "6D" : ParamParseErrType.ERR_6D_EEPROM_NOT_READY                               ,
-        "6E" : ParamParseErrType.ERR_6E_WRONG_PARAMETER_ID                             ,
-        "6F" : ParamParseErrType.ERR_6F_SET_TO_DEFAULT_VALUE_NOT_ALLOWED               ,
-        "70" : ParamParseErrType.ERR_70_PARAMETER_NOT_SETTABLE                         ,
-        "71" : ParamParseErrType.ERR_71_PARAMETER_NOT_READABLE                         ,
-        "72" : ParamParseErrType.ERR_72_SET_TO_INITIAL_VALUE_NOT_ALLOWED               ,
-        "73" : ParamParseErrType.ERR_73_WRONG_PARAMETER_INDEX                          ,
-        "74" : ParamParseErrType.ERR_74_INITIAL_VALUE_OUT_OF_RANGE                     ,
-        "76" : ParamParseErrType.ERR_76_WRONG_VALUE                                    ,
-        "77" : ParamParseErrType.ERR_77_WRONG_VALUE_ONLY_RESET_POSSIBLE                ,
-        "78" : ParamParseErrType.ERR_78_NOT_ALLOWED_IN_THIS_STATE                      ,
-        "7A" : ParamParseErrType.ERR_7A_WRONG_SERVICE                                  ,
-        "7B" : ParamParseErrType.ERR_7B_PARAMETER_NOT_ACTIVE                           ,
-        "7C" : ParamParseErrType.ERR_7C_PARAMETER_SYSTEM_ERROR                         ,
-        "7D" : ParamParseErrType.ERR_7D_COMMUNICATION_ERROR                            ,
-        "7E" : ParamParseErrType.ERR_7E_UNKNOWN_SERVICE                                ,
-        "7F" : ParamParseErrType.ERR_7F_UNEXPECTED_CHARACTER                           ,
-        "80" : ParamParseErrType.ERR_80_NO_ACCESS_RIGHTS                               ,
-        "81" : ParamParseErrType.ERR_81_NO_ADEQUATELY_HARDWARE                         ,
-        "82" : ParamParseErrType.ERR_82_WRONG_OBJECT_STATE                             ,
-        "84" : ParamParseErrType.ERR_84_NO_SLAVE_COMMAND                               ,
-        "85" : ParamParseErrType.ERR_85_COMMAND_TO_UNKNOWN_SLAVE                       ,
-        "87" : ParamParseErrType.ERR_87_COMMAND_TO_MASTER_ONLY                         ,
-        "88" : ParamParseErrType.ERR_88_ONLY_G_COMMAND_ALLOWED                         ,
-        "89" : ParamParseErrType.ERR_89_NOT_SUPPORTED                                  ,
-        "A0" : ParamParseErrType.ERR_A0_FUNCTION_IS_DISABLED                           ,
-        "A1" : ParamParseErrType.ERR_A1_ALREADY_DONE                                   
-    }
-
-    NOT_SUPPORT_CODES = frozenset({"6E", "73", "7B", "7E", "89"}) # 검색 속도가 빠른 frozenset 사용
-    
     INT_TYPES = (ParamDataType.INT8, ParamDataType.INT16, ParamDataType.INT32, ParamDataType.UINT8, ParamDataType.UINT16, ParamDataType.UINT32)
     FLOAT_TYPES = (ParamDataType.FLOAT, ParamDataType.DOUBLE)
     STR_TYPES = (ParamDataType.STR,)
@@ -79,14 +57,6 @@ class Parameter(QObject):
 
         full_path         = param_json.get("path", "")
         path, name        = full_path.rsplit(".", 1)
-        id                = param_json.get("id", "")
-        index             = param_json.get("idx", 0)
-        len               = param_json.get("len", 0)
-        rreq              = param_json.get("rreq", "")
-        rres              = param_json.get("rres", "")
-        wreq              = param_json.get("wreq", "")
-        wres              = param_json.get("wres", "")
-        proto_type        = param_json.get("proto_type", None)
         acc_str           = param_json.get("acc", "RO")
         acc               = getattr(ParamAccType, acc_str, ParamAccType.RO)
         local_acc         = param_json.get("local_acc", False)
@@ -100,9 +70,6 @@ class Parameter(QObject):
         self.display_type      = param_display_type
         self.path              = path
         self.name              = name
-        self.id                = id
-        self.index             = index
-        self.len               = len
         self.acc               = acc
         self.is_only_local_acc = local_acc
         self.is_nor_backup     = nor_backup
@@ -110,37 +77,19 @@ class Parameter(QObject):
         self.description       = desc
         self.is_need_reconnect = reconnect
 
-        if enable_condition is not None:
-            self.enable_conditions = []
-            for cond in enable_condition:
-                param_cond = ParamCondition(self)
-                param_cond.ref_id = cond.get("id")
-                param_cond.values = cond.get("conditions", [])
-                self.enable_conditions.append(param_cond)
-        else:
-            self.enable_conditions = None
-        
-        if visible_condition is not None:
-            self.visible_conditions = []
-            for cond in visible_condition:
-                param_cond = ParamCondition(self)
-                param_cond.ref_id = cond.get("id")
-                param_cond.values = cond.get("conditions", [])
-                self.visible_conditions.append(param_cond)
-        else:
-            self.visible_conditions = None
+        self.enable_conditions = self._build_conditions(enable_condition)
+        self.visible_conditions = self._build_conditions(visible_condition)
 
-        
         self.data_type = ParamDataType.FLOAT
         self.min_value : Union[int, float, None] = None
         self.max_value : Union[int, float, None] = None
-        self.ref_list  = None # Type[p_enum.DescriptionEnum] or List[Tuple[str, Type[DescriptionEnum]]] 
+        self.ref_list  = None # Type[p_enum.DescriptionEnum] or List[Tuple[str, Type[DescriptionEnum]]]
         self._value : Union[int, float, str, None] = None
         self.str_value : str = ""
         self._is_not_support : bool = False
         self._is_err : bool = False
         self.write_str_value : str | None = None
-        
+
         if self.display_type == ParamDisplayType.ENUM:
             self._init_enum(param_json)
         elif self.display_type == ParamDisplayType.BTN:
@@ -175,6 +124,18 @@ class Parameter(QObject):
             self._init_enum(param_json)
             self.display_type = ParamDisplayType.ENUM
             self.data_type = ParamDataType.BASE_36
+
+    def _build_conditions(self, condition_json):
+        """enable / visible 조건 목록 -> ParamCondition 목록 (없으면 None)."""
+        if condition_json is None:
+            return None
+        conditions = []
+        for cond in condition_json:
+            param_cond = ParamCondition(self)
+            param_cond.ref_path = cond.get("path")
+            param_cond.values = cond.get("conditions", [])
+            conditions.append(param_cond)
+        return conditions
 
     def _init_enum(self, param_json):
         self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
@@ -257,7 +218,7 @@ class Parameter(QObject):
                 min = int(min_str, 16)
             else:
                 min = int(min_str)
-            
+
             if max_str.startswith("0x"):
                 max = int(max_str, 16)
             else:
@@ -267,7 +228,11 @@ class Parameter(QObject):
             max = float(max_str)
 
         return min, max
-    
+
+    @property
+    def full_path(self) -> str:
+        return f"{self.path}.{self.name}"
+
     @property
     def value(self) -> Union[int, float, str, None]:
         return self._value
@@ -308,115 +273,32 @@ class Parameter(QObject):
 
     def set_visible_condition(self, condition: ParamCondition | None):
         self.visible_condition = condition
-        
-    def set_force_value(self, new_val: str):
+
+    def set_text_value(self, text: str) -> bool:
+        """전송 문자열을 data_type 규칙으로 변환해 값으로 확정한다. 변환 실패면 False.
+        spec 의 응답 반영과 set_force_value 가 공유한다.
+
+        [기존 동작 유지] str_value 는 변환 전에 대입되므로 실패해도 그 문자열이 남는다
+        (구 set_read_response_packet / set_force_value 와 동일). 실패 시 되돌리는 쪽이
+        맞아 보이지만 1단계는 동작 변화 없음이 원칙이라 그대로 둔다 — 정리 후보."""
+        self.str_value = text
         try:
             if self.data_type in self.INT_TYPES:
-                self.str_value = new_val
-                self.value = int(new_val)
+                self.value = int(text)
             elif self.data_type in self.FLOAT_TYPES:
-                self.str_value = new_val
-                self.value = float(new_val)
+                self.value = float(text)
             elif self.data_type in self.STR_TYPES:
-                self.str_value = new_val
-                self.value = new_val
+                self.value = text
             elif self.data_type in self.BASE36_TYPES:
-                self.str_value = new_val
-                self.value = int(new_val, 36)
-                
-            self.is_err = False
+                self.value = int(text, 36)
+            else:
+                return False
         except ValueError:
+            return False
+        return True
+
+    def set_force_value(self, new_val: str):
+        if self.set_text_value(new_val):
+            self.is_err = False
+        else:
             _log.error(f"set_force_value() 설정 값이 잘못 되었습니다: {self.path}, {self.name}, {new_val}")
-
-    def set_read_response_packet(self, resp_msg: str) -> tuple[ParamParseErrType | None, bool]:        
-        parse_err_type : ParamParseErrType = ParamParseErrType.NONE
-
-        parse_err_type, need_retry = self.check_error(True, resp_msg)
-
-        if parse_err_type != ParamParseErrType.NONE:
-            return parse_err_type, need_retry
-
-        if len(resp_msg) > 16:
-            new_val = resp_msg[16:]
-            try:
-                if self.data_type in self.INT_TYPES:
-                    self.str_value = new_val
-                    self.value = int(new_val)
-                elif self.data_type in self.FLOAT_TYPES:
-                    self.str_value = new_val
-                    self.value = float(new_val)
-                elif self.data_type in self.STR_TYPES:
-                    self.str_value = new_val
-                    self.value = new_val
-                elif self.data_type in self.BASE36_TYPES:
-                    self.str_value = new_val
-                    self.value = int(new_val, 36)
-                    
-            except ValueError:
-                return ParamParseErrType.DATA_TYPE_ERROR, True
-        else:
-            if self.data_type is ParamDataType.STR and len(resp_msg) == 16:
-                self.str_value = ""
-                self.value = ""
-            else:
-                return ParamParseErrType.WRONG_PARAM_LENGTH, True
-
-        return parse_err_type, False      
-
-    def set_write_response_packet(self, resp_msg: str) -> tuple[ParamParseErrType | None, bool]:                    
-        return self.check_error(False, resp_msg)
-
-    def check_error(self, is_read : bool, resp_msg: str) -> tuple[ParamParseErrType | None, bool]: 
-        if not is_read and self.acc != ParamAccType.WO:
-            return ParamParseErrType.NONE, False
-        
-        if not resp_msg:
-            self.is_err = True
-            return ParamParseErrType.COMMUNICATION_ERR, True
-
-        if len(resp_msg) < 4:
-            self.is_err = True
-            return ParamParseErrType.WRONG_FORMAT, True
-
-        prefix = resp_msg[0:2]
-        if prefix != "p:":
-            self.is_err = True
-            return ParamParseErrType.WRONG_PREFIX, True
-
-        err_code = resp_msg[2:4]
-
-        if err_code == "00":
-            if len(resp_msg) < 16:
-                self.is_err = True
-                return ParamParseErrType.WRONG_PARAM_LENGTH, True
-
-            svc_code = resp_msg[4:6]
-            if (svc_code != "01" and not is_read) or (svc_code != "0B" and is_read):
-                self.is_err = True
-                return ParamParseErrType.WRONG_SVC_CODE, True
-
-            id_code = resp_msg[6:14]
-            index = int(resp_msg[14:16], 16)
-            
-            if self.id == id_code and self.index == index:
-                self.is_err = False
-                self.is_not_support = False
-                return ParamParseErrType.NONE, False
-            else:
-                self.is_err = True
-                return ParamParseErrType.WRONG_ID_OR_INDEX, True
-
-        not_support_codes = {"6E", "73", "7B", "7E", "89"} 
-
-        if err_code in self.ERR_CODE_MAP:
-            if err_code in not_support_codes:
-                self.is_not_support = True
-            else:
-                self.is_err = True
-
-            mapped_enum = self.ERR_CODE_MAP[err_code]
-
-            return mapped_enum, False
-        else:
-            self.is_err = True # 알 수 없는 에러일 때
-            return ParamParseErrType.UNKNOWN_ERROR_CODE, True

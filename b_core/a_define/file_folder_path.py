@@ -59,7 +59,10 @@ RSRC_KERNEL_CPU1_FILE     = os.path.join(RSRC_TEMP_PATH, "fknlcp1.dlla")
 RSRC_KERNEL_CPU2_FILE     = os.path.join(RSRC_TEMP_PATH, "fknlcp2.dlla")
 
 RSRC_PARAM_SCHEMA_PATH = os.path.join(RSRC_BASE, "param_schema")
-RSRC_PARAM_SCHEMA_JSON_FILE = os.path.join(RSRC_PARAM_SCHEMA_PATH, "param.json")
+# 값 정의(params) 와 전송 규약(nv2/nv1 spec) 을 파일로 분리한다 — g_protocol/spec_loader 참고
+RSRC_PARAMS_JSON_FILE   = os.path.join(RSRC_PARAM_SCHEMA_PATH, "params.json")
+RSRC_NV2_SPEC_JSON_FILE = os.path.join(RSRC_PARAM_SCHEMA_PATH, "nv2_spec.json")
+RSRC_NV1_SPEC_JSON_FILE = os.path.join(RSRC_PARAM_SCHEMA_PATH, "nv1_spec.json")  # 2단계
 
 RSRC_TEMPLATE_PATH = os.path.join(RSRC_BASE, "template")
 RSRC_TEMPLATE_EDS_FILE = os.path.join(RSRC_TEMPLATE_PATH, "eds_sample_v2.txt")

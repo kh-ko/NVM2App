@@ -226,16 +226,16 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         # 값이 조건 목록에 있을 때만 해당 위젯이 활성화된다. 참조 탐색은 이 창에
         # 올라온 위젯으로 한정하며, 참조가 이 창에 없으면 조건을 걸 수 없어
         # 건너뛴다 (항상 활성으로 남으므로 화면에서 바로 드러난다)
-        widget_by_param_id = {}
+        widget_by_param_path = {}
         for param_widget in all_param_widgets:
-            widget_by_param_id.setdefault(param_widget.param.id, param_widget)
+            widget_by_param_path.setdefault(param_widget.param.full_path, param_widget)
 
         for param_widget in all_param_widgets:
             if param_widget.param.enable_conditions is None:
                 continue
 
             for condition in param_widget.param.enable_conditions:
-                ref_widget = widget_by_param_id.get(condition.ref_id)
+                ref_widget = widget_by_param_path.get(condition.ref_path)
                 if ref_widget is not None:
                     param_widget.reg_enable_condition(ref_widget, condition.values)
 
@@ -272,7 +272,8 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
     def on_clicked_save_file(self):
         # 백업 대상: RW + nor_backup param 만 (ver1 과 동일 기준).
         # 값은 위젯의 export_backup_value() 로 뽑는다 — 컨버터 위젯은 이 훅을
-        # 오버라이드해 표시 단위 그대로 저장한다. 파일 스키마는 ver1 과 호환.
+        # 오버라이드해 표시 단위 그대로 저장한다. 항목은 path/name 으로 식별한다
+        # (2026-09-11 결정 B: 프로토콜 id 는 정체성이 아니므로 기록하지 않는다).
         # 숨겨진 위젯은 제외한다 — 숨김 = 현재 창 모드가 다루지 않는 항목
         # (예: EtherCAT 창의 Advanced Range 전환)
         data_to_save = []
@@ -284,8 +285,6 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
                     item = {
                         "path": param.path,
                         "name": param.name,
-                        "id": param.id,
-                        "index": str(param.index),
                         "value": param_widget.export_backup_value(),
                     }
 
@@ -320,7 +319,7 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         QMessageBox.information(self, "Success", "File saved successfully.")
 
     def on_clicked_load_file(self):
-        # save_file 의 대칭: 같은 스키마(id/index 로 대상 식별)를 읽어
+        # save_file 의 대칭: 같은 스키마(path/name 으로 대상 식별)를 읽어
         # import_backup_value() 로 위젯에 넣는다. commit 하지 않으므로 값이
         # 달라진 위젯은 dirty 로 표시되고, 실제 쓰기는 Apply 가 수행한다.
         file_path, _ = QFileDialog.getOpenFileName(
@@ -348,21 +347,21 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         # 아래의 visible 필터가 이 조정 결과를 따라가므로 반드시 적용 전이어야 한다
         self.before_apply_loaded_items(loaded_data)
 
-        # (id, index) -> 위젯 매핑 (RW 만 — save 와 동일 기준)
+        # (path, name) -> 위젯 매핑 (RW 만 — save 와 동일 기준)
         widget_map = {}
         for folder_widget in self.folder_widgets:
             for param_widget in folder_widget.widgets:
                 param = param_widget.param
                 if param.acc == ParamAccType.RW:
-                    widget_map[(param.id, str(param.index))] = param_widget
+                    widget_map[(param.path, param.name)] = param_widget
 
         applied = 0
         failed_items = []
         for item in loaded_data:
-            if not isinstance(item, dict) or not all(k in item for k in ("id", "index", "value")):
+            if not isinstance(item, dict) or not all(k in item for k in ("path", "name", "value")):
                 continue
 
-            param_widget = widget_map.get((item["id"], item["index"]))
+            param_widget = widget_map.get((item["path"], item["name"]))
             if param_widget is None:
                 continue  # 이 창에 없는 param 항목은 무시 (부분 백업 파일 허용)
 
@@ -546,11 +545,11 @@ class ParamIfaceEtherCatWin(ParamWin):
     def before_apply_loaded_items(self, loaded_items):
         # 파일에 Scaling 항목이 있으면 Advanced, 없으면 Basic 으로 맞춘 뒤 적용 —
         # 이후의 visible 필터가 반대편(숨겨진) 항목을 자동으로 걸러낸다
-        scaling_keys = {(pw.param.id, str(pw.param.index))
+        scaling_keys = {(pw.param.path, pw.param.name)
                         for fw in self.scaling_folder_widgets
                         for pw in fw.widgets}
         has_scaling = any(isinstance(item, dict)
-                          and (item.get("id"), item.get("index")) in scaling_keys
+                          and (item.get("path"), item.get("name")) in scaling_keys
                           for item in loaded_items)
         self._apply_advanced_range_mode(has_scaling)
 

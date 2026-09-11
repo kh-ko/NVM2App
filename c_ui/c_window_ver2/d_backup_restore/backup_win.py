@@ -9,6 +9,7 @@ from b_core.b_datatype.parameter import Parameter
 from b_core.b_datatype.param_enum import SysUserInterfaceEnum
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.f_helper import backup_file_helper, firmware_util
+from b_core.g_protocol.spec_registry import SpecRegistry
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
 from c_ui.b_control_ver2.d_param.param_win import ParamWin
 from c_ui.c_window_ver2.x_message.firmware_update_message_box import (NoBackupChoice,
@@ -286,14 +287,19 @@ class BackupWin(ParamWin):
             self.param_worker.single_read_request(param)
             return
 
-        resp_check_prefix = f"p:000B{param.id}{param.index:02X}"
+        # 응답 검증과 저장 패킷 생성은 spec 에 맡긴다 — 이 창은 프로토콜 형식을 모른다.
+        # 파일에는 쓰기 패킷을 그대로 저장한다 (결정 10: 현행 형식 유지)
+        registry = SpecRegistry()
+        read_spec = registry.get_read_spec(param)
+        write_spec = registry.get_write_spec(param)
+        resp_check_prefix = read_spec.expected_response_prefix if read_spec is not None else None
 
-        if resp_msg.startswith(resp_check_prefix) == False:
+        if resp_check_prefix is None or write_spec is None or not resp_msg.startswith(resp_check_prefix):
             self._log.error(f"[Packet Error]: Parameter = {param.path}.{param.name}, packet = {resp_msg}")
         else:
             self._log.info(f"[Success]: Parameter = {param.path}.{param.name}")
-            value = resp_msg[16:]
-            content = f"{param.path}.{param.name}, p:01{param.id}{param.index:02X}{value}"
+            value = resp_msg[len(resp_check_prefix):]
+            content = f"{param.path}.{param.name}, {write_spec.build_request({param: value})}"
             self.backup_contents.append(content)
 
         try:

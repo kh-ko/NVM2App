@@ -35,6 +35,7 @@ from PySide6.QtCore import QCoreApplication, QMutex, QMutexLocker, QObject, QThr
 
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.d_dal.service_port import ServicePort
+from b_core.g_protocol.spec_registry import SpecRegistry
 from b_core.b_datatype.general_enum import SvcPortErrType
 from b_core.b_datatype.parameter import Parameter
 
@@ -257,18 +258,22 @@ class CompoundRunWorker(QObject):
         if self._thread is None:
             return
 
+        # Compound 프로토콜은 NV2 전용이고 ref param 의 NV2 id 자체를 값으로 보낸다 —
+        # 식별자는 SpecRegistry 의 NV2 역조회로 얻는다 (Parameter 는 id 를 모른다)
+        get_nv2_key = SpecRegistry().get_nv2_key
+
         write_cmds: list[bytes] = []
         for compound, ref in pairs:
-            idx_str = f"{compound.index:02X}"
-            ref_id = ref.id if ref is not None else "00000000"
+            compound_id, compound_index = get_nv2_key(compound)
+            ref_id = get_nv2_key(ref)[0] if ref is not None else "00000000"
             # 값 필드의 int(ref_id, 16) 은 의도된 변환이다:
             # ref param 의 hex id 를 10진수 문자열로 바꿔 서비스 01 값으로 전송한다.
-            cmd_str = f"p:01{compound.id}{idx_str}{int(ref_id, 16)}"
+            cmd_str = f"p:01{compound_id}{compound_index:02X}{int(ref_id, 16)}"
             write_cmds.append(cmd_str.encode('utf-8'))
 
         read_cmd = b""
         if pairs:
-            read_cmd = f"p:29{pairs[0][0].id}00".encode('utf-8')
+            read_cmd = f"p:29{get_nv2_key(pairs[0][0])[0]}00".encode('utf-8')
 
         expected_count = sum(1 for _, ref in pairs if ref is not None)
 
