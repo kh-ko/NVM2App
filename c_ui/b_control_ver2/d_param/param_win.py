@@ -24,7 +24,7 @@ from c_ui.b_control_ver2.d_param.param_values import ParamWriteOnlyEnumValueWidg
 from c_ui.c_window_ver2.win_manager import WinManager
 from c_ui.c_window_ver2.log_view_win import LogViewWin
 from c_ui.c_window_ver2.x_message.param_result_message_box import (
-    ask_local_switch, show_param_refresh_warning, show_param_write_warning)
+    ask_local_switch, show_param_refresh_warning, show_param_write_skipped, show_param_write_warning)
 from c_ui.c_window_ver2.x_message.wait_message_box import show_busy_wait_message_box
 
 """ParameterRunWorker 를 소유한 윈도우 공통 동작 믹스인.
@@ -62,6 +62,11 @@ class ParamWorkerWinMixin:
     def start_param_refresh(self):
         result = self.param_worker.refresh()
         show_param_refresh_warning(self, result)
+
+    def handle_skipped_write(self, params: list):
+        # 워커가 codec 문맥 미준비로 요청 없이 건너뛴 쓰기 — 시퀀스 종료 시 한 번 알림
+        # (호스트 창은 param_worker.sig_write_skipped 를 이 슬롯에 연결한다)
+        show_param_write_skipped(self, params)
 
     def handle_changed_connection_info(self, info: str):
         is_connected = bool(info)
@@ -169,6 +174,7 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         self.param_worker.sig_reboot_finished.connect(self.handle_finished_reboot)
         self.param_worker.sig_progress_changed.connect(self.handle_changed_param_worker_progress)
         self.param_worker.sig_is_working_changed.connect(self.handle_changed_working)
+        self.param_worker.sig_write_skipped.connect(self.handle_skipped_write)
 
         self.sn_param = self.param_manager.get_by_full_path("System.Identification.Serial Number")
         self.sn_param.sig_value_changed.connect(self.handle_changed_sn_param)

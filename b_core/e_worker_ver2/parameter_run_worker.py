@@ -44,7 +44,9 @@ ver1 에서 달라진 점:
 
 2026-09-11 도메인 중립화 (3단계):
 - write() 의 값은 도메인 값(백분율, Torr 등 — 숫자 또는 그 문자열)이고 선로 문자열은
-  spec 의 codec 이 만든다. 문맥 미준비로 encode 가 None 이면 그 작업은 건너뛴다.
+  spec 의 codec 이 만든다. 문맥 미준비로 encode 가 None 이면 그 작업은 건너뛴다 —
+  건너뛴 param 은 시퀀스 종료 시 sig_write_skipped 로 한 번에 알린다 (창이 대화상자로 표시,
+  2026-09-14 사용자 결정: 기능 처리는 그대로 두고 GUI 안내만 보강).
 - 문맥이 바뀌어도 값은 재디코드하지 않는다 (결정 E).
 
 2026-09-14 기준 워커 조정 (문맥 선행 읽기 대체, 사용자 결정):
@@ -192,6 +194,7 @@ class ParameterRunWorker(QObject):
     sig_progress_changed = Signal(int)
     sig_is_working_changed = Signal(bool)
     sig_finish_refresh = Signal()
+    sig_write_skipped = Signal(list)  # 시퀀스 종료 시: codec 문맥 미준비로 요청 없이 건너뛴 쓰기 param 목록
 
     MONITOR_LOG_ROUNDS = 30   # 모니터링 정상 로그는 30 라운드당 1 라운드만 기록
     REBOOT_TICK_MS = 1000
@@ -242,6 +245,7 @@ class ParameterRunWorker(QObject):
         self._jobs: list[_Job] = []
         self._job_index = 0
         self._seq_is_refresh = False  # 현재 시퀀스가 refresh 인지 (완료 시그널 구분용)
+        self._skipped_write_params: list[Parameter] = []  # 이번 시퀀스에서 encode 실패로 건너뛴 쓰기
         self._is_working = False
         self._progress = 0
         self._is_cleaned = False
@@ -624,6 +628,7 @@ class ParameterRunWorker(QObject):
         self._jobs = jobs
         self._job_index = 0
         self._seq_is_refresh = is_refresh
+        self._skipped_write_params = []
         self._state = _WorkerState.SEQUENCE
         self.is_working = True
         self.progress = 0
@@ -640,6 +645,7 @@ class ParameterRunWorker(QObject):
 
             self._log.error(f"encode failed (codec context not ready) - write skipped: "
                             f"{job.spec.describe()} values={job.values}")
+            self._skipped_write_params += list(job.values) if job.values else []
             self._job_index += 1
             self.progress = int((self._job_index / len(self._jobs)) * 100)
 
@@ -736,6 +742,12 @@ class ParameterRunWorker(QObject):
         if self is ParameterRunWorker._primary:
             self._release_pending_refresh()
 
+        # 건너뛴 쓰기 안내는 상태 전환을 모두 마친 뒤 마지막에 — 창의 슬롯이 모달 대화상자를
+        # 띄워 이벤트 루프가 안에서 돌더라도 워커는 이미 유휴/모니터링 상태다
+        if self._skipped_write_params:
+            skipped, self._skipped_write_params = self._skipped_write_params, []
+            self.sig_write_skipped.emit(skipped)
+
     # ------------------------------------------------------------ 기준 워커 조정
     @classmethod
     def _release_pending_refresh(cls) -> None:
@@ -808,6 +820,7 @@ class ParameterRunWorker(QObject):
         self.reboot_timer.stop()
         self._jobs = []
         self._job_index = 0
+        self._skipped_write_params = []
         self._state = _WorkerState.IDLE
         self.is_working = False
         self.progress = 0

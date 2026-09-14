@@ -42,6 +42,26 @@ def show_param_write_warning(parent, result: StartResult) -> None:
                             "Cannot modify local-only parameters while in Remote Lock mode.")
 
 
+def show_param_write_skipped(parent, params: list) -> None:
+    """쓰기 시퀀스가 끝났을 때, codec 문맥(Position Unit / Pressure Unit·범위, 센서 구성) 미준비로
+    요청 없이 건너뛴 param 목록을 알린다 (ParameterRunWorker.sig_write_skipped).
+
+    같은 시퀀스의 다른 쓰기(예: Control Mode)는 정상 전송된 뒤이므로 '일부만 반영' 을 분명히 한다.
+    처리 자체(건너뜀·read-back)는 워커가 이미 마쳤고 여기서는 표시만 한다."""
+    if not params:
+        return
+
+    names = "\n".join(f"  - {p.path}.{p.name}" for p in params)
+    QMessageBox.warning(
+        parent, "Write Skipped",
+        "The following parameter(s) were not written because the device scaling settings "
+        "needed to convert the value (Position Unit / Pressure Unit and range, sensor configuration) "
+        "are not available yet:\n\n"
+        f"{names}\n\n"
+        "Other parameters in the same request were written. "
+        "Please refresh after the device settings have been read and try again.")
+
+
 def show_param_refresh_warning(parent, result: StartResult) -> None:
     """refresh() 결과 중 NOT_CONNECTED 만 표시.
 

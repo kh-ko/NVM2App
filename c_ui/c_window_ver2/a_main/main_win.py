@@ -342,6 +342,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.param_worker.sig_reboot_started.connect(self.handle_started_reboot)
         self.param_worker.sig_reboot_finished.connect(self.handle_finished_reboot)
         self.param_worker.sig_progress_changed.connect(self.handle_changed_param_worker_progress)
+        self.param_worker.sig_write_skipped.connect(self.handle_skipped_write)
 
         # MainWin 이벤트 처리 연결
         self.sn_param.sig_value_changed.connect(self.handle_changed_sn_param)
