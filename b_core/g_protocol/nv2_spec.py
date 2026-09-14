@@ -91,7 +91,9 @@ class _Nv2Spec(PacketSpec):
         return f"{self.param.path}.{self.param.name} [NV2 {self.id}/{self.index} {self.codec.name}]"
 
     def _check_response(self, resp: str | None, is_read: bool) -> tuple[ParamParseErrType, bool]:
-        """기존 Parameter.check_error 와 동일한 판정 순서/결과."""
+        """기존 Parameter.check_error 와 같은 판정이되, ID 비교를 INDEX 파싱보다 먼저 한다 —
+        ID 가 다르고 INDEX 자리가 16진수가 아닌 응답에서 구버전은 int() 예외로 워커가 멈췄고
+        여기서는 WRONG_ID_OR_INDEX(재시도) 로 처리한다."""
         param = self.param
 
         # 쓰기 응답은 WO param 만 검증한다 (기존 동작 유지)
