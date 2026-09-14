@@ -53,6 +53,10 @@ ver1 에서 달라진 점:
   (StartResult.PENDING) 기준 시퀀스가 끝난 뒤 이어서 시작한다 — 연결/재연결 직후 자식 창이
   문맥 없이(또는 이전 장비 문맥으로) decode 하는 경합을 막는다. 요청 목록 자체는 구 워커와
   같다 (문맥 param 을 큐에 끼워 넣지 않는다).
+- 대기(PENDING)는 창 입장에서 refresh 진행 중과 같아야 한다: 진행 중이던 시퀀스/모니터링을
+  중단하고(구 refresh 와 동일) is_working 을 올려 창 본문을 잠그며, write() 는 BUSY 를 돌려준다.
+  잠금은 지연 refresh 가 _finish_sequence 에 닿을 때(또는 끊김/cleanup) 풀린다 — 재연결 직후
+  이전 값이 편집 가능한 채 남거나, 그 사이 시작된 쓰기가 지연 refresh 에 잘리는 일을 막는다.
 """
 
 from enum import Enum, auto
@@ -77,10 +81,11 @@ class StartResult(Enum):
     OK = auto()
     NOT_CONNECTED = auto()
     EMPTY = auto()              # 처리할 param 없음
-    BUSY = auto()               # write: 시퀀스/재부팅 진행 중, refresh: 재부팅 대기 중
+    BUSY = auto()               # write: 시퀀스/재부팅/기준 refresh 대기 중, refresh: 재부팅 대기 중
     LOCAL_BLOCKED = auto()      # Remote Lock 상태에서 local 전용 param 쓰기 시도
     NEED_LOCAL_SWITCH = auto()  # Remote 상태 — Local 전환 여부를 사용자에게 물어볼 것
     PENDING = auto()            # refresh: 기준(MainWin) refresh 완료 후 자동 시작 예약됨
+                                #          (대기 중에도 is_working=True 로 창이 잠기고 write 는 BUSY)
 
 
 class _JobOp(Enum):
@@ -100,6 +105,7 @@ class _WorkerState(Enum):
     MONITOR = auto()       # 유휴 — read_param_list round-robin 읽기
     REBOOT = auto()        # 밸브 재부팅 대기 (임시 raw serial 연결로 SN probe 폴링)
     DISCONNECTED = auto()  # 연결 끊김으로 전 동작 중단 — 재연결 refresh 대기
+    PENDING = auto()       # 기준(MainWin) refresh 완료 대기 — 창 잠금(is_working) 유지, write 는 BUSY
 
 
 class ParameterThread(QObject):
@@ -386,8 +392,9 @@ class ParameterRunWorker(QObject):
     def refresh(self) -> StartResult:
         """등록 param 전체 읽기 시퀀스 시작. 완료 후 모니터링으로 전환된다.
 
-        기준 워커(MainWin)의 refresh 가 진행 중이면 PENDING 을 반환하고 예약만 한다 —
+        기준 워커(MainWin)의 refresh 가 진행 중이면 PENDING 을 반환하고 예약한다 —
         기준 시퀀스가 끝나면 워커가 스스로 refresh() 를 다시 호출한다 (클래스 주석 참고).
+        대기 중에도 창은 refresh 중과 같이 잠긴다 (is_working=True, write 는 BUSY).
 
         진행 중이던 시퀀스/모니터링은 무조건 중단하고 다시 시작한다.
         단, 재부팅 대기 중에는 BUSY 를 반환한다 — 외부의 refresh 호출이
@@ -400,7 +407,13 @@ class ParameterRunWorker(QObject):
         if primary is not None and primary is not self and primary._is_refreshing:
             if self not in ParameterRunWorker._pending_refresh:
                 ParameterRunWorker._pending_refresh.append(self)
-            self._log.info("refresh pending - waiting for primary refresh to finish")
+            # 대기 시작: 진행 중이던 동작을 중단하고 창을 잠근다. 이미 대기 중이면 그대로 둔다
+            # (잠금 해제는 지연 refresh 의 _finish_sequence, 끊김(handle_disconnected), cleanup 에서)
+            if self._state != _WorkerState.PENDING:
+                self._stop_all()
+                self._state = _WorkerState.PENDING
+                self.is_working = True
+                self._log.info("refresh pending - waiting for primary refresh to finish")
             return StartResult.PENDING
 
         self._stop_all()
@@ -432,7 +445,8 @@ class ParameterRunWorker(QObject):
         NEED_LOCAL_SWITCH 반환 시 윈도우가 사용자에게 물어본 뒤 동일 pairs 로
         write(pairs, switch_to_local=True) 를 다시 호출한다.
         쓰기 후에는 [쓴 param 읽기(RW만) -> read_param_list 읽기] 가 이어진다."""
-        if self._state in (_WorkerState.SEQUENCE, _WorkerState.REBOOT):
+        # PENDING 도 BUSY — 대기 중 시작된 쓰기가 지연 refresh 의 _stop_all 에 잘리는 것을 막는다
+        if self._state in (_WorkerState.SEQUENCE, _WorkerState.REBOOT, _WorkerState.PENDING):
             return StartResult.BUSY
 
         if not ServicePort().connect_info:
@@ -486,8 +500,10 @@ class ParameterRunWorker(QObject):
 
         if self._state == _WorkerState.SEQUENCE:
             self._log.info(f"disconnected - sequence aborted ({self._job_index}/{len(self._jobs)} jobs done)")
+        elif self._state == _WorkerState.PENDING:
+            self._log.info("disconnected - pending refresh cancelled")
 
-        self._stop_all()
+        self._stop_all()  # PENDING 이었다면 여기서 is_working=False 로 창 잠금이 풀린다
         self._state = _WorkerState.DISCONNECTED
 
         # 예약된 refresh 는 취소한다 — 재연결 시 창이 다시 refresh() 를 호출한다.
@@ -825,6 +841,9 @@ class ParameterRunWorker(QObject):
         self._discard_pending_refresh()
         if self is ParameterRunWorker._primary:
             ParameterRunWorker._primary = None
+            # 기준 워커가 사라지면 대기자를 잠긴 채 두지 않고 이어서 시작시킨다
+            # (대기자 자신도 cleanup 됐다면 _resume_pending_refresh 가 _is_cleaned 로 무시)
+            self._release_pending_refresh()
 
         self._stop_all()
 
