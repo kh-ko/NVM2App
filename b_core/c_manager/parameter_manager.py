@@ -20,7 +20,10 @@ class ParamManager:
       1. params.json   -> Parameter 생성 (값 정의만, 전송 정보 없음)
       2. nv2_spec.json -> SpecRegistry 에 param 별 NV2 읽기/쓰기 spec 등록
       3. (NV1 단계) nv1_spec.json
-      4. 검증: 어느 스펙에도 없는 param 은 오류 로그 + Not Support (결정 9)
+      4. 검증: 어느 스펙에도 없는 param 은 오류 로그 + Not Support
+    파일 누락/손상과 로더가 찾은 불일치는 전부 load_errors 에 모인다 — 스키마 파일은
+    앱과 함께 배포되므로 오류는 손상으로 보고, main.py 가 기동 시 대화상자로 알린 뒤
+    종료한다 (2026-09-14 사용자 결정). 여기서는 예외를 던지지 않는다 (도구/테스트 호환).
     창은 지금처럼 get_by_full_path() 로 찾을 뿐 프로토콜을 모른다. spec 이
     필요한 쪽(워커, 백업/복원 창, Compound)은 SpecRegistry() 에서 param 으로 찾는다."""
 
@@ -48,9 +51,9 @@ class ParamManager:
         self._param_map: Dict[tuple, Parameter] = {}  # (path, name) 검색용
         self._parameters: List[Parameter] = []         # 전체 리스트 보관용
         self._spec_registry = SpecRegistry()
+        self.load_errors: List[str] = []  # 스키마 파일 누락/손상/불일치 — main.py 가 기동 시 검사
 
-        # 스키마 파일이 없거나 로드에 실패해도 빈 목록으로 기동한다
-        # (param 을 못 찾는 오류는 이후 get 계열 호출에서 개별 로그로 남음)
+        # 스키마 파일이 없거나 로드에 실패해도 예외 없이 빈 목록으로 진행하되 오류를 모은다
         param_list = []
 
         if os.path.exists(path_def.RSRC_PARAMS_JSON_FILE):
@@ -58,9 +61,13 @@ class ParamManager:
                 with open(path_def.RSRC_PARAMS_JSON_FILE, 'r', encoding='utf-8') as f:
                     param_list = json.load(f)
             except Exception as e:
-                self._log.error(f"params 스키마 로드 실패: {e}")
+                self._fail(f"params 스키마 로드 실패: {path_def.RSRC_PARAMS_JSON_FILE} ({e})")
         else:
-            self._log.error(f"params 스키마 파일 없음: {path_def.RSRC_PARAMS_JSON_FILE}")
+            self._fail(f"params 스키마 파일 없음: {path_def.RSRC_PARAMS_JSON_FILE}")
+
+        if not isinstance(param_list, list):
+            self._fail(f"params 스키마: 최상위가 배열이 아님: {path_def.RSRC_PARAMS_JSON_FILE}")
+            param_list = []
 
         for param in param_list:
             param_type = param.get("type", "")
@@ -68,11 +75,19 @@ class ParamManager:
             display_type = PARAM_DISPLAY_TYPE_MAP.get(param_type)
             self._add_param(param, display_type)
 
+        if not self._parameters and not self.load_errors:
+            self._fail(f"params 스키마에 param 이 없음: {path_def.RSRC_PARAMS_JSON_FILE}")
+
         # 전송 규약 부착 — 경로 조회는 오류 로그 없이 (누락은 로더가 자기 문구로 기록)
         count = spec_loader.load_nv2_specs(path_def.RSRC_NV2_SPEC_JSON_FILE,
-                                           self._find_quiet, self._spec_registry)
-        missing = spec_loader.validate_specs(self._parameters, self._spec_registry)
-        self._log.info(f"params {len(self._parameters)} / nv2 spec {count} / spec 없음 {missing}")
+                                           self._find_quiet, self._spec_registry, self.load_errors)
+        missing = spec_loader.validate_specs(self._parameters, self._spec_registry, self.load_errors)
+        self._log.info(f"params {len(self._parameters)} / nv2 spec {count} / spec 없음 {missing}"
+                       f" / 스키마 오류 {len(self.load_errors)}")
+
+    def _fail(self, msg: str) -> None:
+        self._log.error(msg)
+        self.load_errors.append(msg)
 
     def _add_param(self, param_json, param_display_type: ParamDisplayType):
         param = Parameter(param_json, param_display_type)

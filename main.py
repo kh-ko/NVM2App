@@ -15,6 +15,7 @@ from b_core.a_define import file_folder_path as path_def
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.parameter_manager import ParamManager
 from c_ui.c_window_ver2.a_main.main_win import MainWin
+from c_ui.c_window_ver2.x_message.startup_message_box import show_schema_load_error
 
 
 def setup_fonts(app):
@@ -73,9 +74,17 @@ def main():
     setup_fonts(app)
 
     # [Step 5] 코어 초기화 — 창 생성 전에 param 스키마와 전송 규약(SpecRegistry)을 로드한다.
-    # 컨버터/워커는 각자 ParamManager() 를 호출해 로드를 보장하므로 필수는 아니며,
-    # "코어 → 창" 순서를 진입점에서 드러내는 것이 목적이다.
-    ParamManager()
+    # 스키마 파일(params.json / nv2_spec.json)이 없거나 깨졌거나 서로 맞지 않으면 창을 만들지
+    # 않고 대화상자로 알린 뒤 종료한다 — 손상된 스키마로 잘못된 값을 표시/전송하거나
+    # 창 생성 중 예외로 조용히 죽는 것을 막는다 (2026-09-14 사용자 결정).
+    param_manager = ParamManager()
+    if param_manager.load_errors:
+        log = AppLogManager().get_logger("App", is_global=True)
+        log.error(f"param 스키마 오류 {len(param_manager.load_errors)}건 — 기동 중단")
+        show_schema_load_error(None,
+                               [path_def.RSRC_PARAMS_JSON_FILE, path_def.RSRC_NV2_SPEC_JSON_FILE],
+                               param_manager.load_errors)
+        sys.exit(1)
 
     # [Step 6] 메인 윈도우 초기화 및 실행
     window = MainWin()
