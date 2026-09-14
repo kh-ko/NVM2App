@@ -45,8 +45,14 @@ ver1 에서 달라진 점:
 2026-09-11 도메인 중립화 (3단계):
 - write() 의 값은 도메인 값(백분율, Torr 등 — 숫자 또는 그 문자열)이고 선로 문자열은
   spec 의 codec 이 만든다. 문맥 미준비로 encode 가 None 이면 그 작업은 건너뛴다.
-- refresh() 는 목록 param 의 codec 이 읽는 문맥 param 을 큐 맨 앞에 한 번 넣는다
-  (모니터링 목록에는 넣지 않는다 — 사용자 결정). 문맥이 바뀌어도 값은 재디코드하지 않는다.
+- 문맥이 바뀌어도 값은 재디코드하지 않는다 (결정 E).
+
+2026-09-14 기준 워커 조정 (문맥 선행 읽기 대체, 사용자 결정):
+- codec 문맥 param(Interface.Scaling.*, Sensor 1/2.*)은 MainWin 워커(is_primary)가 init
+  목록으로 읽는다. 기준 워커의 refresh 가 진행 중이면 다른 워커의 refresh() 는 예약만 하고
+  (StartResult.PENDING) 기준 시퀀스가 끝난 뒤 이어서 시작한다 — 연결/재연결 직후 자식 창이
+  문맥 없이(또는 이전 장비 문맥으로) decode 하는 경합을 막는다. 요청 목록 자체는 구 워커와
+  같다 (문맥 param 을 큐에 끼워 넣지 않는다).
 """
 
 from enum import Enum, auto
@@ -74,6 +80,7 @@ class StartResult(Enum):
     BUSY = auto()               # write: 시퀀스/재부팅 진행 중, refresh: 재부팅 대기 중
     LOCAL_BLOCKED = auto()      # Remote Lock 상태에서 local 전용 param 쓰기 시도
     NEED_LOCAL_SWITCH = auto()  # Remote 상태 — Local 전환 여부를 사용자에게 물어볼 것
+    PENDING = auto()            # refresh: 기준(MainWin) refresh 완료 후 자동 시작 예약됨
 
 
 class _JobOp(Enum):
@@ -84,7 +91,7 @@ class _JobOp(Enum):
 class _Job(NamedTuple):
     op: _JobOp
     spec: PacketSpec
-    values: dict | None = None  # WRITE: {param: 값 문자열}
+    values: dict | None = None  # WRITE: {param: 도메인 값 (숫자 또는 문자열)}
 
 
 class _WorkerState(Enum):
@@ -183,6 +190,13 @@ class ParameterRunWorker(QObject):
     MONITOR_LOG_ROUNDS = 30   # 모니터링 정상 로그는 30 라운드당 1 라운드만 기록
     REBOOT_TICK_MS = 1000
 
+    # 기준 워커 조정 — MainWin 워커(is_primary)의 refresh 가 진행 중이면 다른 워커의
+    # refresh 는 예약만 하고, 기준 시퀀스가 끝난 뒤 이어서 시작한다. codec 문맥 param
+    # (Interface.Scaling.*, Sensor 1/2.*)은 MainWin 이 init 목록으로 읽으므로
+    # "기준 refresh 완료" 가 곧 "문맥 최신" 이다 (3단계 결정 E: 재디코드 없음).
+    _primary: "ParameterRunWorker | None" = None
+    _pending_refresh: list["ParameterRunWorker"] = []
+
     @property
     def progress(self) -> int:
         return self._progress
@@ -203,10 +217,14 @@ class ParameterRunWorker(QObject):
             self._is_working = is_working
             self.sig_is_working_changed.emit(is_working)
 
-    def __init__(self, parent=None, log_source: str = "ParameterRunWorker", monitor_tick: int = 100):
+    def __init__(self, parent=None, log_source: str = "ParameterRunWorker", monitor_tick: int = 100,
+                 is_primary: bool = False):
         super().__init__(parent)
 
         self._log = AppLogManager().get_logger(log_source)
+
+        if is_primary:
+            ParameterRunWorker._primary = self
 
         self._acc_mode_param: Optional[Parameter] = ParamManager().get_by_full_path("System.Access Mode")
 
@@ -361,8 +379,15 @@ class ParameterRunWorker(QObject):
         return jobs
 
     # ------------------------------------------------------------ 시퀀스 시작
+    @property
+    def _is_refreshing(self) -> bool:
+        return self._state == _WorkerState.SEQUENCE and self._seq_is_refresh
+
     def refresh(self) -> StartResult:
         """등록 param 전체 읽기 시퀀스 시작. 완료 후 모니터링으로 전환된다.
+
+        기준 워커(MainWin)의 refresh 가 진행 중이면 PENDING 을 반환하고 예약만 한다 —
+        기준 시퀀스가 끝나면 워커가 스스로 refresh() 를 다시 호출한다 (클래스 주석 참고).
 
         진행 중이던 시퀀스/모니터링은 무조건 중단하고 다시 시작한다.
         단, 재부팅 대기 중에는 BUSY 를 반환한다 — 외부의 refresh 호출이
@@ -371,16 +396,19 @@ class ParameterRunWorker(QObject):
         if self._state == _WorkerState.REBOOT:
             return StartResult.BUSY
 
+        primary = ParameterRunWorker._primary
+        if primary is not None and primary is not self and primary._is_refreshing:
+            if self not in ParameterRunWorker._pending_refresh:
+                ParameterRunWorker._pending_refresh.append(self)
+            self._log.info("refresh pending - waiting for primary refresh to finish")
+            return StartResult.PENDING
+
         self._stop_all()
 
         params: list[Parameter] = []
         params += self.init_param_list
         params += [p for p in self.write_param_list if p.acc != ParamAccType.WO]
         params += self.read_param_list
-
-        # 문맥 param(codec 이 읽는 스케일링·센서 구성)을 맨 앞에 한 번 읽어, 뒤따르는 param 의
-        # decode 시점에 문맥이 최신임을 보장한다. 재디코드는 하지 않는다 (3단계 결정 E)
-        params = self._registry.get_context_params(params) + params
 
         jobs = [_Job(_JobOp.READ, spec) for spec in self._read_specs_of(params)]
 
@@ -393,11 +421,13 @@ class ParameterRunWorker(QObject):
         self._start_sequence(jobs, is_refresh=True)
         return StartResult.OK
 
-    def write(self, pairs: list[tuple[Parameter, str]], switch_to_local: bool = False) -> StartResult:
+    def write(self, pairs: list[tuple[Parameter, float | int | str]], switch_to_local: bool = False) -> StartResult:
         """전달받은 [(param, value), ...] 쌍들의 쓰기 시퀀스 시작.
 
-        값은 호출측이 스냅샷으로 넘긴다 — 워커는 param.write_str_value 같은
-        공유 필드를 직접 참조하지 않는다 (모듈 docstring 참고).
+        값은 도메인 값(숫자 또는 문자열)이며 호출측이 스냅샷으로 넘긴다 — 워커는
+        param.write_str_value 같은 공유 필드를 직접 참조하지 않는다 (모듈 docstring 참고).
+        선로 문자열은 전송 직전에 spec 의 codec 이 만든다 — 호출측이 미리 문자열화하지
+        않아야 유효숫자 절단이 한 번만 일어난다.
 
         NEED_LOCAL_SWITCH 반환 시 윈도우가 사용자에게 물어본 뒤 동일 pairs 로
         write(pairs, switch_to_local=True) 를 다시 호출한다.
@@ -408,7 +438,8 @@ class ParameterRunWorker(QObject):
         if not ServicePort().connect_info:
             return StartResult.NOT_CONNECTED
 
-        pending = [(param, value) for param, value in pairs if value]
+        # 값 없음(None / 빈 문자열)만 거른다 — 숫자 0 은 유효한 쓰기 값이다
+        pending = [(param, value) for param, value in pairs if value is not None and value != ""]
         if not pending:
             return StartResult.EMPTY
 
@@ -458,6 +489,12 @@ class ParameterRunWorker(QObject):
 
         self._stop_all()
         self._state = _WorkerState.DISCONNECTED
+
+        # 예약된 refresh 는 취소한다 — 재연결 시 창이 다시 refresh() 를 호출한다.
+        # 기준 워커가 끊기면 대기자 전부를 비운다 (대기자도 각자 끊김 처리를 받는다)
+        self._discard_pending_refresh()
+        if self is ParameterRunWorker._primary:
+            ParameterRunWorker._pending_refresh.clear()
 
     # ------------------------------------------------------------ 단발 요청
     def single_read_request(self, param: Parameter):
@@ -678,6 +715,28 @@ class ParameterRunWorker(QObject):
         if was_refresh:
             self.sig_finish_refresh.emit()
 
+        # 기준 워커의 시퀀스가 끝나면(refresh 든, refresh 를 끊고 들어온 write 든)
+        # 예약된 다른 워커의 refresh 를 이어서 시작한다
+        if self is ParameterRunWorker._primary:
+            self._release_pending_refresh()
+
+    # ------------------------------------------------------------ 기준 워커 조정
+    @classmethod
+    def _release_pending_refresh(cls) -> None:
+        waiting, cls._pending_refresh = cls._pending_refresh, []
+        for worker in waiting:
+            QTimer.singleShot(0, worker._resume_pending_refresh)  # 기준 워커 슬롯 밖에서 시작
+
+    def _resume_pending_refresh(self) -> None:
+        if self._is_cleaned:
+            return
+        result = self.refresh()
+        if result not in (StartResult.OK, StartResult.PENDING):
+            self._log.info(f"pending refresh not started: {result.name}")
+
+    def _discard_pending_refresh(self) -> None:
+        ParameterRunWorker._pending_refresh = [w for w in ParameterRunWorker._pending_refresh if w is not self]
+
     # ------------------------------------------------------------ 모니터링
     def _on_timeout_monitor(self):
         if self._state != _WorkerState.MONITOR:
@@ -762,6 +821,10 @@ class ParameterRunWorker(QObject):
                 app.aboutToQuit.disconnect(self.cleanup)
             except (TypeError, RuntimeError):
                 pass
+
+        self._discard_pending_refresh()
+        if self is ParameterRunWorker._primary:
+            ParameterRunWorker._primary = None
 
         self._stop_all()
 

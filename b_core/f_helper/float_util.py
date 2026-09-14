@@ -21,6 +21,8 @@ from decimal import Decimal
 FLOAT_REL_TOL = 1e-6   # 유효숫자 6자리 (비교)
 FLOAT_ABS_TOL = 1e-9   # 0 근처 안전망
 SIG_DIGITS = 6         # 유효숫자 6자리 (표시)
+SNAP_SIG_DIGITS = 15   # 단위 환산 곱셈의 마지막 비트 잡음 제거용 — float64 유효숫자(~16) 바로 아래.
+                       # 더 줄이면(예: 12) 실제 자릿수를 깎고 인위적인 .5 동점을 만들어 표시 반올림이 흔들린다
 
 
 def is_float_equal(a: float | None, b: float | None) -> bool:
@@ -42,6 +44,22 @@ def to_sig_str(value: float | None) -> str | None:
     try:
         text = f"{value:.{SIG_DIGITS}g}"
         return f"{Decimal(text):f}" if "e" in text or "E" in text else text
+    except Exception:
+        return None
+
+
+def snap_float(value: float | None) -> float | None:
+    """유효숫자 15자리로 되묶어 1 ULP 잡음을 없앤다 (예: 749.9999999999999 -> 750.0).
+
+    선로 단위 -> Torr(도메인) -> 표시 단위처럼 환산 계수를 두 번 곱하면 곱이 정확히
+    1 이나 10^n 이 되지 않아 마지막 비트가 흔들린다. 그 값이 CSV/설정 파일에 그대로
+    기록되거나 반올림 경계에서 표시 마지막 자리를 바꾸므로 표시 직전에 정리한다.
+    None/해석 불가 입력은 None."""
+    if value is None:
+        return None
+
+    try:
+        return float(f"{value:.{SNAP_SIG_DIGITS}g}")
     except Exception:
         return None
 

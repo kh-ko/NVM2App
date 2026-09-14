@@ -14,7 +14,7 @@ c_ui/a_converter 두 파일을 git 에서 꺼내 그대로 실행한 결과다.
      × 선로값 표본 × 모드(auto/s1/s2) → 구 convert_iface_pres_to_dp_pres vs 새 codec.from_line → to_display.
      역방향, 만압(get_dp_max_pres), sfs 변환 대조.
   3. 배율: scale100 / scale10000 codec == 구 위젯 배율.
-  4. 등록부: get_context_params 순서, apply_line_text, 워커 refresh 가 문맥 param 을 앞에 넣는지.
+  4. 등록부: apply_line_text, 워커 refresh 큐가 등록 param 만 담는지(문맥 선행 읽기 없음).
   5. 위젯(offscreen): posi/pres/scale 위젯이 도메인 값을 화면 문자열로 바르게 만드는지.
 실수 비교는 앱 전역 정책(is_float_equal, 유효숫자 6자리)을 따른다.
 """
@@ -179,9 +179,9 @@ def main() -> int:
                 rep.check(new_posi.convert_pfs_to_dp_str(pfs) == new_posi.format_dp(pfs * 100.0), f"pfs→dp str pfs={pfs}")
                 pfs_same_as_old[0] += feq(old_posi.convert_pfs_to_dp(pfs), dp)
                 pfs_total[0] += 1
-            # 설정점 버튼: 백분율 문자열 → 쓰기값은 codec 이 현재 단위의 선로값으로 (예: 0-100000 에서 100 → 100000)
+            # 설정점 버튼: 백분율(float) → 쓰기값은 codec 이 현재 단위의 선로값으로 (예: 0-100000 에서 100 → 100000)
             if posi_codec.is_ready:
-                line = posi_codec.encode(new_posi.normalize_dp_str("100"))
+                line = posi_codec.encode(new_posi.parse_dp_str("100"))
                 rng = posi_codec.range()
                 rep.check(seq(line, to_sig_str(rng[1])), f"설정점 100 % → 선로 {line} (Open={rng[1]})")
     # 문맥 미준비: 구 컨버터는 마지막 계수를 유지하지만 새 codec 은 None (의도된 편차)
@@ -289,14 +289,6 @@ def main() -> int:
     rep.check(reg.get_param_codec(s1_pres) is pres_codecs["s1"], "Sensor 1 Actual Pressure Value → pres_s1 codec")
     rep.check(isinstance(reg.get_param_codec(speed), ScaleCodec), "Speed Used (%) → scale100 codec")
 
-    ctx = reg.get_context_params([act_posi, act_pres, s1_pres])
-    expected_ctx = list(posi_codec.context_params)
-    for p in pres_codecs["auto"].context_params + pres_codecs["s1"].context_params:
-        if p not in expected_ctx:
-            expected_ctx.append(p)
-    rep.check(ctx == expected_ctx, f"get_context_params 순서/중복 제거: {len(ctx)} vs {len(expected_ctx)}")
-    rep.check(reg.get_context_params([unit_p, act_posi]) == [min_p, max_p], "get_context_params 는 목록에 이미 있는 문맥을 빼고 준다")
-
     set_param(unit_p, p_enum.RS232PositionUnitEnum.ZERO_TO_100000.value)
     rep.check(reg.apply_line_text(act_posi, "50000") and feq(act_posi.value, 50.0) and act_posi.str_value == "50000",
               f"apply_line_text posi: {act_posi.value} / {act_posi.str_value!r}")
@@ -315,8 +307,8 @@ def main() -> int:
         jobs = list(w._jobs)
         w._stop_all()
         params_in_order = [j.spec.params[0] for j in jobs]
-        expected = list(posi_codec.context_params) + [p for p in pres_codecs["s1"].context_params if p not in posi_codec.context_params] + [act_posi, s1_pres]
-        rep.check(params_in_order == expected, f"refresh 큐: 문맥 {len(expected) - 2}개 선행 후 대상 2개 — 실제 {len(params_in_order)}개")
+        expected = [act_posi, s1_pres]  # 문맥 선행 읽기 없음 — 기준 워커(MainWin) refresh 완료 후 시작하는 조정으로 대체
+        rep.check(params_in_order == expected, f"refresh 큐: 등록 대상 2개만 — 실제 {len(params_in_order)}개")
         rep.check(all(j.op is _JobOp.READ for j in jobs), "refresh 큐는 전부 읽기")
 
         # 쓰기: 도메인 값(백분율) → codec 이 선로 문자열 생성. 문맥 미준비면 작업 건너뜀

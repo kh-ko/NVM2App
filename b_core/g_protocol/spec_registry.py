@@ -15,8 +15,6 @@
       │                                  Compound 프로토콜이 NV2 id/idx 를 값으로 쓰기 때문
       ├ add_codec / get_codec            이름 → Codec (nv2_spec.json "codecs" 절, 로더가 등록)
       ├ get_param_codec(param)           param 의 현재 읽기 spec 이 쓰는 codec
-      ├ get_context_params(params)       params 의 codec 들이 읽는 문맥 param (순서 유지, 중복·자기 제외)
-      │                                  — 워커가 refresh 큐 맨 앞에 넣는다 (3단계 결정 E)
       ├ decode_line(param, v)            숫자 선로값 → 도메인 값 (Compound 폴링 샘플용)
       ├ apply_line_text(param, text)     선로 문자열을 param 에 반영 (구 set_force_value 대체)
       └ clear()                          테스트용
@@ -33,7 +31,7 @@ get_by_nv2_key 는 "마지막 등록이 이긴다" — 기존 RestoreWin 의 dic
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Iterable, Optional
+from typing import TYPE_CHECKING, Optional
 
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.g_protocol.codec import Codec, TextCodec
@@ -112,20 +110,6 @@ class SpecRegistry:
         spec = self.get_read_spec(param) or self.get_write_spec(param)
         codec = getattr(spec, "codec", None)
         return codec if codec is not None else TextCodec.of(param.data_type)
-
-    def get_context_params(self, params: Iterable["Parameter"]) -> list["Parameter"]:
-        """params 의 codec 들이 읽는 문맥 param 목록 — 등장 순서 유지, 중복과 params 자신은 제외.
-        워커가 refresh 큐 맨 앞에 넣어 decode 시점의 문맥이 최신임을 보장한다."""
-        own = set(params)
-        seen: set = set()
-        result: list["Parameter"] = []
-        for param in params:
-            for ctx in self.get_param_codec(param).context_params:
-                if ctx in own or ctx in seen:
-                    continue
-                seen.add(ctx)
-                result.append(ctx)
-        return result
 
     def decode_line(self, param: "Parameter", line_value: float) -> float | None:
         """숫자 선로값 → 도메인 값 (Compound 폴링 샘플 등). 문맥 미준비면 None."""

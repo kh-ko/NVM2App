@@ -46,7 +46,8 @@ def show_param_refresh_warning(parent, result: StartResult) -> None:
     """refresh() 결과 중 NOT_CONNECTED 만 표시.
 
     BUSY 는 재부팅 대기 중 재연결 시그널 경유 호출의 정상 흐름이므로 표시하지 않고,
-    EMPTY(등록 param 없음)도 표시할 것이 없다."""
+    EMPTY(등록 param 없음)도 표시할 것이 없다. PENDING(기준 창 refresh 완료 후 자동
+    시작 예약)은 정상 흐름이며 창 본문이 첫 refresh 까지 잠겨 있는 것으로 드러난다."""
     if result == StartResult.NOT_CONNECTED:
         QMessageBox.warning(parent, "Connection Error",
                             "Communication is not connected. Please check the connection status.")

@@ -15,7 +15,7 @@ from c_ui.b_control_ver2.d_param.param_values import ParamReadOnlyPosiValueWidge
 
 
 class MainPositionPanel(PanelWidget):
-    sig_setpoint = Signal(str)
+    sig_setpoint = Signal(object)  # 도메인 값(백분율, float) — 선로 문자열은 워커의 codec 이 만든다
 
     def __init__(self, parent=None):
         super().__init__(title="Position", is_big_title=True, btn_icon = GLYPH_EDIT, btn_text = "Edit",parent = parent)
@@ -111,38 +111,38 @@ class MainPositionPanel(PanelWidget):
         self.right_layout.insertWidget(0, self.target_posi_widget)
 
     def _on_target_posi_edited_by_enter(self):
-        value = self.target_posi_widget.get_value_str()
+        value = self.target_posi_widget.get_value()  # 백분율 float
         if value is not None:
             self.sig_setpoint.emit(value)
         self.target_posi_widget.commit()
 
     def _on_point_01_clicked(self):
-        value = self.converter.normalize_dp_str(self.point_01_btn.text())
+        value = self.converter.parse_dp_str(self.point_01_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_02_clicked(self):
-        value = self.converter.normalize_dp_str(self.point_02_btn.text())
+        value = self.converter.parse_dp_str(self.point_02_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_03_clicked(self):
-        value = self.converter.normalize_dp_str(self.point_03_btn.text())
+        value = self.converter.parse_dp_str(self.point_03_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_04_clicked(self):
-        value = self.converter.normalize_dp_str(self.point_04_btn.text())
+        value = self.converter.parse_dp_str(self.point_04_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_05_clicked(self):
-        value = self.converter.normalize_dp_str(self.point_05_btn.text())
+        value = self.converter.parse_dp_str(self.point_05_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_06_clicked(self):
-        value = self.converter.normalize_dp_str(self.point_06_btn.text())
+        value = self.converter.parse_dp_str(self.point_06_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 

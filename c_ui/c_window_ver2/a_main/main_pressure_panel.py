@@ -18,7 +18,7 @@ from c_ui.b_control_ver2.d_param.param_values import ParamReadOnlyPresValueWidge
 
 
 class MainPressurePanel(PanelWidget):
-    sig_setpoint = Signal(str)
+    sig_setpoint = Signal(object)  # 도메인 값(Torr, float) — 선로 문자열은 워커의 codec 이 만든다
 
     def __init__(self, parent=None): 
         super().__init__(title="Pressure", is_big_title=True, btn_icon = GLYPH_EDIT, btn_text = "Edit", parent = parent)
@@ -105,18 +105,44 @@ class MainPressurePanel(PanelWidget):
     def set_max_pres_param(self, param):
         # Value Pressure Sensor Full Scale 은 압력이 아니라 인터페이스 눈금(real param)이라
         # 압력 위젯에 직접 묶을 수 없다 — 컨버터가 auto codec 으로 풀어 준 만압(표시 단위)을
-        # 텍스트 위젯에 표시하고, 문맥/단위/자릿수 변경 시 함께 갱신한다 (3단계)
+        # 텍스트 위젯에 표시하고, 문맥/단위/자릿수 변경 시 함께 갱신한다 (3단계).
+        # 읽기 오류/Not Support 상태 표시는 param 바인딩 위젯(ParamWidget)과 같은 방식으로 유지한다
+        self._max_pres_param = param
+
         t = tokens()
         self.max_pres_widget = ReadOnlyTextValueWidget(label_text="Max Pres. Max", label_width=150, is_vertical_mode = True)
         self.max_pres_widget.value_widget.set_boxed(True)
         self.max_pres_widget.value_widget.set_colors(text=t.panel_pres_text, bg=t.panel_pres_bg, border=t.panel_pres_border)
         self.left_layout.insertWidget(2, self.max_pres_widget)
+
+        param.sig_is_err_changed.connect(self._on_max_pres_err_changed)
+        param.sig_is_not_support_changed.connect(self._on_max_pres_not_support_changed)
         self._refresh_max_pres_widget()
+        self._on_max_pres_err_changed()
 
     def _refresh_max_pres_widget(self):
         widget = getattr(self, "max_pres_widget", None)
-        if widget is not None:
-            widget.set_value(self.converter.get_dp_max_pres_str())
+        if widget is None:
+            return
+
+        if self._max_pres_param.is_not_support:
+            widget.set_not_support(True)   # 만압 대신 'Not Support' 유지
+            return
+
+        widget.set_value(self.converter.get_dp_max_pres_str())
+
+    def _on_max_pres_err_changed(self):
+        label = self.max_pres_widget.lbl_label
+        if label is None:
+            return
+
+        if self._max_pres_param.is_err:
+            label.set_colors(text=tokens().danger)
+        else:
+            label.set_colors(text=tokens().text)
+
+    def _on_max_pres_not_support_changed(self):
+        self._refresh_max_pres_widget()
 
     def set_target_pres_param(self, param):
         self._target_pres_param = param
@@ -129,38 +155,38 @@ class MainPressurePanel(PanelWidget):
         self.local_setting_manager.pres_unit = self.unit_widget.get_value()
 
     def _on_target_pres_edited_by_enter(self):
-        value = self.target_pres_widget.get_value_str()
+        value = self.target_pres_widget.get_value()  # Torr float
         if value is not None:
             self.sig_setpoint.emit(value)
         self.target_pres_widget.commit()
 
     def _on_point_01_clicked(self):
-        value = self.converter.convert_dp_str_to_domain_str(self.point_01_btn.text())
+        value = self.converter.from_display_str(self.point_01_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_02_clicked(self):
-        value = self.converter.convert_dp_str_to_domain_str(self.point_02_btn.text())
+        value = self.converter.from_display_str(self.point_02_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_03_clicked(self):
-        value = self.converter.convert_dp_str_to_domain_str(self.point_03_btn.text())
+        value = self.converter.from_display_str(self.point_03_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_04_clicked(self):
-        value = self.converter.convert_dp_str_to_domain_str(self.point_04_btn.text())
+        value = self.converter.from_display_str(self.point_04_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_05_clicked(self):
-        value = self.converter.convert_dp_str_to_domain_str(self.point_05_btn.text())
+        value = self.converter.from_display_str(self.point_05_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_06_clicked(self):
-        value = self.converter.convert_dp_str_to_domain_str(self.point_06_btn.text())
+        value = self.converter.from_display_str(self.point_06_btn.text())
         if value is not None:
             self.sig_setpoint.emit(value)
 

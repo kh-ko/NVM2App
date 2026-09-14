@@ -13,6 +13,7 @@ from PySide6.QtGui import QIcon, QFontDatabase, QFont
 from b_core.a_define import app_info
 from b_core.a_define import file_folder_path as path_def
 from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.c_manager.parameter_manager import ParamManager
 from c_ui.c_window_ver2.a_main.main_win import MainWin
 
 
@@ -71,11 +72,16 @@ def main():
     # - 폰트 로드 및 적용
     setup_fonts(app)
 
-    # [Step 5] 메인 윈도우 초기화 및 실행
+    # [Step 5] 코어 초기화 — 창 생성 전에 param 스키마와 전송 규약(SpecRegistry)을 로드한다.
+    # 컨버터/워커는 각자 ParamManager() 를 호출해 로드를 보장하므로 필수는 아니며,
+    # "코어 → 창" 순서를 진입점에서 드러내는 것이 목적이다.
+    ParamManager()
+
+    # [Step 6] 메인 윈도우 초기화 및 실행
     window = MainWin()
     window.show()
     
-    # [Step 6] 앱 종료 이벤트 핸들링
+    # [Step 7] 앱 종료 이벤트 핸들링
     sys.exit(app.exec())
 
 if __name__ == "__main__":

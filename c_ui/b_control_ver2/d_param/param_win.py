@@ -387,11 +387,13 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
                                 f"Parameter data loaded successfully. ({applied}/{len(loaded_data)} items)")
 
     def on_clicked_apply(self):
+        # 값은 위젯의 도메인 값(숫자 또는 문자열)을 그대로 넘긴다 — 선로 문자열은 spec 의 codec 이
+        # 선로값을 만든 뒤 한 번만 포맷한다 (여기서 문자열화하면 6자리 절단이 두 번 일어난다)
         write_pairs = []
         for folder_widget in self.folder_widgets:
             for param_widget in folder_widget.widgets:
                 if param_widget.is_dirty():
-                    write_pairs.append((param_widget.param, param_widget.get_value_str()))
+                    write_pairs.append((param_widget.param, param_widget.get_value()))
 
         self.multiple_param_write(write_pairs)                    
 

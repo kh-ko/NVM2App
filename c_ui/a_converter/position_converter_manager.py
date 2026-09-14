@@ -20,7 +20,6 @@ from decimal import Decimal
 from PySide6.QtCore import Signal, QObject
 
 from b_core.c_manager.local_setting_manager import LocalSettingManager
-from b_core.f_helper.float_util import to_sig_str
 
 
 class PosiConverterManager(QObject):
@@ -71,10 +70,6 @@ class PosiConverterManager(QObject):
             return float(text)
         except Exception:
             return None
-
-    def normalize_dp_str(self, text: str | None) -> str | None:
-        """화면의 백분율 문자열 → 쓰기용 도메인 값 문자열 (유효숫자 6자리). 해석 불가는 None."""
-        return to_sig_str(self.parse_dp_str(text))
 
     # ------------------------------------------------------------ 로컬 설정점 (pfs = 백분율 ÷ 100)
     def convert_dp_to_pfs(self, display_value: float) -> float | None:

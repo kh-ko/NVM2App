@@ -1,7 +1,7 @@
 from b_core.b_datatype import param_enum as p_enum
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.c_manager.parameter_manager import ParamManager
-from b_core.f_helper.float_util import to_sig_str
+from b_core.f_helper.float_util import to_sig_str, is_float_equal
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 from c_ui.a_converter.position_converter_manager import PosiConverterManager
 from c_ui.b_control_ver2.a_theme.tokens  import tokens
@@ -432,6 +432,12 @@ class ParamReadWritePresValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinB
         # 표시 단위 → Torr (도메인). 쓰기 시 선로 문자열은 spec 의 codec 이 만든다
         return self.converter.from_display(super().get_value())
 
+    def is_dirty(self):
+        # dirty 는 사용자에게 보이는 값(표시 단위) 기준 — get_value() 는 쓰기용 Torr 라 그대로
+        # 비교하면 abs_tol(1e-9) 이 표시 단위와 어긋난다 (mTorr 표시에서 0 → 0.000001 이 clean)
+        return not is_float_equal(self.converter.to_display(self.get_value()),
+                                  self.converter.to_display(self.ori_value))
+
     def import_backup_value(self, value, unit=None):
         # 저장 당시 표시 단위가 현재와 다르면 현재 표시 단위로 환산해 넣는다
         current_unit = self.converter.local_setting.pres_unit
@@ -490,6 +496,12 @@ class ParamReadWritePresValueWidget(ParamWidget, ReadWriteFloatValueWidget):
     def get_value(self):
         # 표시 단위 → Torr (도메인). 쓰기 시 선로 문자열은 spec 의 codec 이 만든다
         return self.converter.from_display(super().get_value())
+
+    def is_dirty(self):
+        # dirty 는 사용자에게 보이는 값(표시 단위) 기준 — get_value() 는 쓰기용 Torr 라 그대로
+        # 비교하면 abs_tol(1e-9) 이 표시 단위와 어긋난다 (mTorr 표시에서 0 → 0.000001 이 clean)
+        return not is_float_equal(self.converter.to_display(self.get_value()),
+                                  self.converter.to_display(self.ori_value))
 
     def import_backup_value(self, value, unit=None):
         # 저장 당시 표시 단위가 현재와 다르면 현재 표시 단위로 환산해 넣는다

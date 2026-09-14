@@ -300,7 +300,9 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.compound_timer.start()
 
         # parameter_worker 설정
-        self.param_worker = ParameterRunWorker(self, log_source=self.win_name)
+        # 기준 워커 — 이 워커의 refresh 가 도는 동안 다른 창의 refresh 는 대기했다가 이어진다
+        # (codec 문맥 param 을 여기서 init 목록으로 읽으므로, 완료 후에는 문맥이 최신이다)
+        self.param_worker = ParameterRunWorker(self, log_source=self.win_name, is_primary=True)
         
         self.param_worker.add_init_param_ptr(self.sn_param               )    
         self.param_worker.add_init_param_ptr(self.valve_type_param       ) 
@@ -397,11 +399,13 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
     def on_pres_setting_edit_clicked(self):
         WinManager().show_window(win_class=LocalPresSettingWin, parent=self)
 
-    def on_posi_input_finished(self, value : str):
+    def on_posi_input_finished(self, value: float):
+        # value 는 백분율(도메인 값) — 선로값 변환은 워커의 codec 몫
         pairs = [(self.ctrl_mode_param, f"{p_enum.ControlModeEnum.POSITION.value}"), (self.target_posi_param, value)]
         self.multiple_param_write(pairs)
 
-    def on_pres_input_finished(self, value : str):
+    def on_pres_input_finished(self, value: float):
+        # value 는 Torr(도메인 값)
         pairs = [(self.ctrl_mode_param, f"{p_enum.ControlModeEnum.PRESSURE.value}"), (self.target_pres_param, value)]
         self.multiple_param_write(pairs)
     

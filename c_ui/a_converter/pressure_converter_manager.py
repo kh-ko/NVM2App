@@ -23,7 +23,8 @@ from PySide6.QtCore import Signal, QObject
 
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.local_setting_manager import LocalSettingManager
-from b_core.f_helper.float_util import to_sig_str
+from b_core.c_manager.parameter_manager import ParamManager
+from b_core.f_helper.float_util import snap_float
 from b_core.g_protocol import codec as codec_mod
 from b_core.g_protocol.spec_registry import SpecRegistry
 
@@ -54,7 +55,11 @@ class PresConverterManager(QObject):
         self.local_setting = LocalSettingManager()
         self.pres_decimal_places = 6
 
-        # 만압(Full Scale) 해석과 문맥 param 은 auto codec 이 안다
+        # 만압(Full Scale) 해석과 문맥 param 은 auto codec 이 안다.
+        # codec 은 ParamManager 가 스펙을 로드할 때 SpecRegistry 에 등록되므로,
+        # 생성 순서와 무관하게 여기서 로드를 보장한다 (의존하는 쪽이 의존 대상을 생성 —
+        # 구 PresConverterManager 도 ParamManager() 를 직접 호출했다)
+        ParamManager()
         self.codec = SpecRegistry().get_codec("pres")
         if self.codec is None:
             self._log.error("pres codec 없음 — nv2_spec.json 의 codecs 절을 확인할 것")
@@ -83,7 +88,9 @@ class PresConverterManager(QObject):
         if torr is None:
             return None
         gain, offset = self._display_coeff()
-        return (torr * gain) + offset
+        # 선로 -> Torr -> 표시 단위 두 번의 곱셈이 남기는 1 ULP 잡음을 정리한다 —
+        # 이 값이 표시 문자열, 차트 CSV, 로컬 설정점(sfs) 에 그대로 쓰인다
+        return snap_float((torr * gain) + offset)
 
     def to_display_str(self, torr: float | None) -> str | None:
         return self._format_dp(self.to_display(torr))
@@ -104,10 +111,6 @@ class PresConverterManager(QObject):
         except Exception:
             return None
         return self.from_display(dp_value)
-
-    def convert_dp_str_to_domain_str(self, display_value: str | None) -> str | None:
-        """화면 문자열(표시 단위) → 쓰기용 도메인 값 문자열(Torr, 유효숫자 6자리). 해석 불가는 None."""
-        return to_sig_str(self.from_display_str(display_value))
 
     # ------------------------------------------------------------ 만압 (Full Scale)
     def get_dp_max_iface(self) -> float | None:

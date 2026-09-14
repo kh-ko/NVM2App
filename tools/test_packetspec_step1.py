@@ -291,11 +291,8 @@ def main() -> int:
         rep.check(w.refresh() == StartResult.OK, "refresh OK")
         actual = [j.spec.build_request(j.values) for j in w._jobs]
         w._stop_all()
-        # 3단계: codec 문맥 param 이 맨 앞에 붙는다 (이 목록의 param 은 문맥이 없어 빈 목록)
-        listed = init_params + [p for p in write_params if p.acc != ParamAccType.WO] + read_params
-        ctx = reg.get_context_params(listed)
-        expected = ([old_read(p) for p in ctx]
-                    + [old_read(p) for p in init_params]
+        # 요청 목록은 구 워커와 같다 (문맥 param 선행 읽기는 기준 워커 조정으로 대체됨)
+        expected = ([old_read(p) for p in init_params]
                     + [old_read(p) for p in write_params if p.acc != ParamAccType.WO]
                     + [old_read(p) for p in read_params])
         rep.check(actual == expected, f"refresh 큐 순서\n    구: {expected}\n    신: {actual}")

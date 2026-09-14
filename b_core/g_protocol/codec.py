@@ -17,8 +17,9 @@ nv2_spec.json 의 "as" 가, codec 이 읽는 문맥 param 은 같은 파일의 "
       ├ encode(value)   도메인 값(숫자 또는 숫자 문자열) → 선로 문자열. 문맥 미준비면 None
       ├ from_line(v)    숫자 선로값 → 도메인 값 (Compound 폴링처럼 이미 숫자인 경로)
       ├ to_line(v)      도메인 값 → 숫자 선로값
-      └ context_params  decode/encode 가 읽는 문맥 param. 워커는 refresh 큐 맨 앞에 이들을
-                        한 번 읽어 decode 시점의 문맥이 최신임을 보장한다
+      └ context_params  decode/encode 가 읽는 문맥 param. MainWin 이 init 목록으로 읽으며,
+                        MainWin(기준 워커) refresh 중에는 다른 창의 refresh 가 대기했다가 이어지므로
+                        decode 시점에 문맥이 최신이다 (parameter_run_worker 기준 워커 조정)
 
 재디코드는 하지 않는다 (결정 E 논의): 옛 선로 원문을 새 문맥으로 다시 풀면 물리적으로
 없는 값이 나온다. 도메인 값은 물리량이므로 문맥이 바뀌어도 그대로 두고 다음 읽기가 갱신한다.
@@ -382,10 +383,14 @@ class PresCodec(Codec):
         coeff = self.coeff()
         if coeff is None or value is None:
             return None
+        domain_value = _as_float(value)  # 형식 검증은 퇴화 여부와 무관하게 먼저
         slope, intercept, gain, offset = coeff
         if slope == 0 or gain == 0:
-            return None
-        real = (_as_float(value) - offset) / gain
+            # 퇴화 구성(Value Pressure Min == Full Scale, 또는 센서 Lower == Upper):
+            # 유효한 선로값이 한 점뿐이라 역변환이 정의되지 않는다 — PosiCodec(span == 0 → Closest)
+            # 과 같이 눈금 시작값(Value Pressure Min)을 보낸다 (2026-09-14 사용자 결정)
+            return float(self.iface_min.value)
+        real = (domain_value - offset) / gain
         return (real - intercept) / slope
 
     def decode(self, text: str):
