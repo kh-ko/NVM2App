@@ -5,7 +5,8 @@ from b_core.f_helper.float_util import to_sig_str, is_float_equal
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 from c_ui.a_converter.position_converter_manager import PosiConverterManager
 from c_ui.b_control_ver2.a_theme.tokens  import tokens
-from c_ui.b_control_ver2.c_values.write_only_values import (WriteOnlyButtonValueWidget, WriteOnlyEnumValueWidget)
+from c_ui.b_control_ver2.c_values.write_only_values import (WriteOnlyButtonValueWidget, WriteOnlyEnumValueWidget,
+                                                            WriteOnlyFloatValueWidget)
 from c_ui.b_control_ver2.c_values.read_only_values import (ReadOnlyBitmapValueWidget, ReadOnlyEnumValueWidget, ReadOnlyFloatValueWidget,
                                                            ReadOnlyIntValueWidget, ReadOnlyMultipleEnumValueWidget,
                                                            ReadOnlyScaleValueWidget, ReadOnlyTextValueWidget)
@@ -317,6 +318,26 @@ class ParamReadWritePosiValueWidget(ParamWidget, ReadWriteFloatValueWidget):
 
     def export_backup_value(self):
         return super().get_value()
+
+class ParamWriteOnlyPosiValueWidget(ParamWidget, WriteOnlyFloatValueWidget):
+    """위치(백분율) 쓰기 전용 입력 — 클러스터 장치 Target Position 처럼 읽기 값이 없는 명령형 param.
+    입력은 백분율이며 자릿수는 LocalSetting, 범위는 스키마 min/max. Send 버튼 또는 Enter 로 쓴다 —
+    선로 문자열(예: 030000)은 spec 의 codec 이 만든다. 창은 sig_edited_by_user 를 받아 get_value() 를 쓴다."""
+
+    def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
+        self.converter = PosiConverterManager()
+        label_text = self._resolve_param(param_full_path, force_label_text)
+        super().__init__(btn_text="Send", label_text=label_text, label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
+
+        self.set_decimals(self.converter.posi_decimal_places)
+        if self.param.min_value is not None and self.param.max_value is not None:
+            self.set_range(self.param.min_value, self.param.max_value)
+
+        self._bind_param()
+        self.converter.sig_posi_range_changed.connect(self.handle_posi_range_changed)
+
+    def handle_posi_range_changed(self):
+        self.set_decimals(self.converter.posi_decimal_places)
 
 class ParamReadWritePosiValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinBoxWidget):
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):

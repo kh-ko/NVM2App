@@ -11,7 +11,8 @@ from c_ui.b_control_ver2.d_param.param_values import (ParamWriteOnlyButtonValueW
                                                     ParamReadWritePosiValueWidget, ParamReadOnlyPresValueWidget, ParamWriteOnlyEnumValueWidget,
                                                     ParamReadWritePresValueWidget, ParamReadOnlyScaleValueWidget, ParamReadWriteScaleValueWidget,
                                                     ParamReadWriteBitmapValueWidget, ParamReadOnlyPresSlopeValueWidget, ParamReadWritePresSlopeValueWidget,
-                                                    ParamReadOnlyHexValueWidget, ParamReadWriteIFaceGainValueWidget)
+                                                    ParamReadOnlyHexValueWidget, ParamReadWriteIFaceGainValueWidget,
+                                                    ParamWriteOnlyPosiValueWidget)
 
 class ParamFolderWidget(PanelWidget):
     def __init__(self, force_title : str = None, folder_path: str = None, filter_param_paths : List[str] = None, params : List = None, label_width = 210, parent=None):
@@ -93,7 +94,7 @@ class ParamFolderWidget(PanelWidget):
                 elif param.acc == ParamAccType.RW:
                     component = ParamReadWritePosiValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False)
                 elif param.acc == ParamAccType.WO:
-                    pass
+                    component = ParamWriteOnlyPosiValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False)
             elif param.display_type == ParamDisplayType.SENS_PRES:
                 if param.acc == ParamAccType.RO:
                     component = ParamReadOnlyPresValueWidget(param_full_path=f"{param.path}.{param.name}", force_label_text=None, label_width=label_width, is_vertical_mode=False, is_visible_unit = True)

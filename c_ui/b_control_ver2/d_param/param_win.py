@@ -19,7 +19,7 @@ from c_ui.b_control_ver2.b_base.toolbars import BaseToolBar
 from c_ui.b_control_ver2.b_base.statusbars import BaseStatusBar
 from c_ui.b_control_ver2.b_base.containers import BaseFlowLayout
 from c_ui.b_control_ver2.d_param.param_folder_widget import ParamFolderWidget
-from c_ui.b_control_ver2.d_param.param_values import ParamWriteOnlyEnumValueWidget
+from c_ui.b_control_ver2.d_param.param_values import ParamWriteOnlyEnumValueWidget, ParamWriteOnlyPosiValueWidget
 
 from c_ui.c_window_ver2.win_manager import WinManager
 from c_ui.c_window_ver2.log_view_win import LogViewWin
@@ -411,10 +411,14 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
             pass
 
     def on_clicked_write_only_component(self, param_component):
-        # WO enum(모드 선택형)은 콤보에서 고른 현재 값을, 버튼형은 스키마에
-        # 고정된 btn_str_value 를 보낸다
+        # WO enum(모드 선택형)은 콤보에서 고른 현재 값을, 위치 입력형은 입력한 백분율(도메인 값 —
+        # 선로 문자열은 spec 의 codec 이 만든다)을, 버튼형은 스키마에 고정된 btn_str_value 를 보낸다
         if isinstance(param_component, ParamWriteOnlyEnumValueWidget):
             self.single_param_write(param_component.param, param_component.get_value_str())
+        elif isinstance(param_component, ParamWriteOnlyPosiValueWidget):
+            value = param_component.get_value()
+            if value is not None:
+                self.single_param_write(param_component.param, value)
         else:
             self.single_param_write(param_component.param, param_component.param.btn_str_value)
 

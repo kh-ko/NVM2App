@@ -54,14 +54,19 @@ class WrapHeaderView(QHeaderView):
 
 
 class BaseTableWidget(QTableWidget, ColorStyled):
-    """앱 표준 읽기 전용 표."""
+    """앱 표준 읽기 전용 표. selectable_rows=True 면 행 하나를 고를 수 있다 (itemSelectionChanged 로 알림)."""
 
-    def __init__(self, rows: int = 0, columns: int = 0, parent=None):
+    def __init__(self, rows: int = 0, columns: int = 0, parent=None, selectable_rows: bool = False):
         super().__init__(rows, columns, parent)
         self.setHorizontalHeader(WrapHeaderView(self))
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.setSelectionMode(QAbstractItemView.NoSelection)
-        self.setFocusPolicy(Qt.NoFocus)
+        if selectable_rows:
+            self.setSelectionMode(QAbstractItemView.SingleSelection)
+            self.setSelectionBehavior(QAbstractItemView.SelectRows)
+            self.setFocusPolicy(Qt.StrongFocus)
+        else:
+            self.setSelectionMode(QAbstractItemView.NoSelection)
+            self.setFocusPolicy(Qt.NoFocus)
         self.verticalHeader().setHighlightSections(False)
         self.verticalHeader().setDefaultSectionSize(24)
 
@@ -86,6 +91,10 @@ class BaseTableWidget(QTableWidget, ColorStyled):
             }}
             BaseTableWidget::item {{
                 padding: 2px 6px;
+            }}
+            BaseTableWidget::item:selected {{
+                background-color: {t.selection_bg};
+                color: {t.selection_text};
             }}
             BaseTableWidget QHeaderView::section {{
                 color: {c.text};

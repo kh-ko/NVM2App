@@ -1,13 +1,17 @@
-"""Cluster Monitor 창 헤드리스 테스트 — 장비 없이 표 구성 · 장치 수 연동 · 값 표시를 확인한다.
+"""Cluster Monitor 창 헤드리스 테스트 — 장비 없이 표 구성 · 장치 수 연동 · 값 표시 · 장치 선택 패널을 확인한다.
 
     python tools/test_cluster_monitor_headless.py
 
 검사 항목
-  1. 생성: 열 17개(Device 0 Status 의 param 순서), 행 0개(장치 수 미수신), 워커 읽기 등록 = Number of Valves 1개
-  2. 장치 수 변경: Number of Valves 값 → 행 수와 읽기 등록(1 + 17 × n)이 따라감. 상한 30, None 이면 0
+  1. 생성: 열 17개(Device 0 Status 의 param 순서), 행 0개(장치 수 미수신), 워커 읽기 등록 = Number of Valves 1개,
+     하단은 안내 패널 2개, 툴바 Apply 표시.
+  2. 장치 수 변경: Number of Valves 값 → 행 수와 읽기 등록(1 + 17 × n)이 따라감. 상한 30, None 이면 0.
   3. 값 표시: NV1 spec 에 샘플 응답(구 C++ 주석 i:9301)을 넣으면 해당 행이 채워진다 —
-     posi 는 LocalSetting 자릿수, enum 은 설명, real 은 유효숫자 6자리. E: → "Not Support", 빈 응답 → 오류 색
-  4. 닫기: closeEvent 로 워커 정리 후 파괴 (예외 없음)
+     posi 는 LocalSetting 자릿수, enum 은 설명, real 은 유효숫자 6자리. E: → "Not Support", 빈 응답 → 오류 색.
+  4. 장치 선택: 행을 고르면 Setting(8 위젯) / Control(4 위젯) 폴더, RW 10개가 쓰기 목록에, Option 읽기 응답이
+     위젯에 반영. Target Position(WO posi) Send → 워커 쓰기 큐에 "G:01R:030000". 선택 해제 → 안내 패널 + 쓰기 목록 비움.
+     선택 행이 장치 수 축소로 사라지면 해제.
+  5. 닫기: closeEvent 로 워커 정리 후 파괴 (예외 없음).
 """
 
 from __future__ import annotations
@@ -26,9 +30,13 @@ app = QApplication.instance() or QApplication(sys.argv)
 
 import resources_rc  # noqa: E402,F401
 from b_core.c_manager.parameter_manager import ParamManager  # noqa: E402
+from b_core.d_dal.service_port import ServicePort  # noqa: E402
+from b_core.e_worker_ver2.parameter_run_worker import _JobOp  # noqa: E402
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 from c_ui.a_converter.position_converter_manager import PosiConverterManager  # noqa: E402
 from c_ui.b_control_ver2.a_theme.tokens import tokens  # noqa: E402
+from c_ui.b_control_ver2.d_param.param_folder_widget import ParamFolderWidget  # noqa: E402
+from c_ui.b_control_ver2.d_param.param_values import ParamWriteOnlyPosiValueWidget  # noqa: E402
 from c_ui.c_window_ver2.f_cluster.cluster_monitor_win import NUM_VALVES_PATH, ClusterMonitorWin  # noqa: E402
 
 SAMPLE_DEV1 = "i:9301100000+3000010000011000000000000000100000"
@@ -50,6 +58,7 @@ def main() -> int:
     rep = Report()
     pm = ParamManager()
     reg = SpecRegistry()
+    svc = ServicePort()
     num = pm.get_by_full_path(NUM_VALVES_PATH)
     num.value = None
 
@@ -64,6 +73,9 @@ def main() -> int:
                   and table.horizontalHeaderItem(16).text() == "Compressed Air Value(mbar)",
                   f"열 제목: {table.horizontalHeaderItem(0).text()!r} … {table.horizontalHeaderItem(16).text()!r}")
         rep.check(win.param_worker.read_param_list == [num], "읽기 등록: Number of Valves 만")
+        rep.check(len(win._panels) == 2 and not isinstance(win._panels[0], ParamFolderWidget) and win.folder_widgets == [],
+                  "초기 하단: 안내 패널 2개")
+        rep.check(win.action_apply.isVisible() and not win.action_save_file.isVisible(), "툴바: Apply 표시, Save File 숨김")
 
         # ---------------------------------------------------------------- 2. 장치 수
         num.value = 3
@@ -106,16 +118,70 @@ def main() -> int:
         app.processEvents()
         rep.check(table.item(1, 0).foreground().color().name() == tokens().text, "정상 응답 후 글자색 복귀")
 
+        # ---------------------------------------------------------------- 4. 장치 선택
+        table.selectRow(1)
+        app.processEvents()
+        rep.check(win._selected_device == 1, f"선택 장치 {win._selected_device}")
+        rep.check(len(win.folder_widgets) == 2 and win._panels == win.folder_widgets
+                  and [len(f.widgets) for f in win.folder_widgets] == [8, 4]
+                  and [f.folder_path for f in win.folder_widgets] == ["Cluster.Device 1.Setting", "Cluster.Device 1.Control"],
+                  f"패널: {[(getattr(f, 'folder_path', None), len(getattr(f, 'widgets', []))) for f in win._panels]}")
+        write_list = win.param_worker.write_param_list
+        rep.check(len(write_list) == 10 and all(p.path.startswith("Cluster.Device 1.") for p in write_list),
+                  f"쓰기 목록(RW 10): {len(write_list)}")
+        rep.check(win.param_worker.read_param_list == [num] + [p for n in range(3) for p in pm.get_params_in_folder(f"Cluster.Device {n}.Status")],
+                  "선택해도 읽기 목록(상태)은 그대로")
+
+        option_spec = reg.get_read_spec(pm.get_by_full_path("Cluster.Device 1.Setting.Homing Mode"))
+        option_spec.apply_response("G:01i:04" + "10210021")   # End 1, Power 0, Stroke 1, Network 0, Start 2, Mode 1
+        app.processEvents()
+        setting = win.folder_widgets[0]
+        by_name = {pw.param.name: pw for pw in setting.widgets}
+        rep.check(by_name["Homing Mode"].get_value() == 1 and by_name["Homing End Position"].get_value() == 1
+                  and by_name["Homing Start Condition"].get_value() == 2
+                  and by_name["Power Failure Option"].get_value() == 0 and not by_name["Homing Mode"].is_dirty(),
+                  f"Option 읽기 → 위젯: Mode {by_name['Homing Mode'].get_value()}, End {by_name['Homing End Position'].get_value()}")
+
+        control = win.folder_widgets[1]
+        target_widget = next(pw for pw in control.widgets if pw.param.name == "Target Position")
+        rep.check(isinstance(target_widget, ParamWriteOnlyPosiValueWidget), f"Target Position 위젯 {type(target_widget).__name__}")
+        svc._connect_info = "test"
+        try:
+            target_widget.edit_widget.setValue(30.0)
+            target_widget.value_widget.click()   # Send
+            jobs = list(win.param_worker._jobs)
+            win.param_worker._stop_all()
+            rep.check(bool(jobs) and jobs[0].op is _JobOp.WRITE
+                      and jobs[0].spec.build_request(jobs[0].values) == "G:01R:030000",
+                      f"Target Send → 쓰기 요청: {[j.spec.build_request(j.values) if j.op is _JobOp.WRITE else j.spec.build_request() for j in jobs][:1]}")
+        finally:
+            svc._connect_info = ""
+
+        table.clearSelection()
+        app.processEvents()
+        rep.check(win._selected_device is None and win.folder_widgets == [] and win.param_worker.write_param_list == []
+                  and len(win._panels) == 2 and not isinstance(win._panels[0], ParamFolderWidget),
+                  "선택 해제 → 안내 패널, 쓰기 목록 비움")
+
+        table.selectRow(2)
+        app.processEvents()
+        rep.check(win._selected_device == 2, "장치 2 선택")
+        num.value = 1
+        app.processEvents()
+        rep.check(table.rowCount() == 1 and win._selected_device is None and win.folder_widgets == [],
+                  f"장치 수 1 로 축소 → 선택 해제 (행 {table.rowCount()}, 선택 {win._selected_device})")
+
         num.value = None
         rep.check(table.rowCount() == 0 and win.param_worker.read_param_list == [num], "장치 수 None → 행 0")
     finally:
         win.close()
         app.processEvents()
         num.value = None
-        for p in pm.get_params_in_folder("Cluster.Device 1.Status"):
-            p.value = None
-            p.is_err = False
-            p.is_not_support = False
+        for folder in ("Cluster.Device 1.Status", "Cluster.Device 1.Setting"):
+            for p in pm.get_params_in_folder(folder):
+                p.value = None
+                p.is_err = False
+                p.is_not_support = False
 
     print(f"\nchecks {rep.checks} / fail {rep.fail}")
     print("ALL PASS" if rep.fail == 0 else f"{rep.fail} FAIL")
