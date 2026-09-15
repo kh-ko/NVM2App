@@ -20,7 +20,7 @@ class ParamManager:
     로드 순서 (2026-09-11 PacketSpec 도입 1단계, 2026-09-15 4단계 NV1):
       1. params.json   -> "expand" 템플릿 항목을 펼친 뒤 Parameter 생성 (값 정의만, 전송 정보 없음)
       2. nv2_spec.json -> SpecRegistry 에 param 별 NV2 읽기/쓰기 spec 등록
-      3. nv1_spec.json -> 읽기 패킷(Nv1ReadSpec)마다 소속 param 전부에 등록 (Cluster Status 30대)
+      3. nv1_spec.json -> 읽기/쓰기 패킷(Nv1ReadSpec / Nv1WriteSpec)마다 소속 param 전부에 등록 (Cluster Device 30대)
       4. 검증: 어느 스펙에도 없는 param 은 오류 로그 + Not Support
     파일 누락/손상과 로더가 찾은 불일치는 전부 load_errors 에 모인다 — 스키마 파일은
     앱과 함께 배포되므로 오류는 손상으로 보고, main.py 가 기동 시 대화상자로 알린 뒤
@@ -89,10 +89,10 @@ class ParamManager:
         # 전송 규약 부착 — 경로 조회는 오류 로그 없이 (누락은 로더가 자기 문구로 기록)
         count = spec_loader.load_nv2_specs(path_def.RSRC_NV2_SPEC_JSON_FILE,
                                            self._find_quiet, self._spec_registry, self.load_errors)
-        nv1_count = spec_loader.load_nv1_specs(path_def.RSRC_NV1_SPEC_JSON_FILE,
-                                               self._find_quiet, self._spec_registry, self.load_errors)
+        nv1_reads, nv1_writes = spec_loader.load_nv1_specs(path_def.RSRC_NV1_SPEC_JSON_FILE,
+                                                           self._find_quiet, self._spec_registry, self.load_errors)
         missing = spec_loader.validate_specs(self._parameters, self._spec_registry, self.load_errors)
-        self._log.info(f"params {len(self._parameters)} / nv2 spec {count} / nv1 read spec {nv1_count}"
+        self._log.info(f"params {len(self._parameters)} / nv2 spec {count} / nv1 read {nv1_reads} write {nv1_writes}"
                        f" / spec 없음 {missing} / 스키마 오류 {len(self.load_errors)}")
 
     def _fail(self, msg: str) -> None:

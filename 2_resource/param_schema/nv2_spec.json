@@ -2688,6 +2688,10 @@
     {"path": "Compound Commands.User Interface.Compound Commands 4.Slot [16] (0x)", "id": "A10A0400", "idx": 16},
     {"path": "Compound Commands.User Interface.Compound Commands 4.Slot [17] (0x)", "id": "A10A0400", "idx": 17},
     {"path": "Compound Commands.User Interface.Compound Commands 4.Slot [18] (0x)", "id": "A10A0400", "idx": 18},
-    {"path": "Compound Commands.User Interface.Compound Commands 4.Slot [19] (0x)", "id": "A10A0400", "idx": 19}
+    {"path": "Compound Commands.User Interface.Compound Commands 4.Slot [19] (0x)", "id": "A10A0400", "idx": 19},
+    {"path": "Cluster.Device {dev}.Setting.Position Control Speed (%)", "expand": {"dev": [0, 29]}, "id": "20{dev+14:02X}0800", "idx": 0, "as": "scale100"},
+    {"path": "Cluster.Device {dev}.Setting.Position Offset", "expand": {"dev": [0, 29]}, "id": "20{dev+14:02X}2100", "idx": 0, "as": "posi"},
+    {"path": "Cluster.Device {dev}.Control.Freeze", "expand": {"dev": [0, 29]}, "id": "20{dev+14:02X}0100", "idx": 0},
+    {"path": "Cluster.Device {dev}.Control.Control Mode Setpoint", "expand": {"dev": [0, 29]}, "id": "20{dev+14:02X}0300", "idx": 0}
   ]
 }

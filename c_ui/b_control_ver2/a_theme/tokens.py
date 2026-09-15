@@ -28,6 +28,7 @@ class ThemeTokens:
     panel_bg: str = "#ffffff"            # 패널(카드) 배경
     progress_bg: str = "#e0e0e0"         # 프로그레스바 배경(빈 영역)
     progress_chunk: str = "#4a90e2"      # 프로그레스바 진행 막대
+    table_header_bg: str = "#f2f2f2"     # 표(BaseTableWidget) 헤더 배경
 
     # 상태
     danger: str = "#ff0000"              # 에러 + dirty 마커

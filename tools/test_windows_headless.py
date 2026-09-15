@@ -28,6 +28,7 @@ from c_ui.b_control_ver2.d_param.param_win import (ParamIfaceEtherCatWin, ParamP
                                                     ParamWin)
 from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin  # noqa: E402
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin  # noqa: E402
+from c_ui.c_window_ver2.f_cluster.cluster_monitor_win import ClusterMonitorWin  # noqa: E402
 
 CASES = [
     ("ParamWin System.Identification", ParamWin,
@@ -46,6 +47,7 @@ CASES = [
      dict(win_name="Interface EtherCAT", paths=["Interface EtherCAT"], filter_param_paths=[])),
     ("BackupWin", BackupWin, dict(win_name="Backup")),
     ("RestoreWin", RestoreWin, dict(win_name="Restore")),
+    ("ClusterMonitorWin", ClusterMonitorWin, dict(win_name="Cluster Monitor")),
 ]
 
 

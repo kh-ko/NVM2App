@@ -29,6 +29,7 @@ from c_ui.c_window_ver2.x_localsetting.local_pres_setting_win import LocalPresSe
 from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
 from c_ui.c_window_ver2.c_analysis.sensor_analysis_win import SensorAnalysisWin
+from c_ui.c_window_ver2.f_cluster.cluster_monitor_win import ClusterMonitorWin
 from c_ui.c_window_ver2.g_factory.factory_firmware_update_win import FactoryFirmwareUpdateWin
 from c_ui.c_window_ver2.h_help.help_nvm_update_win import HelpNvmUpdateWin
 from c_ui.c_window_ver2.h_help.help_about_win import HelpAboutWin
@@ -614,7 +615,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         WinManager().show_window(win_class=HelpAboutWin, win_name="About", win_id="ParamWin_About", parent=self, is_modal=False)
 
     def on_clicked_cluster_monitor(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ClusterMonitorWin, win_name="Cluster Monitor", win_id="ParamWin_ClusterMonitor", parent=self, is_modal=False)
 
     def on_clicked_fac_adc_calib(self):
         show_not_ready(self)
