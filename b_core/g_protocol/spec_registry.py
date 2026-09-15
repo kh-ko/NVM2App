@@ -108,7 +108,7 @@ class SpecRegistry:
     def get_param_codec(self, param: "Parameter") -> Codec:
         """param 의 현재 읽기(없으면 쓰기) spec 이 쓰는 codec. spec 이 없으면 형 변환 codec."""
         spec = self.get_read_spec(param) or self.get_write_spec(param)
-        codec = getattr(spec, "codec", None)
+        codec = spec.codec_of(param) if spec is not None else None
         return codec if codec is not None else TextCodec.of(param.data_type)
 
     def decode_line(self, param: "Parameter", line_value: float) -> float | None:

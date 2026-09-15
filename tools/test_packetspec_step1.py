@@ -127,8 +127,10 @@ def main() -> int:
 
     rep = Report()
     olds, old_items = load_old(args.old_commit, args.old_parameter, args.old_schema)
-    news = ParamManager().get_param_list()
+    all_news = ParamManager().get_param_list()
     reg = SpecRegistry()
+    # NV1 전용 param(4단계, Cluster.Device n.Status)은 옛 param.json 에 없다 — NV2 식별자가 있는 param 만 대조
+    news = [p for p in all_news if reg.get_nv2_key(p) is not None]
     print(f"old params {len(olds)} / new params {len(news)}")
     rep.check(len(olds) == len(news), "param 수 불일치")
 

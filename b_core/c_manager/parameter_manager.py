@@ -9,6 +9,7 @@ from b_core.a_define import file_folder_path as path_def
 from b_core.b_datatype.general_enum import ParamDisplayType, PARAM_DISPLAY_TYPE_MAP
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.b_datatype.parameter import Parameter
+from b_core.f_helper.schema_template import expand_items
 from b_core.g_protocol import spec_loader
 from b_core.g_protocol.spec_registry import SpecRegistry
 
@@ -16,10 +17,10 @@ from b_core.g_protocol.spec_registry import SpecRegistry
 class ParamManager:
     """Parameter 저장소 (싱글턴).
 
-    로드 순서 (2026-09-11 PacketSpec 도입 1단계):
-      1. params.json   -> Parameter 생성 (값 정의만, 전송 정보 없음)
+    로드 순서 (2026-09-11 PacketSpec 도입 1단계, 2026-09-15 4단계 NV1):
+      1. params.json   -> "expand" 템플릿 항목을 펼친 뒤 Parameter 생성 (값 정의만, 전송 정보 없음)
       2. nv2_spec.json -> SpecRegistry 에 param 별 NV2 읽기/쓰기 spec 등록
-      3. (NV1 단계) nv1_spec.json
+      3. nv1_spec.json -> 읽기 패킷(Nv1ReadSpec)마다 소속 param 전부에 등록 (Cluster Status 30대)
       4. 검증: 어느 스펙에도 없는 param 은 오류 로그 + Not Support
     파일 누락/손상과 로더가 찾은 불일치는 전부 load_errors 에 모인다 — 스키마 파일은
     앱과 함께 배포되므로 오류는 손상으로 보고, main.py 가 기동 시 대화상자로 알린 뒤
@@ -69,6 +70,13 @@ class ParamManager:
             self._fail(f"params 스키마: 최상위가 배열이 아님: {path_def.RSRC_PARAMS_JSON_FILE}")
             param_list = []
 
+        # "expand" 템플릿 항목(장치 30대분 등)을 펼친다 — nv1_spec.json 과 같은 규칙
+        try:
+            param_list = expand_items(param_list)
+        except ValueError as e:
+            self._fail(f"params 스키마 템플릿 오류: {e}")
+            param_list = []
+
         for param in param_list:
             param_type = param.get("type", "")
 
@@ -81,9 +89,11 @@ class ParamManager:
         # 전송 규약 부착 — 경로 조회는 오류 로그 없이 (누락은 로더가 자기 문구로 기록)
         count = spec_loader.load_nv2_specs(path_def.RSRC_NV2_SPEC_JSON_FILE,
                                            self._find_quiet, self._spec_registry, self.load_errors)
+        nv1_count = spec_loader.load_nv1_specs(path_def.RSRC_NV1_SPEC_JSON_FILE,
+                                               self._find_quiet, self._spec_registry, self.load_errors)
         missing = spec_loader.validate_specs(self._parameters, self._spec_registry, self.load_errors)
-        self._log.info(f"params {len(self._parameters)} / nv2 spec {count} / spec 없음 {missing}"
-                       f" / 스키마 오류 {len(self.load_errors)}")
+        self._log.info(f"params {len(self._parameters)} / nv2 spec {count} / nv1 read spec {nv1_count}"
+                       f" / spec 없음 {missing} / 스키마 오류 {len(self.load_errors)}")
 
     def _fail(self, msg: str) -> None:
         self._log.error(msg)

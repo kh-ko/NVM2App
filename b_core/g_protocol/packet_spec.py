@@ -10,7 +10,8 @@ Parameter 는 값의 정의(타입/범위/값/시그널)만 갖고, "그 값이 
       ├ build_request(values)        요청 문자열 (읽기는 values 없이)
       ├ apply_response(resp)         응답 검증 + 소속 param 전부에 값/오류 반영
       │                              반환 (ParamParseErrType, 재시도 필요 여부)
-      └ expected_response_prefix     정상 응답이 시작해야 하는 문자열 (raw 응답 검증용)
+      ├ expected_response_prefix     정상 응답이 시작해야 하는 문자열 (raw 응답 검증용)
+      └ codec_of(param)              그 param 의 선로 ↔ 도메인 codec (SpecRegistry.get_param_codec 용)
 
     SpecSelector (SpecRegistry 가 param 마다 읽기용/쓰기용 하나씩 보유)
       [(조건, spec), …] 을 갖고 resolve() 시점의 문맥으로 spec 하나를 고른다.
@@ -21,7 +22,8 @@ Parameter 는 값의 정의(타입/범위/값/시그널)만 갖고, "그 값이 
     바인딩(어떤 param 이 어떤 spec 을 쓰는가)은 Parameter 가 아니라
     spec_registry.SpecRegistry 가 갖는다 (결정 A, 2026-09-11) — Parameter 는 값만 안다.
 
-구현체: nv2_spec.py (Nv2ReadSpec / Nv2WriteSpec), nv1_spec.py (NV1 단계).
+구현체: nv2_spec.py (Nv2ReadSpec / Nv2WriteSpec — param 1개 = 패킷 1개),
+        nv1_spec.py (Nv1ReadSpec — param n개 = 패킷 1개, 4단계).
 """
 
 from __future__ import annotations
@@ -71,6 +73,11 @@ class PacketSpec(ABC):
                 param.is_err = is_err
             if is_not_support is not None:
                 param.is_not_support = is_not_support
+
+    def codec_of(self, param: "Parameter"):
+        """param 의 선로 ↔ 도메인 codec. 이 spec 이 그 param 을 싣지 않으면 None.
+        SpecRegistry.get_param_codec 이 쓴다 (Compound 폴링 샘플 변환, apply_line_text)."""
+        return None
 
 
 class SpecSelector:

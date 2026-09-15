@@ -90,6 +90,9 @@ class _Nv2Spec(PacketSpec):
     def describe(self) -> str:
         return f"{self.param.path}.{self.param.name} [NV2 {self.id}/{self.index} {self.codec.name}]"
 
+    def codec_of(self, param: "Parameter") -> Codec | None:
+        return self.codec if param is self.param else None
+
     def _check_response(self, resp: str | None, is_read: bool) -> tuple[ParamParseErrType, bool]:
         """기존 Parameter.check_error 와 같은 판정이되, ID 비교를 INDEX 파싱보다 먼저 한다 —
         ID 가 다르고 INDEX 자리가 16진수가 아닌 응답에서 구버전은 int() 예외로 워커가 멈췄고

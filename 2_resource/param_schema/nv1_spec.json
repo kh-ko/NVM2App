@@ -1,0 +1,29 @@
+{
+  "codecs": {
+    "posiold": {"kind": "scale", "factor": 0.001},
+    "scale1000": {"kind": "scale", "factor": 0.1}
+  },
+  "reads": [
+    {"name": "device_status", "expand": {"dev": [0, 29]}, "req": "i:93{dev:02X}", "res_prefix": "i:93{dev:02X}",
+     "fields": [
+       {"path": "Cluster.Device {dev}.Status.Actual Position", "offset": 0, "len": 6, "as": "posiold"},
+       {"path": "Cluster.Device {dev}.Status.Position Offset Used", "offset": 6, "len": 6, "as": "posiold"},
+       {"path": "Cluster.Device {dev}.Status.Position Control Speed Used (%)", "offset": 12, "len": 4, "as": "scale1000"},
+       {"path": "Cluster.Device {dev}.Status.Freeze", "offset": 16, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.Access Mode Used", "offset": 17, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.Control Mode Used", "offset": 18, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.Service Request", "offset": 19, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.Parameter Error", "offset": 20, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.PFO Not Fully Charged", "offset": 21, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.Compressed Air Failure", "offset": 22, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.Sensor Factor Warning", "offset": 23, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.Offline Mode", "offset": 25, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.ROM Error", "offset": 27, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.No Interface Found", "offset": 28, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.No ADC Signal", "offset": 29, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.No ADC Signal On Logic", "offset": 30, "len": 1},
+       {"path": "Cluster.Device {dev}.Status.Compressed Air Value(mbar)", "offset": 35, "len": 6}
+     ]}
+  ],
+  "writes": []
+}

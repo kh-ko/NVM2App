@@ -16,9 +16,23 @@ nv2_spec.json:
     }
     항목마다 Nv2ReadSpec / Nv2WriteSpec 을 만들어 SpecRegistry 에 등록한다. "as" 가 없으면
     형 변환만 하는 TextCodec(param.data_type). 읽기/쓰기 사용 여부는 param.acc 로 워커가 정한다.
-    "when"(조건부) 과 "expand"(템플릿) 는 NV1 단계에서 추가한다.
 
-nv1_spec.json: NV1 단계.
+nv1_spec.json (4단계):
+    {
+      "codecs": { "posiold": { "kind": "scale", "factor": 0.001 }, "scale1000": { "kind": "scale", "factor": 0.1 } },
+      "reads": [
+        { "name": "device_status", "expand": { "dev": [0, 29] },
+          "req": "i:93{dev:02X}", "res_prefix": "i:93{dev:02X}",
+          "fields": [ { "path": "Cluster.Device {dev}.Status.Actual Position", "offset": 0, "len": 6, "as": "posiold" },
+                      { "path": "Cluster.Device {dev}.Status.Freeze",          "offset": 16, "len": 1 }, ... ] }
+      ],
+      "writes": []                                  ← 6단계 (Nv1WriteSpec, when 조건)
+    }
+    reads 항목마다 Nv1ReadSpec 하나를 만들어 소속 param 전부에 등록한다. "expand" 항목은 템플릿이며
+    f_helper.schema_template.expand_items 가 변수 범위대로 펼친다 (params.json 도 같은 규칙, ParamManager).
+    offset 은 res_prefix 를 뺀 페이로드 기준 0. codecs 절은 nv2 와 같은 등록부에 들어가므로 이름이
+    겹치면 오류. 한 param 은 읽기 spec 하나만 가진다 (두 패킷이 같은 path 를 참조하면 오류).
+    "when"(조건부 선택) 은 6단계에서 추가한다.
 
 검증: 스펙이 참조한 path 가 params.json 에 없거나, 어느 스펙에도 참조되지 않은 param 이 있거나,
 codec 정의(kind / 문맥 path / 'as' 이름)가 어긋나면 오류 로그를 남기고 같은 문구를 errors 목록에
@@ -33,7 +47,9 @@ import json
 from typing import TYPE_CHECKING, Callable, Optional
 
 from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.f_helper.schema_template import expand_items
 from b_core.g_protocol.codec import Codec, PosiCodec, PresCodec, ScaleCodec, TextCodec
+from b_core.g_protocol.nv1_spec import Nv1Field, Nv1ReadSpec
 from b_core.g_protocol.nv2_spec import Nv2ReadSpec, Nv2WriteSpec
 from b_core.g_protocol.spec_registry import SpecRegistry
 
@@ -53,56 +69,89 @@ def _fail(errors: Errors, msg: str) -> None:
         errors.append(msg)
 
 
-def _ctx(find_param: FindParam, codec_name: str, cfg: dict, key: str, errors: Errors) -> Optional["Parameter"]:
-    """codecs 절의 문맥 path 하나를 Parameter 로. 누락/미존재는 오류 + None."""
-    path = cfg.get(key)
-    if not path:
-        _fail(errors, f"nv2 spec codecs.{codec_name}: 문맥 키 누락: {key}")
-        return None
-    param = find_param(path)
-    if param is None:
-        _fail(errors, f"nv2 spec codecs.{codec_name}.{key}: params.json 에 없는 path: {path}")
-    return param
-
-
-def _build_codec(name: str, cfg: dict, find_param: FindParam, errors: Errors) -> Optional[Codec]:
-    kind = cfg.get("kind")
-    if kind == "scale":
-        return ScaleCodec(name, cfg.get("factor", 1.0))
-    if kind == "posi":
-        return PosiCodec(name, _ctx(find_param, name, cfg, "unit", errors),
-                         _ctx(find_param, name, cfg, "min", errors), _ctx(find_param, name, cfg, "max", errors))
-    if kind == "pres":
-        sens = {}
-        for sens_key in ("sens1", "sens2"):
-            sub = cfg.get(sens_key, {})
-            sens[sens_key] = {k: _ctx(find_param, f"{name}.{sens_key}", sub, k, errors)
-                              for k in ("avail", "enable", "unit", "min", "max")}
-        try:
-            return PresCodec(name, cfg.get("mode", "auto"),
-                             _ctx(find_param, name, cfg, "iface_unit", errors),
-                             _ctx(find_param, name, cfg, "iface_min", errors),
-                             _ctx(find_param, name, cfg, "iface_max", errors),
-                             sens["sens1"], sens["sens2"])
-        except ValueError as e:
-            _fail(errors, f"nv2 spec codecs.{name}: {e}")
-            return None
-    _fail(errors, f"nv2 spec codecs.{name}: 알 수 없는 kind: {kind}")
-    return None
-
-
-def load_nv2_specs(file_path: str, find_param: FindParam, registry: SpecRegistry, errors: Errors = None) -> int:
-    """nv2_spec.json 을 읽어 registry 에 codec 과 spec 을 등록한다. find_param(full_path) -> Parameter | None.
-    반환: 등록한 param 항목 수. 파일이 없거나 깨졌으면 0. 오류는 로그 + errors(있으면) 에 모은다."""
+def _load_json(label: str, file_path: str, errors: Errors) -> Optional[dict]:
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
-        _fail(errors, f"nv2 spec 로드 실패: {file_path} ({e})")
-        return 0
-
+        _fail(errors, f"{label} 로드 실패: {file_path} ({e})")
+        return None
     if not isinstance(data, dict):
-        _fail(errors, f"nv2 spec: 최상위가 객체가 아님: {file_path}")
+        _fail(errors, f"{label}: 최상위가 객체가 아님: {file_path}")
+        return None
+    return data
+
+
+# ================================================================== codecs 절 (nv2 / nv1 공용)
+def _ctx(label: str, find_param: FindParam, codec_name: str, cfg: dict, key: str, errors: Errors) -> Optional["Parameter"]:
+    """codecs 절의 문맥 path 하나를 Parameter 로. 누락/미존재는 오류 + None."""
+    path = cfg.get(key)
+    if not path:
+        _fail(errors, f"{label} codecs.{codec_name}: 문맥 키 누락: {key}")
+        return None
+    param = find_param(path)
+    if param is None:
+        _fail(errors, f"{label} codecs.{codec_name}.{key}: params.json 에 없는 path: {path}")
+    return param
+
+
+def _build_codec(label: str, name: str, cfg: dict, find_param: FindParam, errors: Errors) -> Optional[Codec]:
+    kind = cfg.get("kind")
+    if kind == "scale":
+        return ScaleCodec(name, cfg.get("factor", 1.0))
+    if kind == "posi":
+        return PosiCodec(name, _ctx(label, find_param, name, cfg, "unit", errors),
+                         _ctx(label, find_param, name, cfg, "min", errors),
+                         _ctx(label, find_param, name, cfg, "max", errors))
+    if kind == "pres":
+        sens = {}
+        for sens_key in ("sens1", "sens2"):
+            sub = cfg.get(sens_key, {})
+            sens[sens_key] = {k: _ctx(label, find_param, f"{name}.{sens_key}", sub, k, errors)
+                              for k in ("avail", "enable", "unit", "min", "max")}
+        try:
+            return PresCodec(name, cfg.get("mode", "auto"),
+                             _ctx(label, find_param, name, cfg, "iface_unit", errors),
+                             _ctx(label, find_param, name, cfg, "iface_min", errors),
+                             _ctx(label, find_param, name, cfg, "iface_max", errors),
+                             sens["sens1"], sens["sens2"])
+        except ValueError as e:
+            _fail(errors, f"{label} codecs.{name}: {e}")
+            return None
+    _fail(errors, f"{label} codecs.{name}: 알 수 없는 kind: {kind}")
+    return None
+
+
+def _load_codecs(label: str, data: dict, find_param: FindParam, registry: SpecRegistry, errors: Errors) -> None:
+    """codecs 절을 등록부에 넣는다. 등록부는 파일 공용이라 같은 이름은 오류."""
+    for name, cfg in data.get("codecs", {}).items():
+        if registry.get_codec(name) is not None:
+            _fail(errors, f"{label} codecs.{name}: 이미 등록된 codec 이름")
+            continue
+        codec = _build_codec(label, name, cfg, find_param, errors)
+        if codec is not None:
+            registry.add_codec(name, codec)
+
+
+def _resolve_codec(label: str, registry: SpecRegistry, param: "Parameter", as_name, where: str, errors: Errors) -> Codec:
+    """항목의 "as" → 등록된 codec. 없으면 형 변환만 하는 TextCodec(param.data_type)."""
+    codec = TextCodec.of(param.data_type)
+    if as_name is None:
+        return codec
+    named = registry.get_codec(as_name)
+    if named is None:
+        _fail(errors, f"{label}: 정의되지 않은 codec '{as_name}': {where} — 형 변환만 적용")
+        return codec
+    return named
+
+
+# ================================================================== NV2
+def load_nv2_specs(file_path: str, find_param: FindParam, registry: SpecRegistry, errors: Errors = None) -> int:
+    """nv2_spec.json 을 읽어 registry 에 codec 과 spec 을 등록한다. find_param(full_path) -> Parameter | None.
+    반환: 등록한 param 항목 수. 파일이 없거나 깨졌으면 0. 오류는 로그 + errors(있으면) 에 모은다."""
+    label = "nv2 spec"
+    data = _load_json(label, file_path, errors)
+    if data is None:
         return 0
 
     read_tpl = data.get("read", {})
@@ -110,13 +159,10 @@ def load_nv2_specs(file_path: str, find_param: FindParam, registry: SpecRegistry
     read_req, read_res = read_tpl.get("req"), read_tpl.get("res_prefix")
     write_req, write_res = write_tpl.get("req"), write_tpl.get("res_prefix")
     if not all((read_req, read_res, write_req, write_res)):
-        _fail(errors, f"nv2 spec: read/write 템플릿 누락: {file_path}")
+        _fail(errors, f"{label}: read/write 템플릿 누락: {file_path}")
         return 0
 
-    for name, cfg in data.get("codecs", {}).items():
-        codec = _build_codec(name, cfg, find_param, errors)
-        if codec is not None:
-            registry.add_codec(name, codec)
+    _load_codecs(label, data, find_param, registry, errors)
 
     count = 0
     for item in data.get("params", []):
@@ -124,23 +170,15 @@ def load_nv2_specs(file_path: str, find_param: FindParam, registry: SpecRegistry
         id_code = item.get("id")
         index = item.get("idx")
         if not path or not isinstance(id_code, str) or not isinstance(index, int):
-            _fail(errors, f"nv2 spec: 항목 형식 오류: {item}")
+            _fail(errors, f"{label}: 항목 형식 오류: {item}")
             continue
 
         param = find_param(path)
         if param is None:
-            _fail(errors, f"nv2 spec: params.json 에 없는 path: {path}")
+            _fail(errors, f"{label}: params.json 에 없는 path: {path}")
             continue
 
-        as_name = item.get("as")
-        codec = TextCodec.of(param.data_type)
-        if as_name is not None:
-            named = registry.get_codec(as_name)
-            if named is None:
-                _fail(errors, f"nv2 spec: 정의되지 않은 codec '{as_name}': {path} — 형 변환만 적용")
-            else:
-                codec = named
-
+        codec = _resolve_codec(label, registry, param, item.get("as"), path, errors)
         registry.add_read_spec(param, Nv2ReadSpec(param, id_code, index, read_req, read_res, codec))
         registry.add_write_spec(param, Nv2WriteSpec(param, id_code, index, write_req, write_res, codec))
         registry.add_nv2_key(param, id_code, index)
@@ -149,6 +187,68 @@ def load_nv2_specs(file_path: str, find_param: FindParam, registry: SpecRegistry
     return count
 
 
+# ================================================================== NV1
+def load_nv1_specs(file_path: str, find_param: FindParam, registry: SpecRegistry, errors: Errors = None) -> int:
+    """nv1_spec.json 을 읽어 reads 항목마다 Nv1ReadSpec 을 만들고 소속 param 전부에 등록한다.
+    반환: 등록한 읽기 spec 수 (템플릿을 펼친 뒤). 파일이 없거나 깨졌으면 0."""
+    label = "nv1 spec"
+    data = _load_json(label, file_path, errors)
+    if data is None:
+        return 0
+
+    _load_codecs(label, data, find_param, registry, errors)
+
+    if data.get("writes"):
+        _fail(errors, f"{label}: writes 는 아직 지원하지 않음 (6단계): {file_path}")
+
+    try:
+        reads = expand_items(data.get("reads", []))
+    except ValueError as e:
+        _fail(errors, f"{label} reads: {e}")
+        return 0
+
+    count = 0
+    for item in reads:
+        name, req, res_prefix, fields = item.get("name"), item.get("req"), item.get("res_prefix"), item.get("fields")
+        if not (isinstance(name, str) and name and isinstance(req, str) and req
+                and isinstance(res_prefix, str) and res_prefix and isinstance(fields, list) and fields):
+            _fail(errors, f"{label} reads: 항목 형식 오류 (name/req/res_prefix/fields): {item}")
+            continue
+
+        nv1_fields: list[Nv1Field] = []
+        seen: set = set()
+        ok = True
+        for fd in fields:
+            path, offset, length = fd.get("path"), fd.get("offset"), fd.get("len")
+            if (not path or not isinstance(offset, int) or not isinstance(length, int)
+                    or isinstance(offset, bool) or isinstance(length, bool) or offset < 0 or length < 1):
+                _fail(errors, f"{label} {name}: 필드 형식 오류 (path/offset/len): {fd}")
+                ok = False
+                continue
+            param = find_param(path)
+            if param is None:
+                _fail(errors, f"{label} {name}: params.json 에 없는 path: {path}")
+                ok = False
+                continue
+            if param in seen or registry.get_read_spec(param) is not None:
+                _fail(errors, f"{label} {name}: 읽기 spec 이 이미 있는 param: {path}")
+                ok = False
+                continue
+            seen.add(param)
+            nv1_fields.append(Nv1Field(param, offset, length,
+                                       _resolve_codec(label, registry, param, fd.get("as"), f"{name} {path}", errors)))
+        if not ok:
+            continue
+
+        spec = Nv1ReadSpec(name, req, res_prefix, tuple(nv1_fields))
+        for field in nv1_fields:
+            registry.add_read_spec(field.param, spec)
+        count += 1
+
+    return count
+
+
+# ================================================================== 검증
 def validate_specs(params: list["Parameter"], registry: SpecRegistry, errors: Errors = None) -> int:
     """어느 스펙에도 없는 param 을 찾아 오류 + Not Support 처리. 반환: 그 수."""
     missing = 0
