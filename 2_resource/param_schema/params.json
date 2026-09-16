@@ -2607,6 +2607,7 @@
   {"type": "enum", "path": "Cluster.Device {dev}.Control.Control Mode Setpoint", "expand": {"dev": [0, 29]}, "acc": "RW", "local_acc": false, "nor_backup": false, "fu_backup": false, "enum": "ControlModeSetpointEnum", "desc": null},
   {"type": "posi", "path": "Cluster.Device {dev}.Control.Target Position", "expand": {"dev": [0, 29]}, "acc": "WO", "local_acc": false, "nor_backup": false, "fu_backup": false, "min": "-130", "max": "130", "desc": null},
   {"type": "btn", "path": "Cluster.Device {dev}.Control.Restart Controller", "expand": {"dev": [0, 29]}, "acc": "WO", "local_acc": false, "nor_backup": false, "fu_backup": false, "value": "01", "desc": null},
+  {"type": "enum", "path": "ADC Calibration.Calibration", "acc": "WO", "local_acc": false, "nor_backup": false, "fu_backup": false, "enum": "AdcCalibrationEnum", "desc": null},
   {"type": "hex", "path": "Compound Commands.NVM For Sevice.Compound Commands 1.[0] (0x)", "acc": "RW", "local_acc": false, "nor_backup": false, "fu_backup": false, "desc": "System.Access Mode"},
   {"type": "hex", "path": "Compound Commands.NVM For Sevice.Compound Commands 1.[1] (0x)", "acc": "RW", "local_acc": false, "nor_backup": false, "fu_backup": false, "desc": "System.Control Mode"},
   {"type": "hex", "path": "Compound Commands.NVM For Sevice.Compound Commands 1.[2] (0x)", "acc": "RW", "local_acc": false, "nor_backup": false, "fu_backup": false, "desc": "Position Control.Basic.Actual Position"},

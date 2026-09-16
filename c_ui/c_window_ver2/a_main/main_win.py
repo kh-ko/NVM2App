@@ -618,7 +618,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         WinManager().show_window(win_class=ClusterMonitorWin, win_name="Cluster Monitor", win_id="ParamWin_ClusterMonitor", parent=self, is_modal=False)
 
     def on_clicked_fac_adc_calib(self):
-        show_not_ready(self)
+        WinManager().show_window(win_class=ParamWin, win_name="ADC Calibration", win_id="ParamWin_ADC Calibration", parent=self, is_modal=False, paths=["ADC Calibration"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_iface_trace(self):
         show_not_ready(self)

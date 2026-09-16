@@ -258,15 +258,36 @@ def write_nv2(entries: list[dict]) -> int:
     return len(entries)
 
 
+def _merge_foreign(spec: dict) -> dict:
+    """기존 nv1_spec.json 에 이 도구가 만들지 않은 항목(예: ADC Calibration 쓰기)이 있으면 보존한다 —
+    codecs 는 이름, reads/writes 는 name 기준. 도구 항목이 앞, 보존 항목이 뒤."""
+    if not os.path.exists(NV1_SPEC):
+        return spec
+    with open(NV1_SPEC, "r", encoding="utf-8") as f:
+        old = json.load(f)
+    merged = {"codecs": dict(spec["codecs"]), "reads": list(spec["reads"]), "writes": list(spec["writes"])}
+    for name, cfg in old.get("codecs", {}).items():
+        merged["codecs"].setdefault(name, cfg)
+    for section in ("reads", "writes"):
+        own = {it["name"] for it in spec[section]}
+        merged[section] += [it for it in old.get(section, []) if it.get("name") not in own]
+    return merged
+
+
 def write_nv1_spec(spec: dict) -> None:
-    """한 항목 = 한 줄 (nv2_spec.json 과 같은 결)."""
+    """한 항목 = 한 줄 (nv2_spec.json 과 같은 결). 도구 밖 항목은 보존한다."""
+    spec = _merge_foreign(spec)
+
     def packets(items: list[dict], extra_keys: tuple[str, ...]) -> str:
         chunks = []
         for it in items:
-            head = f'"name": {json.dumps(it["name"])}, "expand": {_dump(it["expand"])}, ' \
-                   f'"req": {json.dumps(it["req"])}, "res_prefix": {json.dumps(it["res_prefix"])}'
+            head = f'"name": {json.dumps(it["name"])}'
+            if "expand" in it:
+                head += f', "expand": {_dump(it["expand"])}'
+            head += f', "req": {json.dumps(it["req"])}, "res_prefix": {json.dumps(it["res_prefix"])}'
             for key in extra_keys:
-                head += f', "{key}": {_dump(it[key])}'
+                if key in it:
+                    head += f', "{key}": {_dump(it[key])}'
             body = ",\n".join("       " + _dump(fd) for fd in it["fields"])
             chunks.append("    {" + head + ",\n" + '     "fields": [\n' + body + "\n     ]}")
         return ",\n".join(chunks)

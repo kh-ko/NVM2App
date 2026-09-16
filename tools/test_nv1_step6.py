@@ -13,6 +13,7 @@
      Restart 버튼 "01" → "G:07c:8201".
   5. 쓰기 응답: RW 만 실린 Option 은 판정 없음(NONE). WO Target 은 빈 응답 / E: / 접두 불일치 / 정상.
   6. 워커: Option 2개 + NV2 Freeze 쓰기 → 쓰기 2건(Option 은 spec 기준 1건) + read-back(device_option 읽기 1건 + Freeze).
+  7. ADC Calibration.Calibration (WO enum, 2026-09-16): 쓰기 spec 만, 요청 "G:" + enum 값 2자리 ("11" → G:11), 응답 접두 "G:".
 """
 
 from __future__ import annotations
@@ -244,6 +245,21 @@ def main() -> int:
             p.value = None
             p.is_err = False
             p.is_not_support = False
+
+    # ---------------------------------------------------------------- 7. ADC Calibration
+    adc = pm.get_by_full_path("ADC Calibration.Calibration")
+    adc_spec = reg.get_write_spec(adc)
+    rep.check(adc is not None and adc.acc == ParamAccType.WO and adc.ref_list is p_enum.AdcCalibrationEnum
+              and reg.get_read_spec(adc) is None and isinstance(adc_spec, Nv1WriteSpec),
+              "ADC Calibration: WO enum, 쓰기 spec 만")
+    for value, expected in (("11", "G:11"), (12, "G:12"), ("13", "G:13"), (1, "G:01"), (None, None), (123, None)):
+        got = adc_spec.build_request({adc: value})
+        rep.check(got == expected, f"ADC Calibration {value!r} → {got!r} (기대 {expected!r})")
+    rep.check(adc_spec.apply_response("G:11") == (ParamParseErrType.NONE, False) and not adc.is_err, "ADC 응답 G:11 → 정상")
+    err, retry = adc_spec.apply_response("E:001")
+    rep.check((err, retry) == (ParamParseErrType.ERR_89_NOT_SUPPORTED, False) and adc.is_not_support, f"ADC E: → {err.name}")
+    adc.is_not_support = False
+    adc.is_err = False
 
     print(f"\nchecks {rep.checks} / fail {rep.fail}")
     print("ALL PASS" if rep.fail == 0 else f"{rep.fail} FAIL")

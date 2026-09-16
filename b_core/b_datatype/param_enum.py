@@ -805,4 +805,9 @@ class ClusterNetworkFailOptEnum(DescriptionEnum):
     CLOSE         = (0, "Close")
     OPEN          = (1, "Open")      
     KEEP_POSITION = (2, "Keep Position") 
+
+class AdcCalibrationEnum(DescriptionEnum):
+    SENS_1        = (11, "Sensor 1")
+    SENS_2        = (12, "Sensor 2")      
+    ANALOG_IN     = (13, "Analog Input") 
     

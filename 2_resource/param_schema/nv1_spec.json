@@ -51,6 +51,10 @@
     {"name": "device_restart", "expand": {"dev": [0, 29]}, "req": "G:{dev:02d}c:82{payload}", "res_prefix": "G:{dev:02d}c:82", "payload_len": 2, "fill": "0",
      "fields": [
        {"path": "Cluster.Device {dev}.Control.Restart Controller", "offset": 0, "len": 2}
+     ]},
+    {"name": "adc_calibration", "req": "G:{payload}", "res_prefix": "G:", "payload_len": 2, "fill": "0",
+     "fields": [
+       {"path": "ADC Calibration.Calibration", "offset": 0, "len": 2}
      ]}
   ]
 }

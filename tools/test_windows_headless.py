@@ -48,6 +48,8 @@ CASES = [
     ("BackupWin", BackupWin, dict(win_name="Backup")),
     ("RestoreWin", RestoreWin, dict(win_name="Restore")),
     ("ClusterMonitorWin", ClusterMonitorWin, dict(win_name="Cluster Monitor")),
+    ("ParamWin ADC Calibration", ParamWin,
+     dict(win_name=None, paths=["ADC Calibration"], filter_param_paths=[], is_editblock_win=False)),
 ]
 
 
