@@ -18,6 +18,8 @@
   (windowed 배포 빌드에서 stderr 가 허공으로 사라지는 문제 대응)
   sig_logged 슬롯이 낸 예외의 traceback 은 파일/링버퍼에만 기록하고 다시 발화하지
   않는다(is_logging() 재진입 판정 — 재귀 크래시 방지). 개행 없이 끝난 조각은 flush 때 기록.
+- 로그 파일 기록 실패는 이번 실행에서 재시도하지 않고 ERROR 1건을 링버퍼에 남기며
+  다음 log() 에서 1회 emit 한다(이미 열린 LogView 도 본다).
 
 사용:
     self._log = AppLogManager().get_logger("CompoundRunWorker")
@@ -120,6 +122,7 @@ class AppLogManager(QObject):
         self._file = None
         self._file_date = None
         self._file_failed = False      # 파일 기록 실패 → 이번 실행에서는 재시도하지 않는다 (F006)
+        self._pending_notice = None    # 파일 실패 알림 — 다음 log() 가 락 밖에서 1회 emit (열린 LogView 용)
 
         self._cleanup_old_files()
 
@@ -132,8 +135,17 @@ class AppLogManager(QObject):
         entry = LogEntry(datetime.now(), category, str(source), str(message), is_global)
         self._record(entry)
 
+        # 파일 기록 실패 알림(_write_file 이 링버퍼에만 넣어 둔 것)이 있으면 먼저 1회 emit —
+        # 이미 열린 LogView 도 실시간으로 본다. 락 밖에서 emit 한다.
+        with self._lock:
+            notice, self._pending_notice = self._pending_notice, None
+        if notice is not None:
+            self._emit(notice)
+        self._emit(entry)
+
+    def _emit(self, entry: LogEntry) -> None:
         # 구독 슬롯이 예외를 내면 PySide6 가 traceback 을 sys.stderr(_StderrTee) 에 찍고,
-        # 그 줄들이 다시 여기로 들어와 같은 슬롯을 호출하는 재귀가 된다(F007, 스택 오버플로 실측).
+        # 그 줄들이 다시 log() 로 들어와 같은 슬롯을 호출하는 재귀가 된다(F007, 스택 오버플로 실측).
         # emit 구간을 스레드별 깊이로 표시해 두면 _StderrTee 가 is_logging() 을 보고
         # 파일/링버퍼 기록만 하고 다시 emit 하지 않는다.
         # PySide6 6.10 기준 슬롯 예외는 emit 밖으로 전파되지 않는다(전파되는 버전이면
@@ -223,9 +235,10 @@ class AppLogManager(QObject):
                 except Exception:
                     pass
                 self._file = None
-            self._ring.append(LogEntry(datetime.now(), LogCategory.ERROR, "AppLogManager",
-                                       f"log file write failed: {e} (file logging disabled for this run)",
-                                       True))
+            notice = LogEntry(datetime.now(), LogCategory.ERROR, "AppLogManager",
+                              f"log file write failed: {e} (file logging disabled for this run)", True)
+            self._ring.append(notice)
+            self._pending_notice = notice  # 다음 log() 가 열린 LogView 에도 1회 emit
             if sys.__stderr__ is not None:
                 sys.__stderr__.write(f"[AppLogManager] file write failed: {e}\n")
 

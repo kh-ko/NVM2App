@@ -11,17 +11,18 @@ FTP 서버/계정을 쓰고 저장소 경로만 다르다. 접속 정보와 설�
 설정 파일 2_resource/config/ftp_connection.json 의 키:
     FTP_HOST / FTP_PORT / FTP_USER / FTP_PASS   접속 정보 (공통)
     FTP_FIRMWARE_PATH / FTP_APP_PATH            저장소별 경로
-파일에 없는 키는 ver1 하드코딩 값(DEFAULT_CONNECTION)으로 채운다 — 현재 배포
-파일에는 FTP_HOST/FTP_PORT 만 있다.
+파일이 없거나 키가 없으면 기본값(DEFAULT_CONNECTION)으로 채운다 — 현재 배포 파일에는
+FTP_HOST/FTP_PORT 만 있다. 파일이 있는데 깨졌거나 객체가 아니면 JsonLoadError 를 올린다:
+잘못된 서버로 조용히 접속하지 않도록 호출한 워커가 실패로 보고한다(호출부는 모두 try 안).
 
 connect() 는 블로킹 네트워크 I/O 다 — 워커 스레드에서 호출한다.
 """
 
 import ftplib
-import json
 from typing import Callable, NamedTuple
 
 from b_core.a_define import file_folder_path as path_def
+from b_core.f_helper.json_file_helper import JsonLoadError, load_json
 
 
 class FtpSetting(NamedTuple):
@@ -49,15 +50,11 @@ ProgressCallback = Callable[[int, int], None]
 
 def load_setting(path_key: str, default_path: str) -> FtpSetting:
     """ftp_connection.json 을 읽어 FtpSetting 반환. path 는 path_key 의 값이고,
-    파일이 없거나 형식이 깨졌거나 키가 없으면 기본값으로 보충한다."""
+    파일이 없거나 키가 없으면 기본값으로 보충한다(BOM 수용).
+    파일이 깨졌거나 객체가 아니면 JsonLoadError (호출한 워커가 실패로 보고)."""
     default = DEFAULT_CONNECTION._replace(path=default_path)
-    try:
-        with open(path_def.RSRC_FTP_SETTING_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return default
-
-    if not isinstance(data, dict):
+    data = load_json(path_def.RSRC_FTP_SETTING_FILE, expect=dict)  # 없으면 None, 깨지면 JsonLoadError
+    if data is None:
         return default
 
     try:

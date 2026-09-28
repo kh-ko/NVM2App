@@ -6,20 +6,22 @@ ver2 는 이 매니저가 파일 IO 와 목록 관리를 전담하고, 윈도우
 조회/변경 호출과 사용자 메시지(QMessageBox) 표시만 담당한다.
 
 - 변경 메서드(select / add / update / remove)는 내부에서 저장까지 수행하고
-  성공 여부를 반환한다. 저장 실패 시 메모리 상태를 롤백한다.
+  성공 여부를 반환한다. 저장 실패 시 메모리 상태를 롤백한다 — select 만 예외:
+  선택을 되돌리면 스캔 중인 설정과 선택이 어긋나므로 메모리 선택은 유지하고 False 만 돌려준다.
+- 파일은 임시 파일 + os.replace 로 원자 교체한다. 로드 시 깨진 파일은 '.corrupt-일시' 로
+  보관하고 기본 항목으로, 객체가 아닌 원소는 건너뛴다.
 - 항목 구성이 바뀌면 sig_list_changed, 선택이 바뀌면 sig_selection_changed
   가 발생한다. (두 윈도우가 동시에 열려 있어도 목록이 동기화됨)
 - get() / selected() 는 복사본을 반환한다 — 항목 수정은 반드시 update() 로.
 """
 
 import threading
-import json
-import os
 
 from PySide6.QtCore import Signal, QObject
 
 from b_core.a_define import file_folder_path as path_def
 from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.f_helper.json_file_helper import JsonLoadError, load_json, save_json_atomic, quarantine_corrupt
 
 
 class ConnectionSettingManager(QObject):
@@ -86,18 +88,20 @@ class ConnectionSettingManager(QObject):
         return self.get(self.selected_index())
 
     # ------------------------------------------------------------ 변경
-    def select(self, index: int) -> None:
-        """index 항목을 선택(isSelect) 상태로 만들고 저장한다."""
+    def select(self, index: int) -> bool:
+        """index 항목을 선택(isSelect) 상태로 만들고 저장한다. 저장 실패면 False.
+        (선택은 메모리에 유지 — 되돌리면 스캔 중인 설정과 선택이 어긋난다)"""
         if index < 0 or index >= len(self._connections):
-            return
+            return False
         if index == self.selected_index():
-            return
+            return True
 
         for i, item in enumerate(self._connections):
             item["isSelect"] = (i == index)
 
-        self._save()
+        ok = self._save()
         self.sig_selection_changed.emit(index)
+        return ok
 
     def add(self, data: dict) -> str | None:
         """항목 추가. 이름이 비어 있으면 기본 이름, 중복이면 _N 접미사를 붙인다.
@@ -181,14 +185,20 @@ class ConnectionSettingManager(QObject):
     def _load(self):
         self._connections = []
 
-        if os.path.exists(path_def.RSRC_CONNECTIONS_JSON_FILE):
-            try:
-                with open(path_def.RSRC_CONNECTIONS_JSON_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                if isinstance(data, list):
-                    self._connections = data
-            except Exception as e:
-                self._log.error(f"connections.json load failed: {e}")
+        try:
+            data = load_json(path_def.RSRC_CONNECTIONS_JSON_FILE, expect=list)
+        except JsonLoadError as e:
+            moved = quarantine_corrupt(path_def.RSRC_CONNECTIONS_JSON_FILE)
+            kept = f"corrupt file kept as {moved}" if moved else "corrupt file could not be moved (next save overwrites)"
+            self._log.error(f"connections.json load failed — default used, {kept}: {e}")
+            data = None
+
+        if data:
+            items = [item for item in data if isinstance(item, dict)]
+            if len(items) != len(data):
+                self._log.warning(f"connections.json: {len(data) - len(items)} non-object item(s) ignored"
+                                  + ("" if items else " — default used"))
+            self._connections = items
 
         # 파일이 없거나 읽기 실패 시 기본 항목 1개로 시작
         if not self._connections:
@@ -204,9 +214,7 @@ class ConnectionSettingManager(QObject):
 
     def _save(self) -> bool:
         try:
-            os.makedirs(os.path.dirname(path_def.RSRC_CONNECTIONS_JSON_FILE), exist_ok=True)
-            with open(path_def.RSRC_CONNECTIONS_JSON_FILE, 'w', encoding='utf-8') as f:
-                json.dump(self._connections, f, indent=4, ensure_ascii=False)
+            save_json_atomic(path_def.RSRC_CONNECTIONS_JSON_FILE, self._connections, ensure_ascii=False)
             return True
         except Exception as e:
             self._log.error(f"connections.json save failed: {e}")

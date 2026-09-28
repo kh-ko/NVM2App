@@ -10,20 +10,22 @@ _Setting 디스크립터가 [property + 변경 검사 + 저장 + 시그널 발�
 를 전부 담당한다. 시그널 선언이 누락되면 클래스 생성 시점에 TypeError 로
 즉시 검출된다. (ver1 은 항목당 5곳을 수정해야 해서 누락 잠복 버그 위험이 있었음)
 
-- 값 변경 시마다 전체 설정이 local_setting.json 에 저장된다.
+- 값 변경 시마다 전체 설정이 local_setting.json 에 저장된다(임시 파일 + os.replace 원자 교체).
+  저장 실패는 로그만 남기고 메모리 값·시그널은 유지한다(화면과 메모리는 일치, 파일만 뒤처짐).
+- 로드 시 파일이 깨졌으면 '.corrupt-일시' 로 보관하고 기본값으로, 항목 값의 종류가
+  기본값과 다르면(bool/int/float 구분, int→float 허용) 그 항목만 기본값으로 둔다.
 - setter 는 UI 스레드 전용이다. (락 없음 — 워커 스레드에서 호출 금지)
 - 최초 로드는 시그널을 발화하지 않는다. 컨트롤은 생성 시 property 를
   직접 읽어 초기값을 잡아야 한다.
 """
 
 import threading
-import json
-import os
 
 from PySide6.QtCore import Signal, QObject
 
 from b_core.a_define import file_folder_path as path_def
 from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.f_helper.json_file_helper import JsonLoadError, load_json, save_json_atomic, quarantine_corrupt
 
 from b_core.b_datatype import param_enum as p_enum
 
@@ -32,7 +34,8 @@ class _Setting:
     """LocalSettingManager 전용 설정 디스크립터.
 
     값은 인스턴스의 _<설정명> 속성에 저장되고, 변경되면
-    [_save_settings() 호출 -> sig_<설정명>_changed 발화] 를 수행한다."""
+    [_save_settings() 호출 -> sig_<설정명>_changed 발화] 를 수행한다.
+    기본값은 bool/int/float 리터럴로 둔다(Enum 은 .value, None 금지) — 로드 시 종류 검사의 기준."""
 
     def __init__(self, default):
         self.default = default
@@ -154,29 +157,46 @@ class LocalSettingManager(QObject):
 
     # ------------------------------------------------------------ 파일 IO
     def _load_settings(self):
-        """JSON 파일에서 설정값을 읽어온다. (없는 키는 기본값 유지, 시그널 미발화)"""
-        if not os.path.exists(path_def.RSRC_LOCAL_SETTING_JSON_FILE):
-            return
-
+        """JSON 파일에서 설정값을 읽어온다. (없는 키·종류가 다른 값은 기본값 유지, 시그널 미발화)"""
         try:
-            with open(path_def.RSRC_LOCAL_SETTING_JSON_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-        except Exception as e:
-            self._log.error(f"local_setting.json 로드 실패: {e}")
+            data = load_json(path_def.RSRC_LOCAL_SETTING_JSON_FILE, expect=dict)
+        except JsonLoadError as e:
+            moved = quarantine_corrupt(path_def.RSRC_LOCAL_SETTING_JSON_FILE)
+            kept = f"손상 파일은 {moved} 로 보관" if moved else "손상 파일 보관 실패(다음 저장이 덮어씀)"
+            self._log.error(f"local_setting.json 로드 실패 — 기본값 사용, {kept}: {e}")
+            return
+        if data is None:
             return
 
         for name, setting in self._settings.items():
+            if name not in data:
+                continue
+            value = data[name]
+            if not _is_same_kind(value, setting.default):
+                self._log.warning(f"local_setting.json '{name}' 값 형식이 맞지 않아 기본값 사용: {value!r}")
+                continue
+            if isinstance(setting.default, float):
+                value = float(value)  # int 로 적힌 값도 메모리·다음 저장에서는 float
             # 디스크립터를 거치지 않고 직접 저장 (로드 중 저장/시그널 발화 방지)
-            setattr(self, "_" + name, data.get(name, setting.default))
+            setattr(self, "_" + name, value)
 
-    def _save_settings(self):
-        """현재 모든 설정값을 JSON 파일로 저장한다."""
+    def _save_settings(self) -> bool:
+        """현재 모든 설정값을 JSON 파일로 저장한다. 실패해도 메모리 값·시그널은 유지된다."""
         try:
             save_data = {name: getattr(self, "_" + name) for name in self._settings}
-
-            os.makedirs(os.path.dirname(path_def.RSRC_LOCAL_SETTING_JSON_FILE), exist_ok=True)
-
-            with open(path_def.RSRC_LOCAL_SETTING_JSON_FILE, 'w', encoding='utf-8') as f:
-                json.dump(save_data, f, indent=4)
+            save_json_atomic(path_def.RSRC_LOCAL_SETTING_JSON_FILE, save_data)
+            return True
         except Exception as e:
-            self._log.error(f"local_setting.json 저장 실패: {e}")
+            self._log.error(f"local_setting.json 저장 실패 (메모리 값은 유지): {e}")
+            return False
+
+
+def _is_same_kind(value, default) -> bool:
+    """기본값과 같은 종류인지 — bool/int/float 를 구분하고 int → float 만 허용한다."""
+    if isinstance(default, bool):
+        return isinstance(value, bool)
+    if isinstance(default, int):
+        return isinstance(value, int) and not isinstance(value, bool)
+    if isinstance(default, float):
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return isinstance(value, type(default))
