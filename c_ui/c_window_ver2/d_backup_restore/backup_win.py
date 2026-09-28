@@ -23,6 +23,7 @@ _DEVICENET_IFACE_VALUES = {SysUserInterfaceEnum.DEVICENET.value,
 _RS232_IFACE_VALUES = {SysUserInterfaceEnum.RS232.value,
                        SysUserInterfaceEnum.RS232_ANALOG_OUTPUT.value,
                        SysUserInterfaceEnum.RS485_ANALOG_OUTPUT.value}
+_ETHERCAT_IFACE_VALUES = {SysUserInterfaceEnum.ETHERCAT.value}
 
 
 class BackupWin(ParamWin):
@@ -94,7 +95,8 @@ class BackupWin(ParamWin):
     # ------------------------------------------------------------ 체크박스 트리
     def _is_iface_included(self, path: str) -> bool:
         """Interface 계열 폴더 포함 판정 — 공용 Scaling 은 항상, 그 외는 현재
-        User Interface 값에 해당하는 폴더만 포함한다 (값 미확인 시 Scaling 만)."""
+        User Interface 값에 해당하는 폴더만 포함한다 (값 미확인 시 Scaling 만).
+        기준은 MainToolBar.set_iface 와 같다 (DeviceNet 4종 / RS232·RS485 3종 / EtherCAT)."""
         if not path.startswith("Interface"):
             return True
 
@@ -106,6 +108,8 @@ class BackupWin(ParamWin):
         if user_iface_value in _DEVICENET_IFACE_VALUES and path.startswith("Interface DeviceNet"):
             return True
         if user_iface_value in _RS232_IFACE_VALUES and path.startswith("Interface RS232/RS485"):
+            return True
+        if user_iface_value in _ETHERCAT_IFACE_VALUES and path.startswith("Interface EtherCAT"):
             return True
 
         return False
