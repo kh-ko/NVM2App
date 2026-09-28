@@ -94,9 +94,8 @@ class _Nv2Spec(PacketSpec):
         return self.codec if param is self.param else None
 
     def _check_response(self, resp: str | None, is_read: bool) -> tuple[ParamParseErrType, bool]:
-        """기존 Parameter.check_error 와 같은 판정이되, ID 비교를 INDEX 파싱보다 먼저 한다 —
-        ID 가 다르고 INDEX 자리가 16진수가 아닌 응답에서 구버전은 int() 예외로 워커가 멈췄고
-        여기서는 WRONG_ID_OR_INDEX(재시도) 로 처리한다."""
+        """기존 Parameter.check_error 와 같은 판정이되, INDEX 자리가 16진수가 아닌 잡음도
+        예외 없이 WRONG_ID_OR_INDEX(재시도) 로 처리한다 — 구버전은 int() 예외로 워커가 멈췄다(F041)."""
         param = self.param
 
         # 쓰기 응답은 WO param 만 검증한다 (기존 동작 유지)
@@ -126,7 +125,12 @@ class _Nv2Spec(PacketSpec):
                 param.is_err = True
                 return ParamParseErrType.WRONG_SVC_CODE, True
 
-            if resp[6:14] == self.id and int(resp[14:16], 16) == self.index:
+            try:
+                index_ok = int(resp[14:16], 16) == self.index
+            except ValueError:
+                index_ok = False  # INDEX 자리가 16진수가 아님 — ID/INDEX 불일치와 같이 취급
+
+            if resp[6:14] == self.id and index_ok:
                 param.is_err = False
                 param.is_not_support = False
                 return ParamParseErrType.NONE, False

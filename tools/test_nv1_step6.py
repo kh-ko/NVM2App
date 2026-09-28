@@ -12,6 +12,7 @@
      Target 30 → "030000" / -30 → "-30000" / -3 → "-03000" / 12.3456 → "012346" / 1000 → None(폭 초과) / None → None.
      Restart 버튼 "01" → "G:07c:8201".
   5. 쓰기 응답: RW 만 실린 Option 은 판정 없음(NONE). WO Target 은 빈 응답 / E: / 접두 불일치 / 정상.
+     E: 는 NV1_ERROR_RESPONSE 이고 플래그를 건드리지 않는다 (2026-09-28: WO 는 다시 읽히지 않아 Not Support 로 잠그면 복구 불가).
   6. 워커: Option 2개 + NV2 Freeze 쓰기 → 쓰기 2건(Option 은 spec 기준 1건) + read-back(device_option 읽기 1건 + Freeze).
   7. ADC Calibration.Calibration (WO enum, 2026-09-16): 쓰기 spec 만, 요청 "G:" + enum 값 2자리 ("11" → G:11), 응답 접두 "G:".
 """
@@ -203,8 +204,10 @@ def main() -> int:
     rep.check(option_write[n].apply_response("") == (ParamParseErrType.NONE, False), "RW 조합 쓰기는 응답 판정 없음")
     err, retry = tspec.apply_response("")
     rep.check((err, retry) == (ParamParseErrType.COMMUNICATION_ERR, True) and target.is_err, f"Target 빈 응답: {err.name}")
+    target.is_err = False  # 직전 빈 응답 검사가 세운 is_err 를 지우고, E: 가 플래그를 건드리지 않음을 본다
     err, retry = tspec.apply_response("E:001")
-    rep.check((err, retry) == (ParamParseErrType.ERR_89_NOT_SUPPORTED, False) and target.is_not_support, f"Target E:: {err.name}")
+    rep.check((err, retry) == (ParamParseErrType.NV1_ERROR_RESPONSE, False) and not target.is_not_support and not target.is_err,
+              f"Target E:: {err.name} (플래그 불변)")
     err, retry = tspec.apply_response("G:01R:")
     rep.check((err, retry) == (ParamParseErrType.WRONG_PREFIX, True), f"Target 접두 불일치: {err.name}")
     err, retry = tspec.apply_response("G:00R:030000")
@@ -257,8 +260,8 @@ def main() -> int:
         rep.check(got == expected, f"ADC Calibration {value!r} → {got!r} (기대 {expected!r})")
     rep.check(adc_spec.apply_response("G:11") == (ParamParseErrType.NONE, False) and not adc.is_err, "ADC 응답 G:11 → 정상")
     err, retry = adc_spec.apply_response("E:001")
-    rep.check((err, retry) == (ParamParseErrType.ERR_89_NOT_SUPPORTED, False) and adc.is_not_support, f"ADC E: → {err.name}")
-    adc.is_not_support = False
+    rep.check((err, retry) == (ParamParseErrType.NV1_ERROR_RESPONSE, False) and not adc.is_not_support and not adc.is_err,
+              f"ADC E: → {err.name} (플래그 불변)")
     adc.is_err = False
 
     print(f"\nchecks {rep.checks} / fail {rep.fail}")

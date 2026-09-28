@@ -7,6 +7,7 @@ params.json / nv2_spec.json / nv1_spec.json 으로 옮긴다. (tools/migrate_nv1
                       → 쓰기 device_option  `G:{dev:02d}s:04{payload}` 같은 자리 (사용자 확인 2026-09-15)
 - NV2 4개             → nv2_spec.json 템플릿 4줄, id "20{dev+14:02X}xxxx" (장치 코드 = 0x0E + 번호)
 - Control.Target Position   → 쓰기 device_target  `G:{dev:02d}R:{payload}` 6자 posiold (음수만 부호, 30 % → 030000)
+  범위 -30~130 % (ver1 픽스처의 -130 은 NV2 Target 을 옮긴 오류 — 2026-09-28 사용자 확인으로 픽스처·params.json 모두 -30 으로 정정)
 - Control.Restart Controller → 쓰기 device_restart `G:{dev:02d}c:82{payload}` 2자, 버튼 값 "01"
 
 사용자 결정(2026-09-15): 경로를 Setting / Control 두 폴더로 정리(ver1 의 Homing.* 와 Device 직하 항목 →

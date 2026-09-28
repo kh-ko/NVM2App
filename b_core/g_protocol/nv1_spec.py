@@ -28,7 +28,10 @@ reads[].fields / writes[].fields 가 주고, offset 은 접두를 뺀 페이로�
     values 에 없는 필드는 param.value(현재 값) 로 채운다 — read-modify-write (결정 6). 어느 필드든 값이
     None 이면 요청을 만들지 않고 None 을 돌려준다 (워커가 건너뛰고 sig_write_skipped 로 알린다).
     응답은 NV2 와 같이 WO param 이 있을 때만 판정한다 (RW 는 이어지는 read-back 이 확인):
-        빈 응답 → COMMUNICATION_ERR / "E:" → 전원 Not Support, ERR_89 / 접두 불일치 → WRONG_PREFIX / 정상 → NONE
+        빈 응답 → COMMUNICATION_ERR / "E:" → NV1_ERROR_RESPONSE(플래그 변경 없음) / 접두 불일치 → WRONG_PREFIX / 정상 → NONE
+    "E:" 를 읽기처럼 Not Support 로 잠그지 않는 이유: WO param 은 refresh·read-back 어디서도 읽히지 않아
+    플래그를 되돌릴 경로가 같은 spec 의 성공한 쓰기뿐인데, 잠기면 그 쓰기를 일으킬 위젯이 비활성이 된다
+    (앱 재시작 전까지 복구 불가, 2026-09-28 결정). 거부 여부는 LogView 의 트랜잭션 원문으로 확인한다.
 """
 
 from __future__ import annotations
@@ -186,8 +189,8 @@ class Nv1WriteSpec(_Nv1Spec):
             return ParamParseErrType.COMMUNICATION_ERR, True
 
         if resp.startswith(ERR_PREFIX):
-            self.set_error_state(None, True)
-            return ParamParseErrType.ERR_89_NOT_SUPPORTED, False
+            # 장비가 거부 — 플래그는 건드리지 않는다 (모듈 docstring 참고). 로그에만 남는다
+            return ParamParseErrType.NV1_ERROR_RESPONSE, False
 
         if not resp.startswith(self.res_prefix):
             self.set_error_state(True, None)
