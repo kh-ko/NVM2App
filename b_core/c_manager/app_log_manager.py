@@ -16,6 +16,8 @@
 - install_stderr_hook() 을 앱 시작 시 호출하면 미처리 예외 traceback 등
   stderr 출력이 ERROR 로그(source="stderr")로 수집된다.
   (windowed 배포 빌드에서 stderr 가 허공으로 사라지는 문제 대응)
+  sig_logged 슬롯이 낸 예외의 traceback 은 파일/링버퍼에만 기록하고 다시 발화하지
+  않는다(is_logging() 재진입 판정 — 재귀 크래시 방지). 개행 없이 끝난 조각은 flush 때 기록.
 
 사용:
     self._log = AppLogManager().get_logger("CompoundRunWorker")
@@ -113,9 +115,11 @@ class AppLogManager(QObject):
         self._initialized = True
 
         self._lock = threading.Lock()  # 파일/링버퍼 보호 (여러 스레드에서 log 호출됨)
+        self._tls = threading.local()  # 스레드별 emit 재진입 깊이 (F007 — is_logging 참고)
         self._ring: deque[LogEntry] = deque(maxlen=self.RING_SIZE)
         self._file = None
         self._file_date = None
+        self._file_failed = False      # 파일 기록 실패 → 이번 실행에서는 재시도하지 않는다 (F006)
 
         self._cleanup_old_files()
 
@@ -126,13 +130,32 @@ class AppLogManager(QObject):
 
     def log(self, category: LogCategory, source: str, message: str, is_global: bool = False) -> None:
         entry = LogEntry(datetime.now(), category, str(source), str(message), is_global)
+        self._record(entry)
 
+        # 구독 슬롯이 예외를 내면 PySide6 가 traceback 을 sys.stderr(_StderrTee) 에 찍고,
+        # 그 줄들이 다시 여기로 들어와 같은 슬롯을 호출하는 재귀가 된다(F007, 스택 오버플로 실측).
+        # emit 구간을 스레드별 깊이로 표시해 두면 _StderrTee 가 is_logging() 을 보고
+        # 파일/링버퍼 기록만 하고 다시 emit 하지 않는다.
+        # PySide6 6.10 기준 슬롯 예외는 emit 밖으로 전파되지 않는다(전파되는 버전이면
+        # try 로 감싸 sys.__stderr__ 에 1줄 요약으로 전환).
+        depth = getattr(self._tls, "depth", 0)
+        self._tls.depth = depth + 1
+        try:
+            self.sig_logged.emit(entry)
+        finally:
+            self._tls.depth = depth
+
+    def is_logging(self) -> bool:
+        """이 스레드가 log() 의 emit 구간 안이면 True — stderr 후킹의 재진입 판정."""
+        return getattr(self._tls, "depth", 0) > 0
+
+    def _record(self, entry: LogEntry) -> None:
+        """파일 + 링버퍼 + 콘솔 기록. emit 없음 (재진입 경로와 log() 가 공용)."""
+        line = entry.to_line()
         with self._lock:
             self._write_file(entry)
             self._ring.append(entry)
-            self._print_console(entry.to_line())
-
-        self.sig_logged.emit(entry)
+        self._print_console(line)  # 락 밖 — stdout 이 후킹돼도 재진입 데드락 없음
 
     @staticmethod
     def _print_console(line: str) -> None:
@@ -170,6 +193,9 @@ class AppLogManager(QObject):
 
     # ------------------------------------------------------------ 파일 IO
     def _write_file(self, entry: LogEntry) -> None:
+        if self._file_failed:
+            return  # 한 번 실패하면 이번 실행에서는 다시 시도하지 않는다 (알림은 아래에서 1회)
+
         try:
             date = entry.timestamp.date()
 
@@ -187,8 +213,19 @@ class AppLogManager(QObject):
             self._file.write(entry.to_line() + "\n")
             self._file.flush()
         except Exception as e:
-            # 파일 기록 실패가 앱 동작을 막으면 안 된다.
-            # (자기 자신을 다시 log 하면 재귀가 되므로 원본 stderr 로만 알림)
+            # 파일 기록 실패가 앱 동작을 막으면 안 된다. --noconsole 배포에서도 보이도록
+            # 링버퍼에 ERROR 항목을 직접 1회 남기고(LogView 백필로 표시; 자기 자신을 log() 하면 재귀),
+            # 원본 stderr 에도 알린다. (호출자가 _lock 을 잡고 있으므로 링버퍼 접근은 안전)
+            self._file_failed = True
+            if self._file is not None:
+                try:
+                    self._file.close()
+                except Exception:
+                    pass
+                self._file = None
+            self._ring.append(LogEntry(datetime.now(), LogCategory.ERROR, "AppLogManager",
+                                       f"log file write failed: {e} (file logging disabled for this run)",
+                                       True))
             if sys.__stderr__ is not None:
                 sys.__stderr__.write(f"[AppLogManager] file write failed: {e}\n")
 
@@ -220,12 +257,27 @@ class AppLogManager(QObject):
 
 
 class _StderrTee:
-    """stderr 를 원본으로 전달하면서 줄 단위로 ERROR 로그에 수집하는 래퍼."""
+    """stderr 를 원본으로 전달하면서 줄 단위로 ERROR 로그에 수집하는 래퍼.
+
+    줄 조립 버퍼는 스레드별(threading.local)이다 — CPython 은 traceback 하나를 여러 번의
+    write() 로 쪼개 쓰므로, 버퍼가 공용이면 그 사이에 끼어든 다른 스레드의 줄이 같은
+    LogEntry 로 병합된다(실측). 스레드별이면 락 없이도 각 스레드의 줄이 따로 조립된다."""
 
     def __init__(self, original, manager: AppLogManager):
         self._original = original
         self._manager = manager
-        self._buffer = ""
+        self._tls = threading.local()
+
+    def _take_lines(self, text: str) -> list[str]:
+        """이 스레드의 버퍼에 text 를 붙이고 완성된 줄(공백 줄 제외)을 꺼낸다."""
+        buf = getattr(self._tls, "buffer", "") + text
+        lines = []
+        while "\n" in buf:
+            line, buf = buf.split("\n", 1)
+            if line.strip():
+                lines.append(line)
+        self._tls.buffer = buf
+        return lines
 
     def write(self, text: str) -> int:
         if self._original is not None:
@@ -234,15 +286,24 @@ class _StderrTee:
             except Exception:
                 pass
 
-        self._buffer += text
-        while "\n" in self._buffer:
-            line, self._buffer = self._buffer.split("\n", 1)
-            if line.strip():
-                # 미처리 예외는 어느 윈도우에서든 보여야 하므로 전역 로그
+        for line in self._take_lines(text):
+            # 미처리 예외는 어느 윈도우에서든 보여야 하므로 전역 로그
+            if self._manager.is_logging():
+                # log() → emit → 슬롯 예외 → traceback 이 여기로 온 경우:
+                # 파일/링버퍼에는 남기되 다시 emit 하지 않는다 (F007 재귀 차단)
+                self._manager._record(LogEntry(datetime.now(), LogCategory.ERROR, "stderr", line, True))
+            else:
                 self._manager.log(LogCategory.ERROR, "stderr", line, is_global=True)
         return len(text)
 
     def flush(self) -> None:
+        # 자기 스레드의 남은 조각만 (종료 시 다른 스레드의 조각은 포기 — 어차피 종료 직전)
+        rest = getattr(self._tls, "buffer", "")
+        self._tls.buffer = ""
+        if rest.strip():
+            # 개행 없이 끝난 조각(종료 직전 출력 등)도 버리지 않는다 — emit 없이 기록만
+            self._manager._record(LogEntry(datetime.now(), LogCategory.ERROR, "stderr", rest, True))
+
         if self._original is not None:
             try:
                 self._original.flush()

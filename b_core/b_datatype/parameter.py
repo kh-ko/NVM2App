@@ -1,14 +1,3 @@
-from typing import Tuple
-from typing import List, Dict, Union, Type
-from PySide6.QtCore import QObject, Signal
-
-from b_core.b_datatype.general_enum import ParamDisplayType, ParamDataType, ParamAccType, PARAM_DISPLAY_TYPE_MAP
-from b_core.b_datatype import param_enum as p_enum
-from b_core.c_manager.app_log_manager import AppLogManager
-
-# Parameter 인스턴스가 수백 개라 인스턴스별 로거 대신 모듈 로거를 공유한다
-_log = AppLogManager().get_logger("Parameter", is_global=True)
-
 """값(Parameter) 계층.
 
 Parameter 는 값의 정의와 상태만 갖는다: 경로/이름, 표시 타입, 데이터 타입, 범위,
@@ -31,6 +20,13 @@ path 기준으로 보유한다 — Parameter 는 spec 객체를 참조하지 않
 이사했다 — 선로 문자열을 param 에 넣을 일은 SpecRegistry.apply_line_text() 로.
 """
 
+from typing import Tuple
+from typing import List, Dict, Union, Type
+from PySide6.QtCore import QObject, Signal
+
+from b_core.b_datatype.general_enum import ParamDisplayType, ParamDataType, ParamAccType, PARAM_DISPLAY_TYPE_MAP
+from b_core.b_datatype import param_enum as p_enum
+
 
 class ParamCondition(QObject):
     def __init__(self, parent: QObject):
@@ -41,7 +37,7 @@ class ParamCondition(QObject):
 
 
 class Parameter(QObject):
-    # 값이 변경되었을 때 발생하는 시그널 (새로운 값을 문자열로 전달)
+    # 값이 변경되었을 때 발생하는 시그널 (페이로드 없음 — 수신측이 param.value 를 읽는다)
     sig_value_changed = Signal()
     sig_is_not_support_changed = Signal()
     sig_is_err_changed = Signal()
