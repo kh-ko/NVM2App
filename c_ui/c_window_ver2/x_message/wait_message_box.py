@@ -4,7 +4,8 @@
 이 폴더의 메시지 박스는 전부 '표시 전용' 모듈 함수다.
 - 일회성 경고: 표시만 하고 반환값 없음
 - 질문: 사용자의 답만 반환
-- 수명이 있는 박스(대기 등): 박스 참조를 반환 — 닫기는 호출측(윈도우)이 수행
+- 수명이 있는 박스(대기 등): 박스 참조를 반환 — 닫기는 호출측(윈도우)이 수행.
+  accept() 로 닫히면 파괴된다(WA_DeleteOnClose) — 창 수명 동안 숨은 박스가 누적되지 않는다.
 다음 행동 결정(워커 호출 등)은 항상 윈도우 몫이다.
 
 사용 예 (윈도우 — 워커의 sig_wait_started/finished 와 연결):
@@ -28,6 +29,7 @@ def show_wait_message_box(parent, title: str, message: str) -> QMessageBox:
     백그라운드 작업이 끝날 때까지 사용자 입력을 막는 용도 —
     닫기는 호출측이 반환된 박스의 accept() 로 수행한다."""
     box = QMessageBox(parent)
+    box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # accept() 로 닫히면 파괴
     box.setWindowTitle(title)
     box.setText(message)
     box.setStandardButtons(QMessageBox.StandardButton.NoButton)
@@ -56,6 +58,7 @@ def show_busy_wait_message_box(parent, title: str, message: str,
     - quit_text 를 주면 버튼이 생기고 dialog.quit_button 으로 노출된다 —
       클릭 후 동작(앱 종료 등) 결정은 호출측이 connect 해서 정한다."""
     dialog = _BusyWaitDialog(parent)
+    dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # accept() 로 닫히면 파괴
     dialog.setWindowTitle(title)
     dialog.setWindowModality(Qt.WindowModality.WindowModal)
     # 타이틀바 닫기(X) 버튼 제거 — 종료 경로를 quit_button 하나로 좁힌다

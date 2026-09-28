@@ -14,7 +14,7 @@ from b_core.f_helper import eds_file_helper, ethercat_xml_file_helper
 from b_core.d_dal.service_port import ServicePort
 from b_core.e_worker_ver2.parameter_run_worker import ParameterRunWorker, StartResult
 
-from c_ui.b_control_ver2.a_theme import tokens
+from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.b_base.toolbars import BaseToolBar
 from c_ui.b_control_ver2.b_base.statusbars import BaseStatusBar
 from c_ui.b_control_ver2.b_base.containers import BaseFlowLayout
@@ -451,6 +451,8 @@ class ParamPresCtrlWin(ParamWin):
         self.controller_selector_used_param = self.param_manager.get_by_full_path("Pressure Control.Basic.Controller Selector Used")
         self.param_worker.add_read_param_ptr(self.controller_selector_used_param)
         self.controller_selector_used_param.sig_value_changed.connect(self.handle_changed_controller_selector_used)
+        # 창을 열 때 값이 이미 있으면(다른 창이 읽어 둠) 시그널이 오지 않으므로 1회 평가
+        self.handle_changed_controller_selector_used()
 
     def handle_changed_controller_selector_used(self):
         used_controller = self.controller_selector_used_param.value
