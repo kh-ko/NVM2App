@@ -85,7 +85,7 @@ class MainPressurePanel(PanelWidget):
         self._handle_pres_range_changed()
 
     def set_actual_pres_param(self, param):
-        self._actual_posi_param = param
+        self._actual_pres_param = param
 
         t = tokens()
         widget = ParamReadOnlyPresValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Pres. Actual", is_visible_unit = False, is_vertical_mode = True)
@@ -94,7 +94,7 @@ class MainPressurePanel(PanelWidget):
         self.left_layout.insertWidget(0, widget)
 
     def set_target_pres_used_param(self, param):
-        self._target_posi_used_param = param
+        self._target_pres_used_param = param
         
         t = tokens()
         widget = ParamReadOnlyPresValueWidget(param_full_path = f"{param.path}.{param.name}", force_label_text="Pres. Used Target", is_visible_unit = False, is_vertical_mode = True)

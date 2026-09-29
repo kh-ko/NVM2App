@@ -1,4 +1,14 @@
+"""창 등록부 (win_id → 창) 싱글턴.
+
+- show_window(): 같은 win_id 의 창이 있으면 앞으로 가져오고(생성 인자는 무시), 없으면 만들어
+  등록·표시한다. 창은 WA_DeleteOnClose 로 닫히면 파괴되고 파괴 시 등록부에서 빠진다
+  (close() 직후에는 아직 등록돼 있다 — deleteLater 라 이벤트 루프로 돌아간 뒤 빠진다).
+- close_all(): 등록된 창 전부 close(). 하나라도 거부하면 False (앱 업데이트 설치 전 등).
+MainWin 은 등록부에 없다 (앱 수명 창).
+"""
+
 from PySide6.QtCore import Qt
+
 
 class WinManager:
     _instance = None
@@ -10,11 +20,11 @@ class WinManager:
         return cls._instance
 
     def show_window(self, win_class, win_id=None, parent=None, is_modal=False, *args, **kwargs):
-        """
-        win_class: 생성할 윈도우 클래스
-        지정된 클래스의 창을 싱글톤으로 관리하여 띄웁니다.
-        창이 파괴(닫힘)되면 관리 목록에서 자동으로 제거합니다.
-        """
+        """win_id(없으면 클래스 이름)의 창을 띄우고 반환한다.
+
+        이미 있으면 앞으로 가져오고 그 창을 반환한다 — 이때 생성 인자는 무시된다
+        (생성 인자를 새로 반영해야 하면 다른 win_id 로 띄운다). 새로 만들면 WA_DeleteOnClose 로
+        닫힐 때 파괴되고, 파괴 시 등록부에서 빠진다."""
         name = win_id if win_id else win_class.__name__
 
         # 창이 이미 존재하면 앞으로 가져오기만 한다
@@ -40,38 +50,6 @@ class WinManager:
 
         new_win.show()
         return new_win
-
-    def show_param_window(self, win_class, win_id=None, parent=None, is_modal=False, *args, **kwargs):
-        """
-        win_class: 생성할 윈도우 클래스
-        지정된 클래스의 창을 싱글톤으로 관리하여 띄웁니다.
-        창이 파괴(닫힘)되면 관리 목록에서 자동으로 제거합니다.
-        """
-        name = win_id if win_id else win_class.__name__
-
-        # 창이 이미 존재하면 앞으로 가져오기만 한다
-        if name in self.windows:
-            win = self.windows[name]
-            win.showNormal()    # (추가) 최소화되어 있을 경우 원래 상태로 복구
-            win.activateWindow() # 최상단으로 활성화
-            win.raise_()         # Z-Order 맨 위로 올림
-            return win
-
-        # 창이 없으면 새로 생성
-        new_win = win_class(parent = parent, *args, **kwargs)
-        self.windows[name] = new_win
-
-        if is_modal:
-            new_win.setWindowModality(Qt.WindowModal)
-
-        new_win.setAttribute(Qt.WA_DeleteOnClose)
-
-        # 창이 닫혀서 파괴될 때 딕셔너리에서 제거하도록 연결
-        # QWidget의 destroyed 시그널을 이용 (WA_DeleteOnClose 속성이 있어야 함)
-        new_win.destroyed.connect(lambda obj=None, n=name: self._on_window_destroyed(n))
-
-        new_win.show()
-        return new_win        
 
     def close_all(self, exclude: tuple = ()) -> bool:
         """등록된 창을 모두 close() 한다 (앱 업데이트 설치 전 등).

@@ -1,5 +1,6 @@
 from typing import NamedTuple
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
 
 from b_core.a_define import app_info
@@ -644,6 +645,15 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
 
     # 재부팅 대기 다이얼로그(handle_started_reboot / handle_finished_reboot /
     # on_clicked_quit_app)는 ParamWorkerWinMixin 이 제공한다
+
+    def closeEvent(self, event: QCloseEvent):
+        # 등록된 창을 먼저 닫는다 — 하나라도 거부(펌웨어 쓰기 중, FU 백업 미저장 등)하면 메인 창도 남긴다.
+        # 그냥 accept 하면 메인 창만 숨고 거부한 창이 남은 채 앱이 계속된다 (F073).
+        # 워커 정리는 aboutToQuit 연결로 — 마지막 주 창이 닫히면 Qt 가 quit 한다
+        if not WinManager().close_all():
+            event.ignore()
+            return
+        event.accept()
 
     def handle_changed_acc_mode_param(self):
         if self.acc_mode_param.value is None:

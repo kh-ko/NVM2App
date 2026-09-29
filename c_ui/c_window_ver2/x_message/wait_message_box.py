@@ -8,6 +8,13 @@
   accept() 로 닫히면 파괴된다(WA_DeleteOnClose) — 창 수명 동안 숨은 박스가 누적되지 않는다.
 다음 행동 결정(워커 호출 등)은 항상 윈도우 몫이다.
 
+== 종료와의 관계 ==
+두 박스 모두 닫기를 거부한다(버튼 없음 / reject 무시). 떠 있는 동안 QApplication.quit() 과
+closeAllWindows() 는 활성 모달인 이 박스에서 거부되어 다른 창의 closeEvent 를 부르지 않고
+조용히 중단된다(실측). 그러므로 박스를 소유한 창은 자기 closeEvent 에서 박스를 먼저 accept()
+해야 한다 — ParamWin.closeEvent 의 재부팅 대기 박스, FactoryFirmwareUpdateWin /
+HelpNvmUpdateWin 의 _close_wait_box 가 그 예. (2026-09-29, N110)
+
 사용 예 (윈도우 — 워커의 sig_wait_started/finished 와 연결):
     def handle_wait_started(self, title, message):
         self._wait_box = show_wait_message_box(self, title, message)

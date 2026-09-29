@@ -49,6 +49,7 @@ ver1 에서 달라진 점:
   잠글 이유가 없다 (ver1 도 content_widget.setEnabled(True) 를 명시했다).
 """
 
+import itertools
 import os
 from enum import Enum, auto
 
@@ -84,6 +85,10 @@ _NETWORK_ONLY_PHASES = (FirmwarePhase.DOWNLOAD,)
 
 # 쓰기 완료 후 장비 재부팅/재연결 대기 — 진행바의 마지막 구간 (워커 단계가 아니다)
 _STEP_RECONNECT = "reconnect"
+
+# FU 흐름마다 새 복원 창 — 같은 win_id 면 WinManager 가 이전 흐름의 창을 재사용해
+# 생성 인자(이번 백업 파일)를 버린다 (N057). 이전 창은 사용자가 닫을 때까지 남는다
+_fu_restore_win_ids = itertools.count(1)
 
 
 class _Stage(Enum):
@@ -514,11 +519,11 @@ class FactoryFirmwareUpdateWin(ParamWin):
                                         "Firmware update and factory reset are completed.")
 
     def _open_restore_win(self):
-        # 부모는 MainWin — 이 창을 닫아도 복원 창은 남아야 한다.
-        # win_id 를 일반 Restore 창과 분리해 기존 창이 재사용(파일 미로드)되는 것을 막는다
+        # 부모는 MainWin — 이 창을 닫아도 복원 창은 남아야 한다. 일반 Restore 창과 id 가 다르고,
+        # FU 흐름끼리도 id 를 다르게 해 항상 새 창을 만든다 (모듈의 _fu_restore_win_ids 참고)
         WinManager().show_window(win_class=RestoreWin, win_name="Firmware Restore",
-                                 win_id="ParamWin_FirmwareRestore", parent=self.parent(),
-                                 is_modal=False, is_fu_restore=True,
+                                 win_id=f"ParamWin_FirmwareRestore_{next(_fu_restore_win_ids)}",
+                                 parent=self.parent(), is_modal=False, is_fu_restore=True,
                                  initial_file_path=self._backup_file_path)
 
     # ------------------------------------------------------------ 종료
