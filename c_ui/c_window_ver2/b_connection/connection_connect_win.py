@@ -1,7 +1,8 @@
-from PySide6.QtWidgets import QListWidgetItem, QMainWindow, QHBoxLayout, QWidget
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QListWidgetItem, QMainWindow, QHBoxLayout, QMessageBox, QWidget
+from PySide6.QtCore import Qt, QTimer
 
 from b_core.e_worker_ver2.comport_scan_run_worker import ComportScanRunWorker
+from b_core.d_dal.serial_setting import SerialSetting
 from b_core.d_dal.service_port import ServicePort
 from b_core.c_manager.connection_setting_manager import ConnectionSettingManager
 
@@ -26,7 +27,7 @@ class ConnectionConnectWin(QMainWindow):
        - 통신 설정 리스트에서 특정 항목이 선택되거나 'Scan' 버튼을 누르면, 백그라운드 스레드에서 포트 검색을 시작합니다.
        - 기존에 진행 중인 스캔/연결 작업이 있다면 안전하게 중지(Stop)시킨 후 새로운 작업을 수행합니다.
        - 검색된 모든 COM Port에 대해 "Checking..." 상태로 등록 후,
-         선택된 통신 설정값을 이용해 순차적으로 포트를 'Open > Send("i:83\\r\\n") > Read > Close' 해보며 유효성을 판단합니다.
+         선택된 통신 설정값을 이용해 순차적으로 포트를 'Open > Send(식별 요청 + 설정 종료문자) > Read > Close' 해보며 유효성을 판단합니다.
        - 연결에 성공하여 응답(Response)을 받은 포트는 활성화 상태와 함께 수신된 데이터를 표시하고, 실패한 포트는 비활성화됩니다.
 
     3. 사용자 연결 및 종료 처리:
@@ -39,7 +40,7 @@ class ConnectionConnectWin(QMainWindow):
         self.resize(750, 450)
 
         self.conn_manager = ConnectionSettingManager()
-        self._open_port_name = None  # 더블클릭으로 선택된 연결 대상 포트
+        self._open_setting: SerialSetting | None = None  # 더블클릭으로 선택된 연결 대상 (포트 + 설정)
         self._wait_box = None        # 스캔 종료 대기 안내 박스
 
         self.scan_worker = ComportScanRunWorker(self.handle_ports_found, self.handle_port_checked, self.handle_scan_stopped, parent=self)
@@ -49,7 +50,9 @@ class ConnectionConnectWin(QMainWindow):
         self._is_closing = False
 
         self._init_ui()
-        self._load_connection_list()
+        # 선택 항목 복원(→ 스캔 시작, 설정이 잘못됐으면 안내 대화상자)은 창이 표시된 뒤에 —
+        # 생성자 안에서 띄우면 창 없이 대화상자만 먼저 뜬다 (RestoreWin 과 같은 방식)
+        QTimer.singleShot(0, self._load_connection_list)
 
         # 설정 윈도우 등에서 목록이 바뀌면 리스트 갱신
         self.conn_manager.sig_list_changed.connect(self._load_connection_list)
@@ -88,28 +91,51 @@ class ConnectionConnectWin(QMainWindow):
         # 선택 항목 복원 (setCurrentRow -> on_change_connection_item 에서 스캔 시작)
         self.connection_list_widget.setCurrentRow(self.conn_manager.selected_index())
 
+    def _make_setting(self, port_name: str, item: dict) -> SerialSetting | None:
+        """connections.json 항목 → SerialSetting. 표에 없는 코드(손으로 고친 파일의 오타)는
+        대화상자로 알리고 None — 조용한 폴백 없음 (2026-09-29 결정)."""
+        try:
+            return SerialSetting.from_connection(port_name, item)
+        except ValueError as e:
+            QMessageBox.warning(self, "Invalid Connection Setting",
+                                f"The selected connection setting cannot be used:\n{e}\n\n"
+                                "Check connections.json (parity 0/2/3/4/5, stopBits 1/2/3, "
+                                "termination 0/1/2, dataBits 5-8).")
+            return None
+
+    def _start_scan(self, item: dict | None):
+        if item is None:
+            return
+        setting = self._make_setting("", item)  # 포트 이름은 스캔 스레드가 포트마다 바꿔 쓴다
+        if setting is None:
+            self.port_list_widget.clear()  # 이전 설정으로 찾은 포트 목록을 남겨 두지 않는다
+            return
+        self.scan_worker.start(setting)
+
     def on_clicked_scan(self):
-        setting = self.conn_manager.selected()
-        if setting is not None:
-            self.scan_worker.start(setting)
+        self._start_scan(self.conn_manager.selected())
 
     def on_change_connection_item(self, index):
         if index < 0 or index >= self.conn_manager.count():
             return
 
         self.conn_manager.select(index)
-        self.scan_worker.start(self.conn_manager.get(index))
+        self._start_scan(self.conn_manager.get(index))
 
     def on_select_port_item(self, index):
-        if self.conn_manager.selected() is None:
+        connection = self.conn_manager.selected()
+        port_item = self.port_list_widget.item(index.row())
+        if connection is None or port_item is None:
             return
 
-        item = self.port_list_widget.item(index.row())
-        if item is not None:
-            self._open_port_name = item.data(Qt.UserRole)
+        # 설정 검증은 여기서 한 번 — 잘못됐으면 안내만 하고 창은 남긴다 (스캔 중지·닫기로 가지 않는다)
+        setting = self._make_setting(port_item.data(Qt.UserRole), connection)
+        if setting is None:
+            return
 
-            if self.scan_worker.stop():
-                self.handle_scan_stopped()
+        self._open_setting = setting
+        if self.scan_worker.stop():
+            self.handle_scan_stopped()
 
     def handle_ports_found(self, port_names):
         self.port_list_widget.clear()
@@ -147,19 +173,8 @@ class ConnectionConnectWin(QMainWindow):
         self.close()
 
     def _execute_port_open(self):
-        if self._open_port_name is None:
-            return
-
-        setting = self.conn_manager.selected()
-        if setting is None:
-            return
-
-        ServicePort().open(self._open_port_name,
-                           setting["baudrate"],
-                           setting["dataBits"],
-                           setting["parity"],
-                           setting["stopBits"],
-                           setting["termination"])
+        if self._open_setting is not None:
+            ServicePort().open(self._open_setting)
 
     def closeEvent(self, event):
         if self._is_closing:

@@ -5,28 +5,27 @@ sig_wait_started(title, message) / sig_wait_finished 시그널만 내고,
 표시는 윈도우가 담당한다. (c_window_ver2/x_message/wait_message_box.py 참고)
 """
 
-import serial
 import serial.tools.list_ports
 
 from PySide6.QtCore import QThread, Signal, QObject, QCoreApplication, Qt
 
+from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.d_dal.serial_setting import SerialSetting, probe_once
 from b_core.d_dal.service_port import ServicePort
 
+SCAN_PACKET = "i:83"  # 장비 식별 요청 (ver1 과 같은 SN 읽기 요청) — 응답 유무·내용만 표시한다
+
 class PortScanThread(QThread):
-    """
-    UI 프리징을 방지하기 위해 백그라운드에서 사용 가능한 COM Port를 검색하고,
-    각 Port에 순차적으로 연결하여 데이터를 읽어오는 Thread 클래스입니다.
-    """
+    """PC 의 COM 포트를 나열하고, 포트마다 선택된 통신 설정으로 1왕복(probe_once) 해 본다.
+    (UI 프리징 방지를 위한 백그라운드 스레드)"""
     ports_found = Signal(list)
     port_checked = Signal(str, bool, str)  # port_name, success, read_data
 
-    def __init__(self, used_service_port_name, connection_setting, parent=None):
+    def __init__(self, used_service_port_name, setting: SerialSetting, parent=None):
         super().__init__(parent)
-        term_map_bytes = {0: b"\r\n", 1: b"\n", 2: b"\r"}
-
         self.used_service_port_name = used_service_port_name if used_service_port_name is not None else ""
-        self.setting = connection_setting
-        self._termination_chars = term_map_bytes.get(self.setting.get("termination", 0), b"\r\n")
+        self.setting = setting  # port_name 은 포트마다 바꿔 쓴다
+        self._log = AppLogManager().get_logger("ComportScan", is_global=True)
         self._is_running = True
 
     def stop(self):
@@ -38,14 +37,6 @@ class PortScanThread(QThread):
         port_names = [port.device for port in available_ports]
         self.ports_found.emit(port_names)
 
-        parity_map = {0: serial.PARITY_NONE, 2: serial.PARITY_EVEN, 3: serial.PARITY_ODD, 4: serial.PARITY_SPACE, 5: serial.PARITY_MARK}
-        stop_map = {1: serial.STOPBITS_ONE, 2: serial.STOPBITS_TWO, 3: serial.STOPBITS_ONE_POINT_FIVE}
-
-        baudrate = self.setting.get("baudrate", 38400)
-        data_bits = self.setting.get("dataBits", 7)
-        parity = parity_map.get(self.setting.get("parity", 2), serial.PARITY_EVEN)
-        stop_bits = stop_map.get(self.setting.get("stopBits", 1), serial.STOPBITS_ONE)
-
         for port_name in port_names:
             if not self._is_running:
                 break
@@ -55,38 +46,16 @@ class PortScanThread(QThread):
                 continue
 
             try:
-                # Open: pyserial은 생성과 동시에 포트가 열립니다. (with 문으로 자동 Close 처리)
-                with serial.Serial(
-                    port=port_name,
-                    baudrate=baudrate,
-                    bytesize=data_bits,
-                    parity=parity,
-                    stopbits=stop_bits,
-                    timeout=0.1,        # 읽기 타임아웃 100ms
-                    write_timeout=0.1,  # 쓰기 타임아웃 100ms — 기본값 None 이면 write() 가 무한 대기할 수 있음
-                ) as ser:
-
-                    # Send (write_timeout 초과 시 SerialTimeoutException — SerialException 의 하위 클래스라 아래에서 잡힘)
-                    ser.write(b"i:83\r\n")
-                    ser.flush()  # 전송 완료 대기 (waitForBytesWritten 대체)
-
-                    # Read: 종료 문자열이 오거나 100ms 타임아웃이 발생할 때까지 대기
-                    # size 제한: 종료 문자 없이 계속 바이트를 뿜는 장치가 물려 있으면 read_until 이 끝나지 않으므로 상한을 둔다
-                    buffer = ser.read_until(self._termination_chars, size=256)
-                    
-                    # 수신된 데이터가 있으면 디코딩, 없으면 빈 문자열
-                    response_data = buffer.decode('utf-8', errors='ignore').strip() if buffer else ""
-
-                    # 응답 데이터가 있으면 성공, 없으면 실패로 간주할 수도 있습니다.
-                    # 여기서는 기존 로직을 따라 예외가 나지 않으면 응답 데이터 유무와 상관없이 정상 통신으로 처리했습니다.
-                    self.port_checked.emit(port_name, True, response_data)
-
-            except serial.SerialException:
-                # 포트가 이미 다른 프로그램에 의해 사용 중이거나, 권한이 없거나, 열 수 없는 경우
+                # 열기 > 식별 요청 + 설정 종료문자 전송 > 종료문자까지 읽기(100ms) > 닫기
+                response = probe_once(self.setting._replace(port_name=port_name), SCAN_PACKET, timeout=0.1)
+            except Exception as e:
+                # 다른 프로그램이 사용 중, 권한 없음, 쓰기 타임아웃 등 — 원인은 로그로 (N034)
+                self._log.warning(f"{port_name}: {type(e).__name__}: {e}")
                 self.port_checked.emit(port_name, False, "")
-            except Exception:
-                # 기타 알 수 없는 에러
-                self.port_checked.emit(port_name, False, "")
+                continue
+
+            # 예외가 없으면 응답 유무와 무관하게 통신 가능으로 본다 (ver1 과 같은 기준)
+            self.port_checked.emit(port_name, True, response.decode("utf-8", errors="ignore").strip())
 
 class ComportScanRunWorker(QObject):
     # 이전 스캔 종료를 기다리는 동안 윈도우가 대기 표시를 띄우고/내리게 한다
@@ -107,8 +76,10 @@ class ComportScanRunWorker(QObject):
 
         self.destroyed.connect(self._destroyed)
 
-    def start(self, connection_setting):
-        self._next_setting = connection_setting
+    def start(self, setting: SerialSetting):
+        """setting 의 통신 설정으로 스캔 시작 (port_name 은 무시 — 포트마다 바꿔 쓴다).
+        스캔 중이면 끝나기를 기다렸다가 시작한다."""
+        self._next_setting = setting
         if self._thread is not None and self._thread.isRunning():
             self._stop_thread("Preparing to scan...", "Please wait for the previous scan to complete...", self._start_thread)
             return 

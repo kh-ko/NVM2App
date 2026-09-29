@@ -64,7 +64,6 @@ ver1 에서 달라진 점:
 from enum import Enum, auto
 from typing import NamedTuple, Optional
 
-import serial
 from PySide6.QtCore import QCoreApplication, QObject, QThread, QTimer, Signal, Slot
 
 from b_core.b_datatype import param_enum as p_enum
@@ -73,6 +72,7 @@ from b_core.b_datatype.general_enum import (ParamAccType, ParamParseErrType,
 from b_core.b_datatype.parameter import Parameter
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.parameter_manager import ParamManager
+from b_core.d_dal.serial_setting import SerialSetting, probe_once
 from b_core.d_dal.service_port import ServicePort
 from b_core.g_protocol.packet_spec import PacketSpec
 from b_core.g_protocol.spec_registry import SpecRegistry
@@ -144,39 +144,21 @@ class ParameterThread(QObject):
 
         self.sig_raw_write_result.emit(tag, packet, response, err_type)
 
-    @Slot(int, str, object)
-    def process_reboot_probe(self, seq: int, packet: str, setting: tuple):
-        """재부팅 확인 probe — ServicePort 는 닫힌 채, 임시 raw serial 연결로
-        요청을 보내 장비 응답 여부만 확인한다. (ComportScanRunWorker 와 같은 패턴)"""
-        port_name, baudrate, data_bits, parity, stop_bits, termination = setting
-
-        parity_map = {0: serial.PARITY_NONE, 2: serial.PARITY_EVEN, 3: serial.PARITY_ODD,
-                      4: serial.PARITY_SPACE, 5: serial.PARITY_MARK}
-        stop_map = {1: serial.STOPBITS_ONE, 2: serial.STOPBITS_TWO, 3: serial.STOPBITS_ONE_POINT_FIVE}
-        term_map_bytes = {0: b"\r\n", 1: b"\n", 2: b"\r"}
-        term = term_map_bytes.get(termination, b"\r\n")
-
+    @Slot(int, str, object, str)
+    def process_reboot_probe(self, seq: int, packet: str, setting: SerialSetting, expected_prefix: str):
+        """재부팅 확인 probe — ServicePort 는 닫힌 채, 임시 raw 포트 1왕복(probe_once)으로 장비 응답
+        여부만 확인한다 (ComportScan 과 같은 경로). 판정은 spec 이 준 정상 응답 접두로 한다 (F026)."""
         try:
-            with serial.Serial(port=port_name, baudrate=baudrate, bytesize=data_bits,
-                               parity=parity_map.get(parity, serial.PARITY_NONE),
-                               stopbits=stop_map.get(stop_bits, serial.STOPBITS_ONE),
-                               timeout=0.5, write_timeout=0.5) as ser:
-                ser.reset_input_buffer()
-                ser.write(packet.encode('utf-8') + term)
-                ser.flush()
-                response = ser.read_until(term)
+            response = probe_once(setting, packet, timeout=0.5)
+        except Exception as e:  # 포트 열기 실패(아직 재부팅 중), 쓰기 타임아웃 등
+            self.sig_reboot_probe_result.emit(seq, False, f"{type(e).__name__}: {e}")
+            return
 
-            if response.startswith(b"p:"):
-                detail = response.decode('utf-8', errors='ignore').strip()
-                self.sig_reboot_probe_result.emit(seq, True, detail)
-            else:
-                detail = response.decode('utf-8', errors='ignore').strip() or "no response"
-                self.sig_reboot_probe_result.emit(seq, False, detail)
-
-        except serial.SerialException as e:
-            self.sig_reboot_probe_result.emit(seq, False, str(e))
-        except Exception as e:
-            self.sig_reboot_probe_result.emit(seq, False, str(e))
+        detail = response.decode("utf-8", errors="ignore").strip()
+        if response.startswith(expected_prefix.encode("utf-8")):
+            self.sig_reboot_probe_result.emit(seq, True, detail)
+        else:
+            self.sig_reboot_probe_result.emit(seq, False, detail or "no response")
 
 
 class ParameterRunWorker(QObject):
@@ -184,7 +166,7 @@ class ParameterRunWorker(QObject):
     sig_request = Signal(int, str, object)
     sig_single_read_request = Signal(str, object)
     sig_raw_write_request = Signal(str, str)
-    sig_reboot_probe_request = Signal(int, str, object)
+    sig_reboot_probe_request = Signal(int, str, object, str)  # seq, packet, SerialSetting, 정상 응답 접두
 
     # 외부 공개
     sig_single_read_result = Signal(str, str, object, SvcPortErrType)  # packet, response, param, err
@@ -268,7 +250,8 @@ class ParameterRunWorker(QObject):
 
         # 재부팅 대기
         self._reboot_probe_packet: str = ""
-        self._reboot_port_setting: tuple = ()
+        self._reboot_port_setting: SerialSetting | None = None
+        self._reboot_expected_prefix: str = ""
         self.reboot_timer = QTimer(self)
         self.reboot_timer.setSingleShot(True)
         self.reboot_timer.timeout.connect(self._on_timeout_reboot)
@@ -542,15 +525,14 @@ class ParameterRunWorker(QObject):
         self._stop_all()
         self.sig_reboot_finished.emit(False)
 
-    def start_reboot_wait(self, port_setting: tuple) -> bool:
+    def start_reboot_wait(self, port_setting: SerialSetting) -> bool:
         """워커 밖의 요인(펌웨어 업데이트 등)으로 장비가 재부팅될 때 재부팅 대기를
         외부에서 시작한다. 이후 흐름은 reconnect param 쓰기에 의한 재부팅과 같다
         (sig_reboot_started -> SN probe 폴링 -> 응답 시 ServicePort.open ->
         sig_reboot_finished(True) -> 재연결 refresh 는 윈도우 경로).
 
-        port_setting: 재연결에 쓸 (port_name, baudrate, data_bits, parity,
-        stop_bits, termination) — 호출측이 ServicePort 를 닫기 전에 스냅샷해 둔
-        값. ServicePort 가 아직 열려 있으면 여기서 닫는다 (probe 는 임시 raw
+        port_setting: 재연결에 쓸 SerialSetting — 호출측이 ServicePort 를 닫기 전에
+        svc.setting 으로 스냅샷해 둔 값. ServicePort 가 아직 열려 있으면 여기서 닫는다 (probe 는 임시 raw
         serial 연결로만 수행하므로 같은 포트가 열려 있으면 안 된다).
         이미 재부팅 대기 중이면 False."""
         if self._state == _WorkerState.REBOOT:
@@ -559,7 +541,7 @@ class ParameterRunWorker(QObject):
         ServicePort().close()
         return self._start_reboot(port_setting)
 
-    def _start_reboot(self, port_setting: tuple | None = None) -> bool:
+    def _start_reboot(self, port_setting: SerialSetting | None = None) -> bool:
         """port_setting 이 None 이면(쓰기 경로) 현재 ServicePort 설정을 백업한 뒤
         닫는다. 주어지면(외부 시작 경로) 그 값을 재연결에 쓴다."""
         sn = ParamManager().get_by_full_path("System.Identification.Serial Number")
@@ -571,14 +553,21 @@ class ParameterRunWorker(QObject):
             return False
 
         self._reboot_probe_packet = sn_spec.build_request()
+        self._reboot_expected_prefix = sn_spec.expected_response_prefix  # probe 판정 기준 (F026)
 
         if port_setting is None:
             # 포트 설정을 백업한 뒤 닫는다. 재부팅 대기 동안 ServicePort 는 닫힌 채
             # 유지되고, 확인은 임시 raw serial 연결(probe)로만 수행한다.
             svc = ServicePort()
-            port_setting = (svc.port_name, svc.baudrate, svc.data_bits,
-                            svc.parity, svc.stop_bits, svc.termination)
+            port_setting = svc.setting
             svc.close()
+
+        if port_setting is None:
+            # 쓰기 응답과 재부팅 진입 사이에 끊긴 경우 — 빈 설정으로 영원히 probe 하지 않는다
+            self._log.error("reboot: port setting unavailable (disconnected) - abort")
+            self._stop_all()
+            self.sig_reboot_finished.emit(False)
+            return False
 
         self._reboot_port_setting = port_setting
 
@@ -598,7 +587,7 @@ class ParameterRunWorker(QObject):
             return
 
         self.sig_reboot_probe_request.emit(self._seq, self._reboot_probe_packet,
-                                           self._reboot_port_setting)
+                                           self._reboot_port_setting, self._reboot_expected_prefix)
 
     def _handle_reboot_probe_result(self, seq: int, success: bool, detail: str):
         if seq != self._seq or self._state != _WorkerState.REBOOT:
@@ -620,7 +609,7 @@ class ParameterRunWorker(QObject):
         setting = self._reboot_port_setting
         self._stop_all()
         self.sig_reboot_finished.emit(True)  # 윈도우가 대기 다이얼로그를 닫는다
-        ServicePort().open(*setting)
+        ServicePort().open(setting)
 
     # ------------------------------------------------------------ 작업 큐 처리
     def _start_sequence(self, jobs: list[_Job], is_refresh: bool):

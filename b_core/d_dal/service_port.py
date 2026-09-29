@@ -3,6 +3,7 @@ from PySide6.QtCore import QCoreApplication, QObject, Signal, Qt, QThread, QMute
 
 from b_core.b_datatype.general_enum import SvcPortErrType
 from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.d_dal.serial_setting import SerialSetting
 
 class ServicePort(QObject):
     _instance = None
@@ -37,12 +38,7 @@ class ServicePort(QObject):
         self.serial_port: serial.Serial | None = None
         self._connect_info : str = ""
         self._termination_chars = b"\r\n" # 기본값
-        self.port_name = ""
-        self.baudrate = 0
-        self.data_bits = 0
-        self.parity = 0
-        self.stop_bits = 0
-        self.termination = 0
+        self._setting: SerialSetting | None = None  # 열려 있는 포트의 설정 (닫히면 None) — _info_mutex 아래
 
         # 락 2개의 역할 분리:
         # - _mutex      : 시리얼 I/O + 포트 상태(open/close/request). 왕복 내내 점유된다.
@@ -108,40 +104,27 @@ class ServicePort(QObject):
                 info = self._pending_infos.pop(0)
             self.connect_info_changed.emit(info)
 
-    def open(self,  port_name: str, baudrate: int, data_bits: int, parity: int, stop_bits: int, termination: int) -> bool:
-        with QMutexLocker(self._mutex):
-            self.port_name = port_name
-            self.baudrate = baudrate
-            self.data_bits = data_bits
-            self.parity = parity
-            self.stop_bits = stop_bits
-            self.termination = termination
-            parity_map = {0: serial.PARITY_NONE, 2: serial.PARITY_EVEN, 3: serial.PARITY_ODD, 4: serial.PARITY_SPACE, 5: serial.PARITY_MARK}
-            stop_map = {1: serial.STOPBITS_ONE, 2: serial.STOPBITS_TWO, 3: serial.STOPBITS_ONE_POINT_FIVE}
-            term_map_bytes = {0: b"\r\n", 1: b"\n", 2: b"\r"}
-            termination_map = {0: 'CR+LF', 1: 'LF', 2: 'CR'}
+    def open(self, setting: SerialSetting) -> bool:
+        """setting 으로 포트를 연다 (열려 있던 포트는 먼저 닫는다).
 
+        코드 → pyserial 값 변환과 코드 검증은 SerialSetting 몫 — 표에 없는 코드는 호출측이
+        from_connection() 에서 미리 거른다 (여기서는 ValueError 가 그대로 올라온다)."""
+        with QMutexLocker(self._mutex):
             self._close_internal()
 
             try:
-                p_val = parity_map.get(parity, serial.PARITY_NONE)
-                s_val = stop_map.get(stop_bits, serial.STOPBITS_ONE)
+                self.serial_port = serial.Serial(**setting.pyserial_kwargs(timeout=0.5))
+                self._termination_chars = setting.term_bytes
+                with QMutexLocker(self._info_mutex):
+                    self._setting = setting
 
-                self.serial_port = serial.Serial(port=port_name, baudrate=baudrate, bytesize=data_bits, parity=p_val, stopbits=s_val, timeout=0.5, write_timeout=0.5)
-
-                self._termination_chars = term_map_bytes.get(termination, b"\r\n")
-
-                p_str = p_val
-                s_str = str(s_val)
-                t_str = termination_map.get(termination, 'CR+LF')
-
-                new_info = f"{port_name}-{baudrate}-{data_bits}-{p_str}-{s_str}-{t_str}"
+                new_info = setting.describe()
                 self._set_connect_info(new_info)
                 self._log.info(f"port opened: {new_info}")
                 success = True
 
             except serial.SerialException as e:
-                self._log.error(f"port open failed: {port_name} ({e})")
+                self._log.error(f"port open failed: {setting.port_name} ({e})")
                 self._close_internal()
                 success = False
 
@@ -151,12 +134,6 @@ class ServicePort(QObject):
     def close(self):
         with QMutexLocker(self._mutex):
             self._close_internal()
-            self.port_name = ""
-            self.baudrate = 0
-            self.data_bits = 0
-            self.parity = 0
-            self.stop_bits = 0
-            self.termination = 0
 
         self._flush_connect_signals()
 
@@ -205,11 +182,16 @@ class ServicePort(QObject):
         except Exception as e:
             return None, SvcPortErrType.UNKNOWN_ERR
 
-    def get_port_name(self)-> str | None:
-        with QMutexLocker(self._mutex):
-            if self.serial_port is None or not self.serial_port.is_open:
-                return None
-            return self.serial_port.port
+    def get_port_name(self) -> str | None:
+        setting = self.setting
+        return setting.port_name if setting is not None else None
+
+    @property
+    def setting(self) -> SerialSetting | None:
+        """열려 있는 포트의 설정 (닫혀 있으면 None) — 재부팅 대기·펌웨어 업데이트가 재연결에 쓰는 스냅샷.
+        _info_mutex 만 잡으므로 워커의 시리얼 왕복(_mutex)을 기다리지 않는다 (F016)."""
+        with QMutexLocker(self._info_mutex):
+            return self._setting
 
     def _close_internal(self):
         if self.serial_port is not None:
@@ -219,4 +201,6 @@ class ServicePort(QObject):
 
             self.serial_port = None
 
+        with QMutexLocker(self._info_mutex):
+            self._setting = None
         self._set_connect_info("")

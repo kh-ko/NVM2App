@@ -58,6 +58,7 @@ from PySide6.QtWidgets import QHBoxLayout, QMessageBox, QWidget
 
 from b_core.a_define import file_folder_path as path_def
 from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.d_dal.serial_setting import SerialSetting
 from b_core.e_worker_ver2.firmware_run_worker import (AdapterType, FirmwarePhase,
                                                       FirmwareRunWorker, FirmwareSource,
                                                       FirmwareWriteJob, list_com_port_names)
@@ -166,7 +167,7 @@ class FactoryFirmwareUpdateWin(ParamWin):
 
         self._log = AppLogManager().get_logger(self.win_name)
         self._job: FirmwareWriteJob | None = None
-        self._saved_port_setting: tuple | None = None  # 업데이트 전 ServicePort 설정 (재연결용)
+        self._saved_port_setting: SerialSetting | None = None  # 업데이트 전 ServicePort 설정 (재연결용)
 
         # 업데이트 전 저장한 백업 파일 — 공장 초기화 후 RestoreWin 이 자동 로드한다.
         # 파일이 사라졌으면(이동/삭제) 없는 것으로 취급한다
@@ -378,11 +379,7 @@ class FactoryFirmwareUpdateWin(ParamWin):
         # 재연결용 설정 스냅샷은 닫기 전에 — close() 가 ServicePort 의 설정을 지운다.
         # 업데이트 전 미연결이면 None (완료 후 재부팅 대기 없이 끝낸다)
         svc = self.svc_port
-        if svc.connect_info:
-            self._saved_port_setting = (svc.port_name, svc.baudrate, svc.data_bits,
-                                        svc.parity, svc.stop_bits, svc.termination)
-        else:
-            self._saved_port_setting = None
+        self._saved_port_setting = svc.setting  # 미연결이면 None
 
         # 워커가 같은 COM 포트를 직접 열므로 ServicePort 는 여기서 닫는다 —
         # 끊김 시그널은 ParamWin 의 공통 처리(상태바/param_worker 중지)가 받는다
