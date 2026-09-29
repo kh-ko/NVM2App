@@ -4,7 +4,9 @@
   창 열림 -> 릴리스 노트(version_info.txt) 조회 (워커 + 대기 박스)
   -> 좌측 버전 목록 / 우측 선택 버전의 수정 내용 표시 (최신이 위, 기본 선택)
   -> Update 클릭 -> 확인 질문 -> 워커: zip 다운로드 -> 압축 해제 ... 진행바 갱신
-  -> 성공: 설치 스크립트 기동 후 앱 종료 (스크립트가 파일 교체 후 앱을 재실행한다)
+  -> 성공: 스크립트 파일 생성 -> 다른 창 닫기 -> 앱 종료 -> aboutToQuit 에서 스크립트 기동
+     (스크립트가 파일 교체 후 앱을 재실행한다). 어떤 창이 닫기/종료를 거부하면 설치하지
+     않고 IDLE 로 돌아온다 — 스크립트가 먼저 떠서 앱 종료를 기다리다 실패하는 일이 없게.
   -> 실패/중단: 메시지, 진행바는 멈춘 자리 유지
 
 GUI 표시 정책: 사용자에게 보이는 것은 [Installed Version / Selected Version]
@@ -29,11 +31,13 @@ ver1 에서 달라진 점:
   창을 다시 연다.
 - 소스 실행(python main.py) 상태에서는 설치를 거부한다.
 - 실행 중 창 닫기: 확인 후 워커 중단 + 종료 대기 (ver1 은 QThread 파괴 크래시).
+- Abort/닫기 확인 질문 중에 도착한 준비 완료는 답이 나온 뒤 처리하고, Yes 뒤에 도착한
+  완료는 설치하지 않는다 (질문 중에 앱이 종료·업데이트되지 않게).
 """
 
 from enum import Enum, auto
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QListWidgetItem, QMessageBox,
                                QVBoxLayout, QWidget)
@@ -50,6 +54,7 @@ from c_ui.b_control_ver2.b_base.labels import BaseLabel, CheckLabel
 from c_ui.b_control_ver2.b_base.statusbars import BaseProgressBar
 from c_ui.b_control_ver2.d_param.param_win import ParamWin
 
+from c_ui.c_window_ver2.win_manager import WinManager
 from c_ui.c_window_ver2.x_message.app_update_message_box import (ask_abort_download,
                                                                  ask_install_version,
                                                                  show_source_run_notice)
@@ -63,7 +68,7 @@ class _Stage(Enum):
     IDLE       = auto()
     LISTING    = auto()  # 릴리스 노트 조회 중 (대기 박스)
     PREPARING  = auto()  # zip 다운로드 -> 압축 해제 스레드 실행 중
-    INSTALLING = auto()  # 설치 스크립트 기동 -> 앱 종료 직전
+    INSTALLING = auto()  # 스크립트 파일 생성 -> 다른 창 닫기 -> 앱 종료 (기동은 aboutToQuit 에서)
 
 
 class _ProgressRow(QWidget):
@@ -118,6 +123,11 @@ class HelpNvmUpdateWin(ParamWin):
         self._log = AppLogManager().get_logger(self.win_name)
         self._notes: list[ReleaseNote] = []
         self._selected_version: str | None = None
+        self._abort_requested = False  # Abort 확인(Yes) 뒤 — 그 후 도착하는 준비 완료도 설치하지 않는다 (F017)
+        self._asking_abort = False     # 중단 확인 질문 중 — 이때 도착한 준비 완료는 _deferred_result 에 보관
+        self._deferred_result: tuple | None = None  # (ok, package_root, msg) — 답이 나온 뒤 처리
+        self._script_path = ""         # write_install_script 결과 — aboutToQuit 에서 기동
+        self._package_root = ""        # 그 스크립트에 환경변수로 넘길 패키지 폴더
 
         self.toolbar.remove_action("Refresh")
         self.toolbar.add_action("Update", self.on_clicked_update)
@@ -271,6 +281,8 @@ class HelpNvmUpdateWin(ParamWin):
             return
 
         self.row_progress.reset()
+        self._abort_requested = False
+        self._deferred_result = None
         self._set_stage(_Stage.PREPARING)
         if not self.update_worker.start_prepare(version):
             self._log.error("[Cancelled] update worker is busy")
@@ -279,8 +291,36 @@ class HelpNvmUpdateWin(ParamWin):
     def on_clicked_abort(self):
         if self._stage != _Stage.PREPARING:
             return
-        if ask_abort_download(self):
+        if self._ask_abort():
             self.update_worker.abort()  # 결과는 handle_prepare_finished(False, "", ABORT_MESSAGE) 로
+        self._resume_deferred_result()
+
+    def _ask_abort(self) -> bool:
+        """중단 확인 질문 (Abort 버튼 / 창 닫기 공용).
+
+        질문 박스는 중첩 이벤트 루프라 그 사이에 준비 완료 시그널이 들어올 수 있다 — 그대로
+        두면 사용자가 답하기 전에 설치·종료로 넘어간다(F017). 질문 중 도착한 결과는
+        _deferred_result 에 보관한다 — 창을 유지하는 호출자는 _resume_deferred_result() 로
+        이벤트 루프에서 이어 처리하고, 창을 닫는 호출자는 버린다.
+        Yes 면 _abort_requested 를 세워, 워커의 마지막 중단 검사를 이미 지난 완료(ok=True)도
+        설치하지 않는다."""
+        self._asking_abort = True
+        try:
+            abort = ask_abort_download(self)
+        finally:
+            self._asking_abort = False
+        if abort:
+            self._abort_requested = True
+        return abort
+
+    def _resume_deferred_result(self):
+        if self._deferred_result is not None:
+            QTimer.singleShot(0, self._handle_deferred_result)  # 질문을 띄운 슬롯 밖(이벤트 루프)에서
+
+    def _handle_deferred_result(self):
+        result, self._deferred_result = self._deferred_result, None
+        if result is not None:
+            self.handle_prepare_finished(*result)
 
     # ------------------------------------------------------------ 준비 진행/완료
     def handle_prepare_progress(self, done: int, total: int):
@@ -295,6 +335,15 @@ class HelpNvmUpdateWin(ParamWin):
         if self._stage != _Stage.PREPARING:
             return
 
+        if self._asking_abort:
+            self._deferred_result = (ok, package_root, msg)  # 답이 나온 뒤 _handle_deferred_result 로
+            return
+
+        if ok and self._abort_requested:
+            # 워커의 마지막 중단 검사 뒤에 Yes 가 들어온 경우 — 패키지는 준비됐지만 설치하지 않는다
+            self._log.warning("[Aborted] package was ready, but the update was aborted by user")
+            ok, package_root, msg = False, "", ABORT_MESSAGE
+
         if not ok:
             # 진행바는 멈춘 자리에 둔다 — 세부 사유는 메시지와 LogView 로
             self._set_stage(_Stage.IDLE)
@@ -307,26 +356,62 @@ class HelpNvmUpdateWin(ParamWin):
         self.row_progress.set_checked(True)
         self._set_stage(_Stage.INSTALLING)
 
+        # 스크립트 파일은 종료 전에 만든다 — 실패를 대화상자로 보일 수 있는 마지막 지점
         try:
-            script_path = app_update_helper.launch_installer(package_root)
+            self._script_path = app_update_helper.write_install_script(package_root)
+            self._package_root = package_root
         except Exception as e:
-            self._log.error(f"[Install] could not start the installer: {e}")
+            self._log.error(f"[Install] could not create the installer script: {e}")
             self._set_stage(_Stage.IDLE)
             QMessageBox.critical(self, "Application Update Failed",
                                  f"The update package is ready, but the installer could not be started.\n\n{e}")
             return
 
-        # 스크립트가 exe 잠금 해제(=앱 종료)를 기다린다 — 여기서 앱을 끝낸다.
-        # 워커 정리는 aboutToQuit 연결로 수행된다
-        self._log.info(f"[Install] installer started ({script_path}) - quitting application")
+        # 다른 창을 먼저 닫는다 — 하나라도 거부(펌웨어 쓰기 중, FU 백업 중 등)하면 설치하지 않는다
+        if not WinManager().close_all(exclude=(self,)):
+            self._log.error("[Install] another window refused to close - update not started")
+            self._set_stage(_Stage.IDLE)
+            QMessageBox.warning(self, "Application Update",
+                                "Another window could not be closed (an operation may be in progress).\n"
+                                "Finish or close it, then try again.")
+            return
+
+        # 스크립트 기동은 종료가 확정된 aboutToQuit 에서 — 스크립트는 exe 잠금 해제(=앱 종료)를
+        # 기다리므로, 어떤 창이 quit 을 거부해도 스크립트가 먼저 떠서 30초 뒤 실패하는 일이 없다 (F094).
+        # 워커 정리도 aboutToQuit 연결로 수행된다
+        app = QApplication.instance()
+        app.aboutToQuit.connect(self._start_installer_on_quit)
+        self._log.info("[Install] quitting application - the installer starts on quit")
         QApplication.quit()
+
+        # Qt6 의 quit() 은 모든 창에 close 를 보내고 하나라도 거부하면 종료를 조용히 중단한다
+        # (param_win.on_clicked_quit_app 주석의 실측). 등록부 밖의 창(재부팅 대기 박스 등)이
+        # 거부하면 여기로 돌아온다 — 종료가 받아들여졌으면 quit() 안에서 모든 창이 이미 닫혀(숨겨져) 있고
+        # aboutToQuit 도 이미 발화했다
+        if any(w.isVisible() for w in QApplication.topLevelWidgets()):
+            app.aboutToQuit.disconnect(self._start_installer_on_quit)
+            self._log.error("[Install] application refused to quit - update not started")
+            self._set_stage(_Stage.IDLE)
+            QMessageBox.warning(self, "Application Update",
+                                "The application could not be closed (a window is busy).\n"
+                                "Finish the operation, then try again.")
+
+    def _start_installer_on_quit(self):
+        # aboutToQuit — 모든 창이 닫기를 받아들인 뒤에만 온다 (PySide6 6.10: quit() 안에서 동기 발화, 실측)
+        try:
+            app_update_helper.start_install_script(self._script_path, self._package_root)
+            self._log.info(f"[Install] installer started ({self._script_path})")
+        except Exception as e:
+            self._log.error(f"[Install] could not start the installer: {e}")
 
     # ------------------------------------------------------------ 종료
     def closeEvent(self, event: QCloseEvent):
         if self._stage == _Stage.PREPARING:
-            if not ask_abort_download(self):
+            if not self._ask_abort():
                 event.ignore()
+                self._resume_deferred_result()  # 창은 남는다 — 질문 중 도착한 준비 완료를 이어서 처리
                 return
+            self._deferred_result = None  # 창을 닫으므로 질문 중 도착한 준비 완료는 버린다
             self.update_worker.abort()
 
         # 실행 중 QThread 파괴 = 앱 abort — 중단 완료까지 기다린 뒤 닫는다

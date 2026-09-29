@@ -73,6 +73,19 @@ class WinManager:
         new_win.show()
         return new_win        
 
+    def close_all(self, exclude: tuple = ()) -> bool:
+        """등록된 창을 모두 close() 한다 (앱 업데이트 설치 전 등).
+
+        하나라도 닫기를 거부하면(closeEvent ignore — 펌웨어 쓰기 중, FU 백업 중 등)
+        그 자리에서 False 를 돌려주고 나머지 창은 건드리지 않는다. exclude 의 창은 건너뛴다.
+        (파괴는 deleteLater 라 목록 제거는 이벤트 루프로 돌아간 뒤 — 스냅샷을 돈다)"""
+        for win in list(self.windows.values()):
+            if win in exclude:
+                continue
+            if not win.close():
+                return False
+        return True
+
     def _on_window_destroyed(self, win_name):
         """창이 소멸될 때 호출되어 관리 딕셔너리에서 삭제"""
         if win_name in self.windows:

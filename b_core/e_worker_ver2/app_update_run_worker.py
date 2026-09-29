@@ -6,8 +6,9 @@ QThread] — start_* / abort / cleanup, aboutToQuit·destroyed 정리. 윈도우
 
 ver1 에서 달라진 점:
 - 다운로드 뒤 압축 해제도 스레드에서 한다 (ver1 은 UI 스레드에서 extractall).
-  결과는 교체 원본 폴더(exe 가 있는 폴더) 경로 — 설치 스크립트 기동은 윈도우가
-  app_update_helper.launch_installer() 로 한다 (앱 종료 결정은 UI 몫).
+  결과는 교체 원본 폴더(exe 가 있는 폴더) 경로 — 설치 스크립트는 윈도우가
+  app_update_helper.write_install_script() 로 만들고, 앱 종료가 확정된 뒤
+  start_install_script() 로 기동한다 (앱 종료 결정은 UI 몫).
 - 취소는 "CANCELED" 문자열 비교 대신 (ok=False, ABORT_MESSAGE) 로 통일.
 - 로그는 sig_log 로 넘기고 래퍼가 AppLogManager 에 기록한다
   (log_source 에 담당 윈도우 이름을 넘기면 그 창의 LogView 에 보인다).
@@ -86,6 +87,7 @@ class PackagePrepareThread(_AppUpdateThreadBase):
             package_root = app_update_helper.extract_package(zip_path, version)
             self.sig_log.emit(False, f"[Extract] package root -> {package_root}")
 
+            self._check_abort()  # 압축 해제 중 들어온 중단 요청 — 완료로 보고하지 않는다 (F017)
             self.sig_prepare_finished.emit(True, package_root, "")
 
         except Exception as e:

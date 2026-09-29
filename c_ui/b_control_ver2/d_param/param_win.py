@@ -264,6 +264,14 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         pass
 
     def closeEvent(self, event: QCloseEvent):
+        # 재부팅 대기 중이면 대기 박스를 함께 닫는다 — WindowModal 박스는 부모가 닫혀도 살아남아
+        # 이어지는 QApplication.quit() 을 거부한다(실측). 대기 자체는 아래 cleanup 이 끊는다.
+        # (Quit App 버튼과 같은 경로 — 재부팅 대기 중에도 앱 닫기는 항상 가능해야 한다, 2026-09-29 결정)
+        if self._reboot_wait_box is not None:
+            box = self._reboot_wait_box
+            self._reboot_wait_box = None
+            box.accept()
+
         # WA_DeleteOnClose 로 파괴되기 전에 워커 스레드를 명시적으로 정리한다.
         # 워커의 destroyed->cleanup 안전망은 창의 자식으로 파괴될 때 동작하지
         # 않아, 누락 시 QThread fatal 로 앱 전체가 abort 된다 (실측)

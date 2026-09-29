@@ -19,15 +19,16 @@ version_info.txt 형식 (ver1 과 동일, 최신이 위):
 
 설치 절차 — 실행 중인 exe 는 스스로 덮어쓸 수 없으므로 배치 스크립트에 위임한다:
     (워커)  download_package -> extract_package
-    (UI)    launch_installer -> 앱 종료
+    (UI)    write_install_script -> 다른 창 닫기 -> 앱 종료 (aboutToQuit 에서 start_install_script)
     (스크립트) exe 잠금 해제 대기(=앱 종료 확인) -> _internal 을 .old 로 보관 -> 덮어쓰기 복사
                -> 성공: .old 삭제 / 실패: .old 복원 -> 앱 재실행 -> 임시 정리
 
 ver1 에서 달라진 점:
 - PRESERVED_RELATIVE_DIRS(3_log) 는 패키지에 들어 있어도 배포하지 않는다.
   그 외(2_resource 포함)는 ver1 과 같이 배포본으로 덮어쓴다 (사용자 결정).
-- 배치 스크립트는 ASCII 전용 + 콘솔 OEM 코드페이지로 저장한다 (ver1 은 UTF-8
-  한글 + chcp 65001 — cmd 의 UTF-8 배치 해석은 불안정하다. build.bat 주석 참고).
+- 배치 스크립트는 순수 ASCII 로 저장하고 경로(앱 폴더/exe 이름/패키지)는 환경변수
+  NVM2APP_* 로 넘긴다 — 코드페이지와 무관하고 & % ! 같은 cmd 특수문자도 재해석되지 않는다
+  (ver1 은 UTF-8 한글 + chcp 65001 — cmd 의 UTF-8 배치 해석은 불안정하다. build.bat 주석 참고).
   잠금 검사는 'exe 를 쓰기 모드로 열기' 로 한다 — ver1 의 ren 은 실행 중인
   exe 도 이름이 바뀔 수 있어 잠금 검사가 되지 않는다.
 - 소스 실행(python main.py) 상태에서는 설치를 거부한다 — ver1 은 sys.argv[0]
@@ -37,7 +38,6 @@ ver1 에서 달라진 점:
 실패는 예외로 전파하며 호출측이 메시지로 바꾼다.
 """
 
-import ctypes
 import io
 import os
 import re
@@ -255,31 +255,43 @@ def _find_package_root(extract_dir: str, exe_name: str) -> str | None:
 # ============================================================================
 #  설치 (교체 스크립트)
 # ============================================================================
-def launch_installer(package_root: str) -> str:
-    """교체 배치 스크립트를 만들어 새 콘솔로 기동하고 스크립트 경로를 반환한다.
+def write_install_script(package_root: str) -> str:
+    """교체 배치 스크립트 파일을 만들고 그 경로를 반환한다 (기동은 start_install_script).
 
-    호출 직후 앱을 종료해야 한다 — 스크립트가 exe 잠금 해제(=앱 종료)를 기다린다.
-    배포 exe 에서만 동작한다 (소스 실행이면 예외)."""
+    배포 exe 에서만 동작한다 (소스 실행이면 예외). 앱 종료 전에 호출해 실패를
+    대화상자로 보일 수 있게 한다."""
     if not is_deployed_exe():
         raise RuntimeError("Application update works only in the deployed executable "
                            f"({APP_EXE_NAME}), not when running from source.")
 
     _drop_preserved_dirs(package_root)
 
-    script = _build_install_script(app_dir=installed_app_dir(), exe_name=installed_exe_name(),
-                                   package_root=package_root)
     script_path = os.path.join(WORK_DIR, INSTALL_SCRIPT_NAME)
-    with open(script_path, "w", encoding=_console_encoding(), newline="\r\n") as f:
-        f.write(script)
+    with open(script_path, "w", encoding="ascii", newline="\r\n") as f:  # 경로는 환경변수로 — 본문은 순수 ASCII
+        f.write(_build_install_script())
+    return script_path
 
+
+def start_install_script(script_path: str, package_root: str) -> None:
+    """교체 스크립트를 새 콘솔로 기동한다. 경로 세 개는 환경변수 NVM2APP_* 로 넘긴다.
+
+    앱 종료가 확정된 뒤(aboutToQuit)에 호출한다 — 스크립트는 exe 잠금 해제(=앱 종료)를
+    기다리므로, 어떤 창이 종료를 거부한 채 스크립트만 뜨면 30초 뒤 실패한다 (F094)."""
     # PyInstaller 부트로더 환경변수는 넘기지 않는다 — 재실행되는 새 exe 가
     # 이미 종료된 부모의 임시 폴더를 자기 것으로 오인하지 않게
     env = {key: value for key, value in os.environ.items()
            if not key.startswith(("_MEIPASS", "_PYI", "PYI_"))}
+    # 경로는 배치 본문이 아니라 환경변수로 — 환경 블록은 유니코드라 배치 파일의 코드페이지와 무관하고,
+    # 배치의 %NVM2APP_*% 확장 결과는 다시 해석되지 않아 & % ! 같은 문자도 그대로 전달된다 (N062 검토)
+    env["NVM2APP_APP_DIR"] = installed_app_dir()
+    env["NVM2APP_EXE_NAME"] = installed_exe_name()
+    env["NVM2APP_SRC_DIR"] = package_root
 
-    subprocess.Popen(["cmd.exe", "/c", script_path], cwd=WORK_DIR, env=env,
+    # 문자열 명령줄 + /s — cmd 는 바깥 따옴표 한 쌍만 벗기고 안쪽 "경로" 를 그대로 실행한다.
+    # 리스트 인자(["cmd.exe", "/c", path])는 %TEMP% 경로에 & ^ ( ) = , ; 가 있으면 cmd 의
+    # /c 따옴표 규칙에 걸려 실행되지 않는다 (N062, 실측). 배치를 직접 넘기는 형태도 같은 이유로 실패.
+    subprocess.Popen(f'cmd.exe /s /c ""{script_path}""', cwd=WORK_DIR, env=env,
                      creationflags=subprocess.CREATE_NEW_CONSOLE)
-    return script_path
 
 
 def _drop_preserved_dirs(package_root: str) -> None:
@@ -291,16 +303,9 @@ def _drop_preserved_dirs(package_root: str) -> None:
             shutil.rmtree(packaged_dir)
 
 
-def _console_encoding() -> str:
-    """cmd 가 배치 파일을 해석하는 콘솔(OEM) 코드페이지 — 한글 경로가 들어갈 수 있다."""
-    try:
-        return f"cp{ctypes.windll.kernel32.GetOEMCP()}"
-    except (AttributeError, OSError):
-        return "mbcs"
-
-
-def _build_install_script(app_dir: str, exe_name: str, package_root: str) -> str:
-    """교체 배치 스크립트 본문 (ASCII 전용 — 경로 외 비ASCII 문자를 넣지 않는다).
+def _build_install_script() -> str:
+    """교체 배치 스크립트 본문 (순수 ASCII — 경로는 환경변수 NVM2APP_APP_DIR / NVM2APP_EXE_NAME /
+    NVM2APP_SRC_DIR 로 받는다. start_install_script 가 넣어 준다).
 
     - 잠금 검사: 실행 중인 exe 는 쓰기 모드로 열 수 없다 (>> 리다이렉션 실패).
       PyInstaller onefile 은 부모/자식 두 프로세스가 같은 exe 라 둘 다 끝나야 통과.
@@ -309,13 +314,22 @@ def _build_install_script(app_dir: str, exe_name: str, package_root: str) -> str
       timeout 등)가 앞서 있어도 영향받지 않게.
     - 대기는 'ping -n (초+1) 127.0.0.1' 로 한다 — timeout.exe 는 stdin 이 콘솔이
       아니면(리다이렉션) 즉시 종료해 대기가 되지 않는다.
-    - 마지막 줄에서 자기 자신을 지운다 ((goto) 2>nul & del 관용구)."""
+    - 마지막 줄에서 자기 자신을 지운다 ((goto) 2>nul & del 관용구).
+    - 경로를 본문에 박지 않으므로 코드페이지(한글·ë 등)와 % 이스케이프 문제가 없다 (N062 검토).
+    - 지연 확장은 명시적으로 끈다 — 레지스트리(Command Processor 키의 DelayedExpansion=1)로 기본 켜진
+      PC 에서는 경로의 ! 가 확장 표시로 먹혀 사라진다 (실측).
+    - 환경변수 없이(남은 파일을 직접 실행) 시작되면 아무것도 하지 않는다 — 빈 경로로 ren/rd 가 돌지 않게."""
     return f"""@echo off
-setlocal
+setlocal DisableDelayedExpansion
 title NVM2App Update
-set "APP_DIR={app_dir}"
-set "EXE_NAME={exe_name}"
-set "SRC_DIR={package_root}"
+if not defined NVM2APP_SRC_DIR (
+    echo [ERROR] This script is started by NVM2App during an update. Do not run it directly.
+    pause
+    exit /b 1
+)
+set "APP_DIR=%NVM2APP_APP_DIR%"
+set "EXE_NAME=%NVM2APP_EXE_NAME%"
+set "SRC_DIR=%NVM2APP_SRC_DIR%"
 set "SYS32=%SystemRoot%\\System32"
 
 echo ===================================================
