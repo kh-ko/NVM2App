@@ -27,21 +27,18 @@ class ReadWriteEnumValueWidget(ValueWidget):
         self.set_value(None)
 
     def set_value(self, value):
-        self.value_widget.setPlaceholderText("Unknown")
-        self.setEnabled(True)
+        self.value_widget.setPlaceholderText(self._no_value_text())
+        self._sync_enabled()
         index = self.value_widget.findData(value)
         self.value_widget.setCurrentIndex(index)
 
     def get_value(self):
         return self.value_widget.currentData()
 
-    def set_not_support(self, is_not_support):
+    def _render_not_support(self, is_not_support):
+        super()._render_not_support(is_not_support)
         if is_not_support:
-            self.set_value(None)
-            self.commit()
-            # set_value 가 placeholder 를 "Unknown" 으로 되돌리므로 반드시 그 뒤에 덮어쓴다
-            self.value_widget.setPlaceholderText("Not Support")
-            self.setEnabled(False)
+            self.commit()  # 값 없음이 dirty 로 남지 않게
 
     def reg_value_widget_event(self):
         self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)
@@ -83,7 +80,7 @@ class ReadWriteBitmapValueWidget(ValueWidget):
 
     def set_value(self, value):
         self.value_widget.set_placeholder_visible(False)
-        self.setEnabled(True)
+        self._sync_enabled()
 
         if value is None:
             # 값 없음 — 전 비트를 '중간 상태'로 (클릭하면 해당 비트만 Checked 로
@@ -108,14 +105,13 @@ class ReadWriteBitmapValueWidget(ValueWidget):
                 result |= 1 << bit_offset
         return result
 
-    def set_not_support(self, is_not_support):
+    def _render_not_support(self, is_not_support):
+        super()._render_not_support(is_not_support)
         if is_not_support:
-            self.set_value(None)
-            self.commit()
-            # set_value 가 placeholder 를 걷으므로 반드시 그 뒤에 다시 씌운다
-            self.value_widget.setPlaceholderText("Not Support")
-            self.value_widget.set_placeholder_visible(True)
-            self.setEnabled(False)
+            self.commit()  # 값 없음이 dirty 로 남지 않게
+        # 값 없음은 중간 상태 체크박스로 보이므로, Not Support 일 때만 placeholder 문구를 덮어 보인다
+        self.value_widget.setPlaceholderText(self._no_value_text())
+        self.value_widget.set_placeholder_visible(is_not_support)
 
     def reg_value_widget_event(self):
         # 각 체크박스가 표준 시그널 소스 — 클릭 확정/코드 할당을 그대로 릴레이한다
@@ -153,7 +149,7 @@ class ReadWriteFloatValueSpinBoxWidget(ValueWidget):
         self.value_widget.setDecimals(decimals)
 
     def set_value(self, value):
-        self.setEnabled(True)
+        self._sync_enabled()
         # 스핀박스는 '값 없음'을 표현할 수 없으므로 None 은 0 으로 표시한다 (setValue(None) 은 TypeError)
         if value is None:
             value = 0
@@ -162,13 +158,11 @@ class ReadWriteFloatValueSpinBoxWidget(ValueWidget):
     def get_value(self):
         return self.value_widget.value()
 
-    def set_not_support(self, is_not_support):
-        # 비활성화 상태가 자동을 풀리는 경우는 set_value()호출하여 값을 지정할 때이다.
+    def _render_not_support(self, is_not_support):
         if is_not_support:
-            self.set_value(0)
+            self.set_value(0)  # 스핀박스는 값 없음을 표현할 수 없다 — 0 으로 두고 확정
             self.commit()
-            self.setEnabled(False)
-            
+
     def reg_value_widget_event(self):
         self.value_widget.sig_edited_by_user.connect(self.on_edited_by_user)
         self.value_widget.sig_edited_by_enter.connect(self.on_edit_by_enter)
@@ -204,8 +198,8 @@ class ReadWriteFloatValueWidget(ValueWidget):
         self.value_widget.setDecimals(decimals)
 
     def set_value(self, value):
-        self.value_widget.setPlaceholderText("Unknown")
-        self.setEnabled(True)
+        self.value_widget.setPlaceholderText(self._no_value_text())
+        self._sync_enabled()
         # None 은 빈 표시(placeholder 노출) — enum 콤보의 -1 과 동일 의미론 (BaseFloatLineEdit 계약)
         self.value_widget.setValue(value)
 
@@ -213,14 +207,10 @@ class ReadWriteFloatValueWidget(ValueWidget):
         # 값 없음/편집 중간 상태("", "-" 등)는 None (is_dirty 는 None 안전)
         return self.value_widget.value()
 
-    def set_not_support(self, is_not_support):
-        # 비활성화 상태가 자동을 풀리는 경우는 set_value()호출하여 값을 지정할 때이다.
+    def _render_not_support(self, is_not_support):
+        super()._render_not_support(is_not_support)
         if is_not_support:
-            self.set_value(None)
-            self.commit()
-            # set_value 가 placeholder 를 "Unknown" 으로 되돌리므로 반드시 그 뒤에 덮어쓴다
-            self.value_widget.setPlaceholderText("Not Support")
-            self.setEnabled(False)
+            self.commit()  # 값 없음이 dirty 로 남지 않게
 
     def reg_value_widget_event(self):
         self.value_widget.sig_edited_by_user.connect(self.on_edited_by_user)
@@ -261,8 +251,8 @@ class ReadWriteScaleValueWidget(ValueWidget):
         self.value_widget.setDecimals(decimals)
 
     def set_value(self, value):
-        self.value_widget.setPlaceholderText("Unknown")
-        self.setEnabled(True)
+        self.value_widget.setPlaceholderText(self._no_value_text())
+        self._sync_enabled()
 
         # None 은 빈 표시(placeholder 노출) — enum 콤보의 -1 과 동일 의미론 (BaseFloatLineEdit 계약)
         if value is not None:
@@ -276,14 +266,10 @@ class ReadWriteScaleValueWidget(ValueWidget):
             return None
         return value / self.scale
 
-    def set_not_support(self, is_not_support):
-        # 비활성화 상태가 자동을 풀리는 경우는 set_value()호출하여 값을 지정할 때이다.
+    def _render_not_support(self, is_not_support):
+        super()._render_not_support(is_not_support)
         if is_not_support:
-            self.set_value(None)
-            self.commit()
-            # set_value 가 placeholder 를 "Unknown" 으로 되돌리므로 반드시 그 뒤에 덮어쓴다
-            self.value_widget.setPlaceholderText("Not Support")
-            self.setEnabled(False)
+            self.commit()  # 값 없음이 dirty 로 남지 않게
 
     def reg_value_widget_event(self):
         self.value_widget.sig_edited_by_user.connect(self.on_edited_by_user)
@@ -314,8 +300,8 @@ class ReadWriteIntValueWidget(ValueWidget):
         self.value_widget.setRange(min_value, max_value)
 
     def set_value(self, value):
-        self.value_widget.setPlaceholderText("Unknown")
-        self.setEnabled(True)
+        self.value_widget.setPlaceholderText(self._no_value_text())
+        self._sync_enabled()
         # None 은 빈 표시(placeholder 노출) — enum 콤보의 -1 과 동일 의미론 (BaseFloatLineEdit 계약)
         self.value_widget.setValue(value)
 
@@ -324,14 +310,10 @@ class ReadWriteIntValueWidget(ValueWidget):
         value = self.value_widget.value()
         return None if value is None else int(value)
 
-    def set_not_support(self, is_not_support):
-        # 비활성화 상태가 자동을 풀리는 경우는 set_value()호출하여 값을 지정할 때이다.
+    def _render_not_support(self, is_not_support):
+        super()._render_not_support(is_not_support)
         if is_not_support:
-            self.set_value(None)
-            self.commit()
-            # set_value 가 placeholder 를 "Unknown" 으로 되돌리므로 반드시 그 뒤에 덮어쓴다
-            self.value_widget.setPlaceholderText("Not Support")
-            self.setEnabled(False)
+            self.commit()  # 값 없음이 dirty 로 남지 않게
 
     def reg_value_widget_event(self):
         self.value_widget.sig_edited_by_user.connect(self.on_edited_by_user)
@@ -366,8 +348,8 @@ class ReadWriteHexValueWidget(ValueWidget):
         self.value_widget.setDigits(digits)
 
     def set_value(self, value):
-        self.value_widget.setPlaceholderText("Unknown")
-        self.setEnabled(True)
+        self.value_widget.setPlaceholderText(self._no_value_text())
+        self._sync_enabled()
         # None 은 빈 표시(placeholder 노출) — enum 콤보의 -1 과 동일 의미론 (BaseHexLineEdit 계약)
         self.value_widget.setValue(value)
 
@@ -375,14 +357,10 @@ class ReadWriteHexValueWidget(ValueWidget):
         # 값 없음/편집 중간 상태("")는 None (is_dirty 는 None 안전)
         return self.value_widget.value()
 
-    def set_not_support(self, is_not_support):
-        # 비활성화 상태가 자동을 풀리는 경우는 set_value()호출하여 값을 지정할 때이다.
+    def _render_not_support(self, is_not_support):
+        super()._render_not_support(is_not_support)
         if is_not_support:
-            self.set_value(None)
-            self.commit()
-            # set_value 가 placeholder 를 "Unknown" 으로 되돌리므로 반드시 그 뒤에 덮어쓴다
-            self.value_widget.setPlaceholderText("Not Support")
-            self.setEnabled(False)
+            self.commit()  # 값 없음이 dirty 로 남지 않게
 
     def reg_value_widget_event(self):
         self.value_widget.sig_edited_by_user.connect(self.on_edited_by_user)

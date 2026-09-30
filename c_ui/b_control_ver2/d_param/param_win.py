@@ -403,10 +403,12 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
     def on_clicked_apply(self):
         # 값은 위젯의 도메인 값(숫자 또는 문자열)을 그대로 넘긴다 — 선로 문자열은 spec 의 codec 이
         # 선로값을 만든 뒤 한 번만 포맷한다 (여기서 문자열화하면 6자리 절단이 두 번 일어난다)
+        # 편집 가능한(활성·표시 중) 위젯의 dirty 값만 — 조건으로 비활성화됐거나 숨은 위젯의 편집은 보내지 않는다 (F064).
+        # 미확정 입력의 클램프·확정은 툴바가 액션 실행 전에 처리한다 (BaseToolBar.confirm_focused_edit)
         write_pairs = []
         for folder_widget in self.folder_widgets:
             for param_widget in folder_widget.widgets:
-                if param_widget.is_dirty():
+                if param_widget.is_editable() and param_widget.is_dirty():
                     write_pairs.append((param_widget.param, param_widget.get_value()))
 
         self.multiple_param_write(write_pairs)                    
@@ -544,8 +546,9 @@ class ParamIfaceEtherCatWin(ParamWin):
     def _apply_advanced_range_mode(self, is_advanced: bool):
         """Advanced: Scaling 폴더 표시 + Range 의 Data Value 숨김 / Basic: 반대.
 
-        숨겨지는 쪽의 RW 편집은 원복한다 — Apply 는 dirty 기준으로 동작하므로
-        (visible 무관), 숨은 편집이 장비로 새어 나가면 안 된다"""
+        숨겨지는 쪽의 RW 편집은 원복한다 — Apply 의 is_editable() 은 위젯 자신의 isHidden() 만 보므로
+        폴더 단위로 숨긴 Scaling 위젯은 걸러지지 않는다(Save/Load 의 isVisible 과 기준이 다름).
+        숨은 편집이 장비로 새어 나가면 안 된다"""
         self.is_advanced_range = is_advanced
 
         hidden_widgets = (self.range_data_value_widgets if is_advanced

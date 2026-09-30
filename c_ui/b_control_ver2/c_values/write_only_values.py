@@ -20,13 +20,8 @@ class WriteOnlyButtonValueWidget(ValueWidget):
     def get_value(self):
         return None
         
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.value_widget.setText("Not Support")
-            self.setEnabled(False)
-        else:
-            self.value_widget.setText(self._btn_text)
-            self.setEnabled(True)
+    def _render_not_support(self, is_not_support):
+        self.value_widget.setText("Not Support" if is_not_support else self._btn_text)
 
     def reg_value_widget_event(self):
         self.value_widget.clicked.connect(self.on_edited_by_user)
@@ -62,14 +57,6 @@ class WriteOnlyEnumValueWidget(WriteOnlyButtonValueWidget):
 
     def get_value(self):
         return self.combo_widget.currentData()
-
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.value_widget.setText("Not Support")
-            self.setEnabled(False)
-        else:
-            self.value_widget.setText(self._btn_text)
-            self.setEnabled(True)
 
     def reg_value_widget_event(self):
         self.value_widget.clicked.connect(self.on_edited_by_user)

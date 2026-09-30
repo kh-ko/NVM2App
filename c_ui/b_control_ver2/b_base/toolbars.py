@@ -16,7 +16,7 @@ BaseToolBar 의 QSS 에 남아 있는 QToolButton / QMenu 블록은 의도된 �
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QColor, QPainter
-from PySide6.QtWidgets import (QStyle, QStyleOptionToolButton, QToolBar,
+from PySide6.QtWidgets import (QApplication, QStyle, QStyleOptionToolButton, QToolBar,
                                QToolButton)
 
 from c_ui.b_control_ver2.b_base import icons
@@ -24,8 +24,20 @@ from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 
 
+def confirm_focused_edit() -> None:
+    """포커스를 가진 입력기의 편집을 확정한다.
+
+    툴바 버튼은 NoFocus 라 클릭해도 라인에딧이 포커스를 잃지 않아, 범위 밖 미확정 텍스트("150", 상한 130)가
+    validator 의 fixup(클램프) 없이 그대로 읽혔다 (F064/N118). 포커스를 빼면 QLineEdit/QSpinBox 가 focus-out 에서
+    fixup 과 editingFinished 를 스스로 수행하므로, 툴바 액션은 실행 직전에 이것을 부른다."""
+    focus = QApplication.focusWidget()
+    if focus is not None:
+        focus.clearFocus()
+
+
 class BaseToolBar(QToolBar, ColorStyled):
-    """앱 표준 툴바. 고정형(이동/플로팅 불가)이 기본이다."""
+    """앱 표준 툴바. 고정형(이동/플로팅 불가)이 기본이다.
+    액션 슬롯은 큐 연결로 실행되며, 실행 직전에 confirm_focused_edit() 로 편집 중인 입력을 확정한다."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -33,6 +45,7 @@ class BaseToolBar(QToolBar, ColorStyled):
         self.setFloatable(False)
 
         self._actions: dict[str, QAction] = {}
+        self._slots: dict[QAction, object] = {}  # 액션 → 실행할 슬롯 (실행 전 편집 확정을 끼워 넣기 위해)
 
         t = tokens()
         self._init_colors(WidgetColors(text=t.text_inverse,
@@ -41,16 +54,26 @@ class BaseToolBar(QToolBar, ColorStyled):
 
     # ------------------------------------------------------------ 액션
     def add_action(self, name: str, slot) -> QAction:
-        """텍스트 액션 추가. name 을 키로 remove / enable 제어한다."""
+        """텍스트 액션 추가. name 을 키로 remove / enable 제어한다.
+        슬롯은 큐 연결로, 실행 직전에 포커스 위젯의 편집을 확정한 뒤 호출된다 (confirm_focused_edit)."""
         action = self.addAction(name)
-        action.triggered.connect(slot, Qt.QueuedConnection)
+        self._slots[action] = slot
+        action.triggered.connect(self._on_action_triggered, Qt.QueuedConnection)
         self._actions[name] = action
         return action
 
+    def _on_action_triggered(self):
+        slot = self._slots.get(self.sender())
+        if slot is None:
+            return
+        confirm_focused_edit()
+        slot()
+
     def remove_action(self, name: str) -> None:
         if name in self._actions:
-            self.removeAction(self._actions[name])
-            del self._actions[name]
+            action = self._actions.pop(name)
+            self._slots.pop(action, None)
+            self.removeAction(action)
 
     def set_action_enabled(self, name: str, enabled: bool) -> None:
         if name in self._actions:

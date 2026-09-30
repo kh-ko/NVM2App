@@ -128,9 +128,11 @@ class MainPressurePanel(PanelWidget):
         if widget is None:
             return
 
+        # 플래그는 해제(False)도 밀어 넣는다 — 활성 여부는 위젯의 단일 결정 지점(_sync_enabled)이 정하므로
+        # set_value 만으로는 Not Support 비활성이 풀리지 않는다 (ParamWidget.handle_param_is_not_support_changed 와 동일)
+        widget.set_not_support(self._max_pres_param.is_not_support)
         if self._max_pres_param.is_not_support:
-            widget.set_not_support(True)   # 만압 대신 'Not Support' 유지
-            return
+            return  # 만압 대신 'Not Support' 유지
 
         widget.set_value(self.converter.get_dp_max_pres_str())
 

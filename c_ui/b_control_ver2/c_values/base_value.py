@@ -30,6 +30,7 @@ class ValueWidget(QWidget, ColorStyled):
         super().__init__(parent)
 
         self._enable_conditions = []
+        self._is_not_support = False
         # 라벨/dirty 마커는 구성에 따라 생성되지 않을 수 있다 — 사용측은 None 가드 필요
         self.lbl_label = None
         self.dirty_label = None
@@ -130,11 +131,36 @@ class ValueWidget(QWidget, ColorStyled):
         self.on_enable_condition_changed()
 
     def on_enable_condition_changed(self):
-        for ref_widget, conditions in self._enable_conditions:
-            if ref_widget.get_value() not in conditions:
-                self.setEnabled(False)
-                return
-        self.setEnabled(True)
+        self._sync_enabled()
+
+    # ------------------------------------------------------------ 활성 상태 — 단일 결정 지점 (8-d)
+    def _is_enabled_by_state(self) -> bool:
+        """Not Support 아님 AND 값 조건 AND enable 조건. 위젯 자신의 상태만 본다 (부모의 비활성은 무관)."""
+        return (not self._is_not_support
+                and self._value_allows_enable()
+                and all(ref_widget.get_value() in conditions for ref_widget, conditions in self._enable_conditions))
+
+    def _sync_enabled(self):
+        """활성 여부를 바꾸는 유일한 곳. set_value / set_not_support / enable 조건 변경이 모두 여기로 온다 —
+        어느 경로도 setEnabled(True) 로 다른 경로의 비활성을 되돌리지 않는다 (F060)."""
+        self.setEnabled(self._is_enabled_by_state())
+
+    def _value_allows_enable(self) -> bool:
+        """값 기준 활성 조건 — 기본 True. RO 위젯은 '값 없음(Unknown) = 비활성' 을 유지하려고 override 한다."""
+        return True
+
+    def _no_value_text(self, detail=None) -> str:
+        """값 없음 문구 — Not Support 중이면 "Not Support", 아니면 "Unknown"(detail 이 있으면 "Unknown (detail)").
+        set_value 의 값 없음 분기가 이것을 쓰므로, Not Support 중에 set_value 가 다시 불려도(컨버터 시그널,
+        Load File) 문구가 "Unknown" 으로 바뀌지 않는다."""
+        if self._is_not_support:
+            return "Not Support"
+        return "Unknown" if detail is None else f"Unknown ({detail})"
+
+    def is_editable(self) -> bool:
+        """Apply 수집 기준 — 상태상 활성이고 숨겨지지 않은 위젯의 편집값만 보낸다 (F064).
+        조건으로 비활성화된 위젯의 dirty 편집은 보내지 않되 되돌리지도 않는다 (2026-09-30 결정)."""
+        return self._is_enabled_by_state() and not self.isHidden()
 
     def on_edited_by_user(self):
         self.proc_dirty()
@@ -195,7 +221,8 @@ class ValueWidget(QWidget, ColorStyled):
         return None        
 
     def set_value(self, value):
-        #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 구현해야됨
+        #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 구현해야됨.
+        #표시만 바꾸고 self._sync_enabled() 를 부른다 — setEnabled 를 직접 호출하지 않는다 (8-d)
         pass
 
     def get_value(self):
@@ -208,8 +235,17 @@ class ValueWidget(QWidget, ColorStyled):
         pass
 
     def set_not_support(self, is_not_support):
-        #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 구현해야됨
-        pass
+        """Not Support 상태 지정 — 문구 표시는 위젯별 _render_not_support, 활성 여부는 _sync_enabled 가 정한다."""
+        self._is_not_support = bool(is_not_support)
+        self._render_not_support(self._is_not_support)
+        self._sync_enabled()
+
+    def _render_not_support(self, is_not_support):
+        # 기본: True 면 값 없음 표시로("Not Support" 문구는 set_value 가 _no_value_text 로 플래그에서 정한다),
+        # False 면 값이 없을 때만 다시 그려 문구를 "Unknown" 으로 되돌린다 — 그 사이 set_value 로 들어온 값은 유지.
+        # 값 재표시는 호출측(ParamWidget.handle_param_is_not_support_changed)이 set_value 로 한다.
+        if is_not_support or self.get_value() is None:
+            self.set_value(None)
 
     def reg_value_widget_event(self):
         #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 이벤트를 연결해야됨

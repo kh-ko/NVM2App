@@ -163,7 +163,9 @@ class LocalPresSettingWin(QMainWindow):
         # 값/dirty 는 반영 전에 함께 스냅샷 — 반영 도중 발화되는 sig_*_changed 가
         # 위젯을 재동기화(commit=clean)하므로 루프 안에서 is_dirty() 를 물으면
         # 뒤 순서의 편집이 누락된다.
-        dirty_values = {name: widget.get_value() for name, widget in self._widgets.items() if widget.is_dirty()}
+        # 미확정 입력(범위 밖 텍스트)의 클램프·확정은 툴바가 액션 실행 전에 처리한다 (BaseToolBar.confirm_focused_edit, N118)
+        dirty_values = {name: widget.get_value() for name, widget in self._widgets.items()
+                        if widget.is_editable() and widget.is_dirty()}
 
         for name, value in dirty_values.items():
             # 편집 중간 상태("-", 빈 칸)는 반영하지 않는다 (툴바 버튼은 포커스를

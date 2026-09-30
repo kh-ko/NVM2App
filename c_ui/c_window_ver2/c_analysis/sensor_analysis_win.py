@@ -258,9 +258,7 @@ class SensorAnalysisWin(ParamWin):
                               (self.range_max_widget, self._range_max)):
             widget.set_decimals(self.local_setting.pres_decimal_places)
             widget.set_value(value)
-            widget.commit()
-            # set_value 가 setEnabled(True) 로 복구하므로 Custom 조건을 다시 평가한다
-            widget.on_enable_condition_changed()
+            widget.commit()  # 활성 여부(Custom 조건)는 set_value 안의 _sync_enabled 가 본다
 
     # ------------------------------------------------------------ 샘플링
     def handle_sample_timer_timeout(self):

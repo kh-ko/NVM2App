@@ -1,7 +1,5 @@
 from typing import List, Tuple, Type
 
-from PySide6.QtCore import QSignalBlocker
-
 from b_core.b_datatype.param_enum import DescriptionEnum
 
 from b_core.f_helper.float_util import to_sig_str, to_str_with_decimal_places
@@ -21,25 +19,19 @@ class ReadOnlyTextValueWidget(ValueWidget):
     def set_value(self, value):
         if value != None:
             self.value_widget.setText(value)
-            self.setEnabled(True)
         else:
-            self.value_widget.setText("Unknown (None)")
-            self.setEnabled(False)
+            self.value_widget.setText(self._no_value_text("None"))
+        self._sync_enabled()
+
+    def _value_allows_enable(self) -> bool:
+        return self.get_value() is not None  # 값 없음(Unknown) = 비활성 (RO 표시 정책)
 
     def get_value(self):
         value = self.value_widget.text()
-        if value == "Unknown (None)":
+        if value in ("Unknown (None)", "Not Support"):
             return None
         else:
             return value
-
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.set_value(None)
-            # 표시 전용 setText — 값 할당이 아니므로 알림 차단
-            with QSignalBlocker(self.value_widget):
-                self.value_widget.setText("Not Support")
-            self.setEnabled(False)
 
     def reg_value_widget_event(self):
         self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)
@@ -61,23 +53,17 @@ class ReadOnlyEnumValueWidget(ValueWidget):
             enum_member = self.enum_class(value)
             description = enum_member.description
             self.value_widget.setText(description)
-            self.setEnabled(True)
         except Exception:
-            self.value_widget.setText(f"Unknown ({value})")
-            self.setEnabled(False)
+            self.value_widget.setText(self._no_value_text(value))
+        self._sync_enabled()
+
+    def _value_allows_enable(self) -> bool:
+        return self.get_value() is not None  # 값 없음(Unknown) = 비활성 (RO 표시 정책)
 
     def get_value(self):
         current_desc = self.value_widget.text()
         enum_member = self.enum_class.from_desc(current_desc)
         return enum_member.value if enum_member else None
-
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.set_value(None)
-            # 표시 전용 setText — 값 할당이 아니므로 알림 차단
-            with QSignalBlocker(self.value_widget):
-                self.value_widget.setText("Not Support")
-            self.setEnabled(False)
 
     def reg_value_widget_event(self):
         self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)
@@ -115,7 +101,7 @@ class ReadOnlyBitmapValueWidget(ValueWidget):
         self.set_value(None)
 
     def set_value(self, value):
-        self.value_widget.setPlaceholderText("Unknown")
+        self.value_widget.setPlaceholderText(self._no_value_text())
 
         if value is None:
             # 값이 없는데 체크 상태가 보이면 오해를 부른다 — 전부 uncheck + placeholder
@@ -134,18 +120,14 @@ class ReadOnlyBitmapValueWidget(ValueWidget):
             self._value = composed
             self.value_widget.set_placeholder_visible(False)
 
-        self.setEnabled(value is not None)
+        self._sync_enabled()
+
+    def _value_allows_enable(self) -> bool:
+        return self.get_value() is not None  # 값 없음(Unknown) = 비활성 (RO 표시 정책)
 
     def get_value(self):
         # 값 없음 상태는 None, 아니면 등록된 비트 조합 int
         return self._value
-
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.set_value(None)
-            # set_value 가 placeholder 를 "Unknown" 으로 되돌리므로 반드시 그 뒤에 덮어쓴다
-            self.value_widget.setPlaceholderText("Not Support")
-            self.setEnabled(False)
 
     def reg_value_widget_event(self):
         # 코드 할당 알림은 CheckLabel.set_checked() 가 발신한다 — 표준 릴레이 경로.
@@ -187,7 +169,7 @@ class ReadOnlyMultipleEnumValueWidget(ValueWidget):
         self.set_value(None)
 
     def set_value(self, value):
-        self.value_widget.setPlaceholderText("Unknown")
+        self.value_widget.setPlaceholderText(self._no_value_text())
 
         # [프로토콜 특례] 0 = '미설정' — 자릿수 해석 없이 Not Set 문구만 표시한다.
         # 알 수 없는 상태(Unknown)가 아니라 유효한 '없음' 값이므로 비활성화하지 않는다
@@ -197,7 +179,7 @@ class ReadOnlyMultipleEnumValueWidget(ValueWidget):
                 digit_widget.set_value(None)
             self.value_widget.set_placeholder_visible(True)
             self.value_widget.setPlaceholderText("Not Set")
-            self.setEnabled(True)
+            self._sync_enabled()
             return
 
         digits = self._split_digits(value)
@@ -215,7 +197,7 @@ class ReadOnlyMultipleEnumValueWidget(ValueWidget):
                 digit_widget.set_value(digit)
             self.value_widget.set_placeholder_visible(False)
 
-        self.setEnabled(digits is not None)
+        self._sync_enabled()
 
     @staticmethod
     def _is_not_set(value) -> bool:
@@ -255,16 +237,12 @@ class ReadOnlyMultipleEnumValueWidget(ValueWidget):
 
         return digits
 
+    def _value_allows_enable(self) -> bool:
+        return self.get_value() is not None  # 값 없음(Unknown) = 비활성 (RO 표시 정책)
+
     def get_value(self):
         # 값 없음/해석 불가 상태는 None, 아니면 표시 중인 원본 int
         return self._value
-
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.set_value(None)
-            # set_value 가 placeholder 를 "Unknown" 으로 되돌리므로 반드시 그 뒤에 덮어쓴다
-            self.value_widget.setPlaceholderText("Not Support")
-            self.setEnabled(False)
 
     def reg_value_widget_event(self):
         # 코드 할당 알림은 각 자릿수 위젯(ReadOnlyEnumValueWidget)이 발신한다 —
@@ -291,10 +269,12 @@ class ReadOnlyScaleValueWidget(ValueWidget):
 
         if str_value:
             self.value_widget.setText(str_value)
-            self.setEnabled(True)
         else:
-            self.value_widget.setText(f"Unknown ({value})")
-            self.setEnabled(False)
+            self.value_widget.setText(self._no_value_text(value))
+        self._sync_enabled()
+
+    def _value_allows_enable(self) -> bool:
+        return self.get_value() is not None  # 값 없음(Unknown) = 비활성 (RO 표시 정책)
 
     def get_value(self):
         try:
@@ -302,14 +282,6 @@ class ReadOnlyScaleValueWidget(ValueWidget):
             return float_value / self.scale
         except Exception:
             return None
-
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.set_value(None)
-            # 표시 전용 setText — 값 할당이 아니므로 알림 차단
-            with QSignalBlocker(self.value_widget):
-                self.value_widget.setText("Not Support")
-            self.setEnabled(False)             
 
     def reg_value_widget_event(self):
         self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)
@@ -327,24 +299,18 @@ class ReadOnlyIntValueWidget(ValueWidget):
     def set_value(self, value):
         if value is not None:
             self.value_widget.setText(str(value))
-            self.setEnabled(True)
         else:
-            self.value_widget.setText("Unknown (None)")
-            self.setEnabled(False)
+            self.value_widget.setText(self._no_value_text("None"))
+        self._sync_enabled()
+
+    def _value_allows_enable(self) -> bool:
+        return self.get_value() is not None  # 값 없음(Unknown) = 비활성 (RO 표시 정책)
 
     def get_value(self):
         try:
             return int(self.value_widget.text())
         except Exception:
             return None
-
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.set_value(None)
-            # 표시 전용 setText — 값 할당이 아니므로 알림 차단
-            with QSignalBlocker(self.value_widget):
-                self.value_widget.setText("Not Support")
-            self.setEnabled(False)
 
     def reg_value_widget_event(self):
         self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)
@@ -371,10 +337,12 @@ class ReadOnlyFloatValueWidget(ValueWidget):
 
         if str_value:
             self.value_widget.setText(str_value)
-            self.setEnabled(True)
         else:
-            self.value_widget.setText(f"Unknown ({value})")
-            self.setEnabled(False)
+            self.value_widget.setText(self._no_value_text(value))
+        self._sync_enabled()
+
+    def _value_allows_enable(self) -> bool:
+        return self.get_value() is not None  # 값 없음(Unknown) = 비활성 (RO 표시 정책)
 
     def get_value(self):
         try:
@@ -382,14 +350,6 @@ class ReadOnlyFloatValueWidget(ValueWidget):
             return float_value
         except Exception:
             return None
-
-    def set_not_support(self, is_not_support):
-        if is_not_support:
-            self.set_value(None)
-            # 표시 전용 setText — 값 할당이 아니므로 알림 차단
-            with QSignalBlocker(self.value_widget):
-                self.value_widget.setText("Not Support")
-            self.setEnabled(False)             
 
     def reg_value_widget_event(self):
         self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)

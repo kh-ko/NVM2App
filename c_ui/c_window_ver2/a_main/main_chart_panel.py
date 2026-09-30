@@ -594,9 +594,7 @@ class MainChartPanel(PanelWidget):
             widget = self._range_widgets[f"{prefix}_chart_range_{suffix}"]
             widget.set_decimals(decimal_places)
             widget.set_value(getattr(self.local_setting, f"{prefix}_chart_range_{suffix}"))
-            widget.commit()
-            # set_value 가 setEnabled(True) 로 복구하므로 Custom 조건을 다시 평가한다
-            widget.on_enable_condition_changed()
+            widget.commit()  # 활성 여부(Custom 조건)는 set_value 안의 _sync_enabled 가 본다
 
     def handle_posi_range_setting_changed(self):
         self._sync_range_widgets("posi", self.local_setting.posi_decimal_places)

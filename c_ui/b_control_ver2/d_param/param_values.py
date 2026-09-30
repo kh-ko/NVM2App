@@ -42,15 +42,10 @@ class ParamWidget:
         self.handle_param_is_not_support_changed()
 
     def handle_param_value_changed(self):
-        # 값 반영 후 commit 으로 dirty 기준(ori_value)까지 갱신한다
+        # 값 반영 후 commit 으로 dirty 기준(ori_value)까지 갱신한다.
+        # 활성 여부는 set_value 안의 _sync_enabled 가 Not Support·값·enable 조건을 한꺼번에 본다 (8-d)
         self.set_value(self.param.value)
         self.commit()
-
-        # set_value 가 setEnabled(True) 로 복구하므로, enable 조건이 걸린
-        # 위젯은 값 갱신 후 조건을 다시 평가한다 (조건 없는 위젯은 건드리지
-        # 않는다 — RO 위젯의 '값 없음 = 비활성' 표시를 되살리지 않기 위함)
-        if self._enable_conditions:
-            self.on_enable_condition_changed()
 
     def handle_param_is_err_changed(self):
         if self.lbl_label is None:  # 라벨 없는 구성(label_text="")에서는 표시할 곳이 없다
@@ -63,6 +58,10 @@ class ParamWidget:
 
     def handle_param_is_not_support_changed(self):
         self.set_not_support(self.param.is_not_support)
+        if not self.param.is_not_support:
+            # Not Support 에서 정상으로 돌아왔는데 값이 같으면 sig_value_changed 가 오지 않는다 —
+            # 마지막 값을 다시 표시해 "Not Support" 잔존을 없앤다 (F058)
+            self.handle_param_value_changed()
 
     def import_backup_value(self, value, unit=None):
         # unit: 저장 당시 값의 단위 표식 — 단위 개념이 있는 위젯(pres)만 사용하고
