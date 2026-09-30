@@ -212,6 +212,7 @@ def main() -> int:
     pres_dp_samples = [0.0, 1.0, 7.5, 100.0, 760.0, -3.0]
     modes = {"auto": OldType.AUTO, "s1": OldType.SENSOR1, "s2": OldType.SENSOR2}
     pres_cases = 0
+    sfs_psig_cases = 0  # psig 는 구 식과 비교하지 않는 의도된 편차 (아래 sfs 블록)
     str_exact = str_total = 0
 
     for unit in range(8):
@@ -229,7 +230,7 @@ def main() -> int:
                 old_pres.local_setting = fake
                 new_pres.local_setting = fake
                 old_pres.handle_pres_decimal_places_changed()
-                new_pres.handle_pres_decimal_places_changed()
+                new_pres.handle_decimals_changed()
                 old_pres.handle_sens_cfg_changed()
 
                 for mode, old_type in modes.items():
@@ -256,6 +257,22 @@ def main() -> int:
                 rep.check(feq(old_pres.get_dp_max_pres(OldType.AUTO), new_pres.get_dp_max_pres()),
                           f"max pres unit={unit} {cfg_name} disp={disp_unit}")
                 for sfs in (0.0, 0.1, 0.5, 1.0):
+                    if disp_unit == p_enum.SensUnitEnum.PSIG.value:
+                        # 설정점 sfs 는 Torr 도메인 비율로 재정의 (2026-09-30 사용자 결정, F049) — 오프셋 단위(psig)에서는
+                        # 구 식(표시 단위 만압 × sfs)과 offset×(1-sfs) 만큼 다르므로 구 식과 비교하지 않고 새 계약을 확인한다
+                        max_torr = new_pres.get_dp_max_torr()
+                        if max_torr is None:
+                            rep.check(new_pres.convert_sfs_to_dp_pres(sfs) is None, f"sfs→dp 미준비 None unit={unit} {cfg_name} disp={disp_unit}")
+                            continue
+                        expect = new_pres.to_display(max_torr * sfs)
+                        rep.check(feq(new_pres.convert_sfs_to_dp_pres(sfs), expect),
+                                  f"sfs→dp (Torr 기준) unit={unit} {cfg_name} disp={disp_unit} sfs={sfs}")
+                        rep.check(feq(new_pres.convert_dp_pres_to_sfs(new_pres.convert_sfs_to_dp_pres(sfs)), sfs),
+                                  f"dp→sfs 왕복 unit={unit} {cfg_name} disp={disp_unit} sfs={sfs}")
+                        rep.check(new_pres.convert_sfs_to_dp_pres_str(sfs) == new_pres._format_dp(expect),
+                                  f"sfs→dp str (Torr 기준) unit={unit} {cfg_name} disp={disp_unit} sfs={sfs}")
+                        sfs_psig_cases += 1
+                        continue
                     rep.check(feq(old_pres.convert_sfs_to_dp_pres(sfs, OldType.AUTO), new_pres.convert_sfs_to_dp_pres(sfs)),
                               f"sfs→dp unit={unit} {cfg_name} disp={disp_unit} sfs={sfs}")
                     rep.check(seq(old_pres.convert_sfs_to_dp_pres_str(sfs, OldType.AUTO), new_pres.convert_sfs_to_dp_pres_str(sfs), decimals=3),
@@ -267,6 +284,7 @@ def main() -> int:
     for a, b in itertools.product(range(8), range(8)):
         rep.check(old_pres.get_unit_conversion(a, b) == new_pres.get_unit_conversion(a, b), f"unit conversion {a}->{b}")
 
+    rep.notes.append(f"의도된 편차: psig 표시의 설정점 sfs {sfs_psig_cases} 케이스는 구 식(표시 단위 만압 × sfs)과 비교하지 않고 Torr 기준 계약(to_display(만압 Torr × sfs), 왕복)으로 확인 — 2026-09-30 결정(F049)")
     rep.notes.append(f"압력 차등 {pres_cases:,} 케이스 (인터페이스 단위 8종, USER_SPECIFIC 범위 2조 × 센서 구성 4종, 표시 단위 8종, "
                      f"모드 3종, 선로값 7 / 표시값 6 표본). 표시 문자열 완전 일치 {str_exact:,}/{str_total:,}, "
                      f"나머지 {str_total - str_exact}건은 .5 반올림 경계에서 마지막 자리 1단위 차이 (값은 1e-15 이내 동일)")
@@ -340,7 +358,7 @@ def main() -> int:
 
     fake = FakeLocalSetting(p_enum.SensUnitEnum.MTORR.value, pres_decimal_places=1)
     new_pres.local_setting = fake
-    new_pres.handle_pres_decimal_places_changed()
+    new_pres.handle_decimals_changed()
     act_pres.value = 1.5  # Torr
     wdg = ParamReadOnlyPresValueWidget(act_pres.full_path)
     rep.check(wdg.value_widget.text() == "1500.0", f"pres RO 위젯 표시 (1.5 Torr → mTorr): {wdg.value_widget.text()!r}")

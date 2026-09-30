@@ -1,3 +1,5 @@
+import math
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMainWindow, QVBoxLayout, QWidget
 
@@ -13,7 +15,8 @@ class LocalPresSettingWin(QMainWindow):
 
     - Decimal Places: pressure 표시 소수점 자리수 (0~6, 정수).
       변경이 적용되면 setpoint 입력기들의 표시 자리수도 함께 갱신된다.
-    - Setpoint 01~06: setpoint 버튼 값 (0.0~FLOAT32_MAX, dp 로 표시하고 sfs 로 저장).
+    - Setpoint 01~06: setpoint 버튼 값 (표시 단위로 입력, sfs = Torr ÷ 만압 Torr 로 저장 — F049).
+      행 범위는 [0 Torr 의 표시값, FLOAT32_MAX] — psig 처럼 오프셋 단위에서는 하한이 음수다 (N120).
       표시 자리수는 pres_decimal_places 를 따른다.
 
     적용 정책: 툴바의 Apply 버튼으로 편집된(dirty) 행만 일괄 반영한다
@@ -24,22 +27,24 @@ class LocalPresSettingWin(QMainWindow):
 
     매니저 값이 바뀌면(다른 창 포함) sig_*_changed 수신으로 위젯을 매니저
     값으로 재동기화한다 — 이때 아직 Apply 하지 않은 편집은 덮어써진다.
+    컨버터의 표시 단위/만압 변경도 같은 방식으로 받아 행 범위·표시값·활성 상태를
+    다시 잡는다 (F098 — 창이 열린 채 만압이 읽히거나 단위가 바뀌어도 따라온다).
     """
 
     # C float(4byte) 최대값 — 장비가 float32 로 값을 다루므로 setpoint 상한을 그 범위로 연다
     # (b_core parameter.py 의 pres 계열 min/max 하드코딩과 같은 값)
     FLOAT32_MAX = 3.4028235e+38
 
-    # (설정명, 라벨, 최소, 최대) — 표시 자리수는 행 정의가 아니라
-    # pres_decimal_places 설정이 결정한다 (handle_* 계열에서 동적 적용)
+    # (설정명, 라벨) — 자릿수 행은 0~6 고정, setpoint 행의 범위는 표시 단위에 따라 _apply_setpoint_range 가 잡는다.
+    # 표시 자리수는 행 정의가 아니라 pres_decimal_places 설정이 결정한다 (handle_* 계열에서 동적 적용)
     _ROWS = [
-        ("pres_decimal_places", "Decimal Places", 0,   6),
-        ("pres_setpoint01",     "Setpoint 01",    0.0, FLOAT32_MAX),
-        ("pres_setpoint02",     "Setpoint 02",    0.0, FLOAT32_MAX),
-        ("pres_setpoint03",     "Setpoint 03",    0.0, FLOAT32_MAX),
-        ("pres_setpoint04",     "Setpoint 04",    0.0, FLOAT32_MAX),
-        ("pres_setpoint05",     "Setpoint 05",    0.0, FLOAT32_MAX),
-        ("pres_setpoint06",     "Setpoint 06",    0.0, FLOAT32_MAX),
+        ("pres_decimal_places", "Decimal Places"),
+        ("pres_setpoint01",     "Setpoint 01"),
+        ("pres_setpoint02",     "Setpoint 02"),
+        ("pres_setpoint03",     "Setpoint 03"),
+        ("pres_setpoint04",     "Setpoint 04"),
+        ("pres_setpoint05",     "Setpoint 05"),
+        ("pres_setpoint06",     "Setpoint 06"),
     ]
 
     def __init__(self, parent=None):
@@ -64,13 +69,14 @@ class LocalPresSettingWin(QMainWindow):
         panel = PanelWidget(title="Pressure Local Setting", is_big_title=True)
         main_layout.addWidget(panel)
 
-        for name, label, min_value, max_value in self._ROWS:
+        for name, label in self._ROWS:
             widget = ReadWriteFloatValueWidget(label_text=label)
-            widget.set_range(min_value, max_value)
             panel.add_widget(widget)
             self._widgets[name] = widget
 
+        self._widgets["pres_decimal_places"].set_range(0, 6)
         self._widgets["pres_decimal_places"].set_decimals(0)
+        self._apply_setpoint_range()
 
         # [주의] 이 창은 WA_DeleteOnClose 로 파괴되고 매니저는 앱 수명 싱글턴이므로
         # 반드시 바운드 메서드로 연결한다 — 람다/partial 은 창 파괴 시 자동 disconnect
@@ -83,6 +89,11 @@ class LocalPresSettingWin(QMainWindow):
         self.local_setting.sig_pres_setpoint05_changed.connect(self.handle_setpoint05_changed)
         self.local_setting.sig_pres_setpoint06_changed.connect(self.handle_setpoint06_changed)
 
+        # 컨버터: 표시 단위가 바뀌면 행 범위와 표시값을, 만압이 준비되거나 바뀌면 표시값·활성 상태를 다시 잡는다 (F098)
+        # (자릿수는 위 sig_pres_decimal_places_changed 로 이미 받는다)
+        self.converter.sig_display_unit_changed.connect(self.handle_pres_display_unit_changed)
+        self.converter.sig_full_scale_changed.connect(self.handle_pres_full_scale_changed)
+
         # 초기 동기화 — setpoint 자리수/값까지 함께 잡힌다
         self.handle_decimal_changed()
 
@@ -91,7 +102,8 @@ class LocalPresSettingWin(QMainWindow):
         widget.set_value(self.local_setting.pres_decimal_places)
         widget.commit()
 
-        # 자리수가 바뀌면 setpoint 표시 자리수도 함께 갱신한다
+        # 자리수가 바뀌면 setpoint 행의 하한(자릿수로 내림한 값)과 표시 자리수도 함께 갱신한다
+        self._apply_setpoint_range()
         for name in self._setpoint_names:
             self.handle_setpoint_changed(name)
 
@@ -107,6 +119,24 @@ class LocalPresSettingWin(QMainWindow):
             widget.setEnabled(True)
 
         widget.commit()
+
+    def _apply_setpoint_range(self):
+        # 하한은 표시 단위 0 이 아니라 0 Torr 의 표시값 — psig 에서는 -14.696 (진공 설정점은 음의 게이지 압력; N120).
+        # 표시 자릿수로 내림해 둔다 — 자릿수로 반올림된 행 문자열(예: -14.696)이 정확한 값(-14.69595) 아래로
+        # 떨어져 validator 에 거부되지 않게 (검토 지적)
+        d = self.local_setting.pres_decimal_places
+        low = math.floor(self.converter.to_display(0.0) * 10 ** d) / 10 ** d
+        for name in self._setpoint_names:
+            self._widgets[name].set_range(low, self.FLOAT32_MAX)
+
+    def handle_pres_display_unit_changed(self):
+        self._apply_setpoint_range()
+        for name in self._setpoint_names:
+            self.handle_setpoint_changed(name)
+
+    def handle_pres_full_scale_changed(self):
+        for name in self._setpoint_names:
+            self.handle_setpoint_changed(name)
 
     # 시그널 연결용 얇은 위임 — 바운드 메서드 연결 규칙 때문에 명시적으로 둔다 (__init__ 주석 참고)
     def handle_setpoint01_changed(self):

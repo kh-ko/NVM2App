@@ -74,7 +74,10 @@ class MainPressurePanel(PanelWidget):
         self.point_05_btn.clicked.connect(self._on_point_05_clicked)
         self.point_06_btn.clicked.connect(self._on_point_06_clicked)
 
-        self.converter.sig_pres_range_changed.connect(self._handle_pres_range_changed)
+        # 컨버터 시그널은 원인별로 — 단위는 콤보까지, 자릿수·만압은 파생 표시(만압·버튼)만 (설계 7위)
+        self.converter.sig_display_unit_changed.connect(self._handle_pres_display_unit_changed)
+        self.converter.sig_decimals_changed.connect(self._handle_pres_decimals_changed)
+        self.converter.sig_full_scale_changed.connect(self._handle_pres_full_scale_changed)
         self.local_setting_manager.sig_pres_setpoint01_changed.connect(self._handle_pres_setpoint01_changed)
         self.local_setting_manager.sig_pres_setpoint02_changed.connect(self._handle_pres_setpoint02_changed)
         self.local_setting_manager.sig_pres_setpoint03_changed.connect(self._handle_pres_setpoint03_changed)
@@ -82,7 +85,7 @@ class MainPressurePanel(PanelWidget):
         self.local_setting_manager.sig_pres_setpoint05_changed.connect(self._handle_pres_setpoint05_changed)
         self.local_setting_manager.sig_pres_setpoint06_changed.connect(self._handle_pres_setpoint06_changed)
 
-        self._handle_pres_range_changed()
+        self._handle_pres_display_unit_changed()  # 초기 동기화
 
     def set_actual_pres_param(self, param):
         self._actual_pres_param = param
@@ -161,38 +164,48 @@ class MainPressurePanel(PanelWidget):
         self.target_pres_widget.commit()
 
     def _on_point_01_clicked(self):
-        value = self.converter.from_display_str(self.point_01_btn.text())
+        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint01)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_02_clicked(self):
-        value = self.converter.from_display_str(self.point_02_btn.text())
+        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint02)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_03_clicked(self):
-        value = self.converter.from_display_str(self.point_03_btn.text())
+        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint03)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_04_clicked(self):
-        value = self.converter.from_display_str(self.point_04_btn.text())
+        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint04)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_05_clicked(self):
-        value = self.converter.from_display_str(self.point_05_btn.text())
+        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint05)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_06_clicked(self):
-        value = self.converter.from_display_str(self.point_06_btn.text())
+        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint06)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
         if value is not None:
             self.sig_setpoint.emit(value)
 
-    def _handle_pres_range_changed(self):
+    def _handle_pres_display_unit_changed(self):
         self.unit_widget.set_value(self.local_setting_manager.pres_unit)
         self.unit_widget.commit()
+        self._refresh_pres_derived()
+
+    def _handle_pres_decimals_changed(self):
+        self._refresh_pres_derived()
+
+    def _handle_pres_full_scale_changed(self):
+        self._refresh_pres_derived()
+
+    def _refresh_pres_derived(self):
+        # 만압 표시와 설정점 버튼 문구 — 단위·자릿수·만압 어느 것이 바뀌어도 다시 그린다
         self._refresh_max_pres_widget()
         self._handle_pres_setpoint01_changed()
         self._handle_pres_setpoint02_changed()

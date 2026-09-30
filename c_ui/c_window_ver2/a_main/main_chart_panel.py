@@ -17,7 +17,7 @@ X축은 사용자가 선택한 시간창(30s~10min, 그래프 하단 콤보)만 
   '화면에 보이는 데이터' 기준이 된다.
 - 꺼진 곡선은 setData 자체를 생략한다 (다시 켤 때 1회 갱신).
 - iface->dp 표시 단위 변환은 append 시 스칼라로 수행 (배치당 수십 회 수준).
-  컨버터의 단위/스케일이 바뀌면 과거 데이터와 표시 단위가 섞이므로 차트를 비운다.
+  표시 단위가 바뀌면 과거 데이터와 표시 단위가 섞이므로 차트를 비운다 (자릿수·만압 변경은 범위/축만 재적용).
 
 곡선 on/off, 축 범위 모드, X 시간창은 LocalSettingManager 의 chart 설정을
 단일 진실로 삼는다 — 컨트롤이든 외부 코드든 설정만 바꾸면 변경 시그널로
@@ -39,7 +39,6 @@ from b_core.b_datatype import param_enum as p_enum
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper
 
-from c_ui.a_converter.position_converter_manager import PosiConverterManager
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 from b_core.g_protocol.spec_registry import SpecRegistry
 from c_ui.b_control_ver2.a_theme.tokens import tokens
@@ -71,7 +70,6 @@ class MainChartPanel(PanelWidget):
         super().__init__(title=None, fit=True, parent=parent)
 
         self.local_setting = LocalSettingManager()
-        self.posi_converter = PosiConverterManager()
         self.pres_converter = PresConverterManager()
 
         # Compound 폴링 샘플은 선로값이다 — 참조 param 의 codec 으로 도메인 값(백분율 / Torr)을
@@ -122,9 +120,11 @@ class MainChartPanel(PanelWidget):
         ls.sig_pres_decimal_places_changed.connect(self.handle_pres_range_setting_changed)
         ls.sig_chart_x_window_sec_changed.connect(self.handle_x_window_changed)
 
-        # 컨버터 단위/스케일 변경 -> 표시 단위가 바뀌므로 과거 데이터를 비우고 범위 재적용
-        self.posi_converter.sig_posi_range_changed.connect(self.handle_posi_converter_changed)
-        self.pres_converter.sig_pres_range_changed.connect(self.handle_pres_converter_changed)
+        # 컨버터: 표시 단위가 바뀌면 버퍼(표시 단위 값)와 단위가 섞이므로 비우고 범위 재적용,
+        # 만압 문맥이 바뀌면 Full 범위만 재적용. 자릿수 변경은 위 LocalSetting 시그널로 축 폭/범위 위젯만 —
+        # 이력은 지우지 않는다 (F068). 위치는 표시 단위가 없어(항상 %) 컨버터 구독이 필요 없다
+        self.pres_converter.sig_display_unit_changed.connect(self.handle_pres_display_unit_changed)
+        self.pres_converter.sig_full_scale_changed.connect(self.handle_pres_range_setting_changed)
 
         # 초기 상태 적용
         self.handle_posi_enable_actual_changed()
@@ -608,15 +608,17 @@ class MainChartPanel(PanelWidget):
             self.local_setting.posi_chart_range_custom_max)
 
     def handle_pres_range_setting_changed(self):
-        full_max = self.pres_converter.get_dp_max_pres()
-        if full_max is None:
-            full_max = 100.0  # 컨버터 미준비 시 대체값 (스펙)
+        # Full 범위는 Torr 도메인의 [0, 만압] 을 표시 단위로 환산한 구간 — 표시 단위 0 이 하한이 아니다
+        # (psig 에서는 하한이 -14.7, 만압이 게이지값; N100/N079)
+        full_range = self.pres_converter.get_dp_full_range()
+        if full_range is None:
+            full_range = (0.0, 100.0)  # 컨버터 미준비 시 대체값 (스펙)
 
         self._sync_range_widgets("pres", self.local_setting.pres_decimal_places)
         self._apply_y_range(
             self.pres_viewbox,
             self.local_setting.pres_chart_range_mode,
-            0.0, full_max,
+            full_range[0], full_range[1],
             self.local_setting.pres_chart_range_custom_min,
             self.local_setting.pres_chart_range_custom_max)
 
@@ -663,12 +665,8 @@ class MainChartPanel(PanelWidget):
         self.plot_item.getAxis("right").setWidth(text_width + 12)
 
     # ------------------------------------------------------------ 외부 변화 대응
-    def handle_posi_converter_changed(self):
-        # 표시 단위/스케일이 바뀌면 과거 데이터와 단위가 섞이므로 비우고 다시 시작한다
-        self.clear_chart()
-        self.handle_posi_range_setting_changed()
-
-    def handle_pres_converter_changed(self):
+    def handle_pres_display_unit_changed(self):
+        # 표시 단위가 바뀌면 과거 데이터(표시 단위 값)와 단위가 섞이므로 비우고 다시 시작한다
         self.clear_chart()
         self.handle_pres_range_setting_changed()
 

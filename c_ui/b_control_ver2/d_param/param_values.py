@@ -377,8 +377,10 @@ class ParamReadOnlyPresValueWidget(ParamWidget, ReadOnlyTextValueWidget):
         super().__init__(label_text=self._make_label_text(), label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
         self._bind_param()
 
-        self.converter.sig_pres_range_changed.connect(self.handle_pres_range_changed)
-        self.handle_pres_range_changed()
+        # 만압 문맥에는 의존하지 않으므로 표시 단위 / 자릿수 두 시그널만 받는다 (설계 7위)
+        self.converter.sig_display_unit_changed.connect(self.handle_pres_display_unit_changed)
+        self.converter.sig_decimals_changed.connect(self.handle_pres_decimals_changed)
+        self.handle_pres_display_unit_changed()
 
     def _make_label_text(self) -> str:
         # pres_unit 은 SensUnitEnum 의 int 값 — 표시 문자열은 get_desc 로 얻는다
@@ -386,12 +388,14 @@ class ParamReadOnlyPresValueWidget(ParamWidget, ReadOnlyTextValueWidget):
             return self.base_label_text
         return f"{self.base_label_text} ({p_enum.SensUnitEnum.get_desc(self.local_setting_manager.pres_unit)})"
 
-    def handle_pres_range_changed(self):
-        # 표시 단위가 바뀌면 라벨의 단위 표기도 함께 갱신한다
+    def handle_pres_display_unit_changed(self):
+        # 표시 단위가 바뀌면 라벨의 단위 표기와 표시값을 갱신한다
         if self.lbl_label is not None:
             self.lbl_label.setText(self._make_label_text())
+        self.handle_pres_decimals_changed()
 
-        self.set_value(self.param.value)
+    def handle_pres_decimals_changed(self):
+        self.set_value(self.param.value)  # to_display_str 이 자릿수를 적용한다
         self.commit()
 
     def set_value(self, value):
@@ -424,11 +428,13 @@ class ParamReadWritePresValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinB
         self.is_visible_unit = is_visible_unit
         self.base_label_text = self._resolve_param(param_full_path, force_label_text)
         super().__init__(label_text=self._make_label_text(), label_width=label_width, is_vertical_mode=is_vertical_mode, parent=parent)
-        self._bind_param()  
+        self._bind_param()
 
-        self.converter.sig_pres_range_changed.connect(self.handle_pres_range_changed)
+        # 만압 문맥에는 의존하지 않으므로 표시 단위 / 자릿수 두 시그널만 받는다 (설계 7위)
+        self.converter.sig_display_unit_changed.connect(self.handle_pres_display_unit_changed)
+        self.converter.sig_decimals_changed.connect(self.handle_pres_decimals_changed)
         self.set_range(self.param.min_value, self.param.max_value)
-        self.handle_pres_range_changed()
+        self.handle_pres_display_unit_changed()
 
     def _make_label_text(self) -> str:
         # pres_unit 은 SensUnitEnum 의 int 값 — 표시 문자열은 get_desc 로 얻는다
@@ -436,11 +442,13 @@ class ParamReadWritePresValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinB
             return self.base_label_text
         return f"{self.base_label_text} ({p_enum.SensUnitEnum.get_desc(self.local_setting_manager.pres_unit)})"
 
-    def handle_pres_range_changed(self):
-        # 표시 단위가 바뀌면 라벨의 단위 표기도 함께 갱신한다
+    def handle_pres_display_unit_changed(self):
+        # 표시 단위가 바뀌면 라벨의 단위 표기와 표시값을 갱신한다
         if self.lbl_label is not None:
             self.lbl_label.setText(self._make_label_text())
-        
+        self.handle_pres_decimals_changed()
+
+    def handle_pres_decimals_changed(self):
         self.set_decimals(self.converter.pres_decimal_places)
         self.set_value(self.param.value)
         self.commit()
@@ -488,7 +496,8 @@ class ParamReadWritePresValueWidget(ParamWidget, ReadWriteFloatValueWidget):
 
         # 범위/자릿수는 _bind_param() 전에 — bind 가 캐시된 값을 즉시 주입하므로
         # 기본 범위(0~99.99)로 클램프되면 안 된다
-        self.converter.sig_pres_range_changed.connect(self.handle_pres_range_changed)
+        self.converter.sig_display_unit_changed.connect(self.handle_pres_display_unit_changed)
+        self.converter.sig_decimals_changed.connect(self.handle_pres_decimals_changed)
         self.set_decimals(self.converter.pres_decimal_places)
         if self.param.min_value is not None and self.param.max_value is not None:
             self.set_range(self.param.min_value, self.param.max_value)
@@ -501,11 +510,13 @@ class ParamReadWritePresValueWidget(ParamWidget, ReadWriteFloatValueWidget):
             return self.base_label_text
         return f"{self.base_label_text} ({p_enum.SensUnitEnum.get_desc(self.local_setting_manager.pres_unit)})"
 
-    def handle_pres_range_changed(self):
-        # 표시 단위가 바뀌면 라벨의 단위 표기도 함께 갱신한다
+    def handle_pres_display_unit_changed(self):
+        # 표시 단위가 바뀌면 라벨의 단위 표기와 표시값을 갱신한다
         if self.lbl_label is not None:
             self.lbl_label.setText(self._make_label_text())
+        self.handle_pres_decimals_changed()
 
+    def handle_pres_decimals_changed(self):
         self.set_decimals(self.converter.pres_decimal_places)
         self.set_value(self.param.value)
         self.commit()
@@ -539,7 +550,11 @@ class ParamReadWritePresValueWidget(ParamWidget, ReadWriteFloatValueWidget):
 
 class ParamReadOnlyPresSlopeValueWidget(ParamReadOnlyPresValueWidget):
     """압력 변화율(slope) 표시 — ParamReadOnlyPresValueWidget 과 동일하되
-    라벨 단위 표기가 '(압력단위/sec)' 인 것만 다르다."""
+    라벨 단위 표기가 '(압력단위/sec)' 인 것만 다르다.
+
+    값 변환은 압력과 완전히 같다 — psig 표시에서는 변화율에도 대기압 오프셋(-14.696)이 붙어
+    물리적인 변화율과 다르게 보인다. 사용자가 환산해서 보도록 매뉴얼에 지침을 둔다
+    (2026-09-30 사용자 결정, 결정 J 유지, N093)."""
 
     def _make_label_text(self) -> str:
         if not self.is_visible_unit:
@@ -548,7 +563,11 @@ class ParamReadOnlyPresSlopeValueWidget(ParamReadOnlyPresValueWidget):
 
 class ParamReadWritePresSlopeValueWidget(ParamReadWritePresValueWidget):
     """압력 변화율(slope) 입력 — ParamReadWritePresValueWidget 과 동일하되
-    라벨 단위 표기가 '(압력단위/sec)' 인 것만 다르다."""
+    라벨 단위 표기가 '(압력단위/sec)' 인 것만 다르다.
+
+    값 변환은 압력과 완전히 같다 — psig 표시에서는 입력값에도 대기압 오프셋이 적용되어
+    Apply 되는 Torr/sec 가 화면의 psi/sec 와 물리적으로 다르다. 사용자가 환산해서 입력하도록
+    매뉴얼에 지침을 둔다 (2026-09-30 사용자 결정, 결정 J 유지, N093)."""
 
     def _make_label_text(self) -> str:
         if not self.is_visible_unit:

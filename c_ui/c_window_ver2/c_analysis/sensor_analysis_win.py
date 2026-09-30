@@ -14,7 +14,7 @@ AUTO(제어 압력) / SENSOR1 / SENSOR2. 변환 불가(값 없음 등)는 NaN �
 선이 끊겨 표시된다.
 
 차트 구현은 MainChartPanel 의 성능 원칙을 따른다: 인터랙션 차단,
-numpy 이중 버퍼, X 시간창 가시 구간만 setData, 컨버터 변경 시 차트 클리어.
+numpy 이중 버퍼, X 시간창 가시 구간만 setData, 표시 단위 변경 시 차트 클리어(자릿수·만압은 범위만).
 """
 
 import time
@@ -87,9 +87,11 @@ class SensorAnalysisWin(ParamWin):
         if self.svc_port.connect_info:
             self.sample_timer.start()
 
-        # 컨버터 단위/스케일 변경 -> 표시 단위가 바뀌므로 과거 데이터를 비운다.
+        # 컨버터: 표시 단위가 바뀌면 버퍼(표시 단위 값)를 비우고, 자릿수·만압 문맥 변경은 범위만 재적용한다 (N114).
         # [주의] 싱글턴 시그널 연결은 바운드 메서드 규칙을 따른다 (람다 좀비 방지)
-        self.pres_converter.sig_pres_range_changed.connect(self.handle_pres_converter_changed)
+        self.pres_converter.sig_display_unit_changed.connect(self.handle_pres_display_unit_changed)
+        self.pres_converter.sig_decimals_changed.connect(self.handle_pres_decimals_changed)
+        self.pres_converter.sig_full_scale_changed.connect(self.handle_pres_full_scale_changed)
 
     def additional_param_settings(self):
         # Actual Pressure 는 MainWin compound 폴링이 갱신하므로 읽기 등록하지 않는다
@@ -371,12 +373,19 @@ class SensorAnalysisWin(ParamWin):
         else:
             self.sample_timer.stop()
 
-    def handle_pres_converter_changed(self):
-        # 표시 단위/스케일이 바뀌면 과거 데이터와 단위가 섞이므로 비우고 다시 시작한다.
-        # Full 범위 상한/소수 자릿수도 컨버터에 따라 달라지므로 함께 재적용한다
+    def handle_pres_display_unit_changed(self):
+        # 표시 단위가 바뀌면 과거 데이터(표시 단위 값)와 단위가 섞이므로 비우고 다시 시작한다
         self.clear_chart()
         self._sync_range_widgets()
         self._apply_y_range()
+
+    def handle_pres_decimals_changed(self):
+        # 자릿수만 — 범위 위젯 표기와 축을 재적용하고 이력은 그대로 둔다 (N114)
+        self._sync_range_widgets()
+        self._apply_y_range()
+
+    def handle_pres_full_scale_changed(self):
+        self._apply_y_range()  # Full 범위의 상·하한만 달라진다
 
     # ------------------------------------------------------------ 곡선 on/off
     def _toggle_curve(self, row):
@@ -433,8 +442,9 @@ class SensorAnalysisWin(ParamWin):
         viewbox.disableAutoRange(axis=pg.ViewBox.YAxis)
 
         if self._range_mode == p_enum.ChartRangeModeEnum.FULL.value:
-            full_max = self.pres_converter.get_dp_max_pres()
-            y_min, y_max = 0.0, full_max if full_max is not None else 100.0  # 컨버터 미준비 시 대체값
+            # Torr 도메인의 [0, 만압] 을 표시 단위로 환산한 구간 (psig 에서는 하한이 음수; N100)
+            full_range = self.pres_converter.get_dp_full_range()
+            y_min, y_max = full_range if full_range is not None else (0.0, 100.0)  # 컨버터 미준비 시 대체값
         else:  # CUSTOM
             y_min, y_max = self._range_min, self._range_max
 

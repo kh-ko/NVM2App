@@ -8,9 +8,13 @@
 선로 ↔ Torr 는 g_protocol 의 PresCodec 이 맡고 (센서 기준 auto/s1/s2 는 param 의 codec 종류),
 이 관리자는 화면 쪽 일만 남았다:
 - Torr ↔ 표시 단위 (to_display / from_display) 와 자릿수 포맷
-- sfs(만압 대비 비율) ↔ 표시 압력 — 만압은 Value Pressure Sensor Full Scale 을 auto codec 으로 푼 값
+- 설정점 sfs(만압 대비 비율) ↔ 표시 압력 — 만압은 Value Pressure Sensor Full Scale 을 auto codec 으로 푼 Torr.
+  비율은 Torr 도메인에서 정의한다(설정점 Torr = 만압 Torr × sfs, sfs = 설정점 Torr ÷ 만압 Torr)
+  — 표시 단위 만압에 곱하면 오프셋 단위(psig)에서 같은 sfs 가 다른 물리 압력이 된다 (F049, 2026-09-30 결정)
+- 만압 구간(get_dp_full_range) — 차트 Full 범위용. 오프셋 단위에서는 하한(0 Torr 의 표시값)이 음수다
 - 단위 환산표(get_unit_conversion / convert_pressure) — 차트 분석 창, 백업 값 단위 환산용
-- 문맥 param 이나 표시 단위·자릿수가 바뀌면 sig_pres_range_changed. Parameter 값은 재디코드하지 않는다.
+- 변경 알림은 원인별 시그널 셋(표시 단위 / 자릿수 / 만압 문맥)으로 낸다 — 구독처가 필요한 것만 받아
+  자릿수 변경에 차트 이력을 지우는 일이 없게 (설계 7위). Parameter 값은 재디코드하지 않는다.
 
 주의: 시그널 연결 기반이므로 UI 스레드 전용이다.
 """
@@ -33,7 +37,9 @@ class PresConverterManager(QObject):
     _instance = None
     _creation_lock = threading.Lock()
 
-    sig_pres_range_changed = Signal()
+    sig_display_unit_changed = Signal()  # LocalSetting.pres_unit — 라벨·표시값이 바뀌고 차트 이력은 무효
+    sig_decimals_changed = Signal()      # LocalSetting.pres_decimal_places — 자릿수만
+    sig_full_scale_changed = Signal()    # 만압 문맥 param(Pressure Unit / Min / Full Scale / 센서 구성) 값 — 만압·설정점 환산만
 
     def __new__(cls, *args, **kwargs):
         # 멀티스레드 환경에서 동시에 생성되는 것을 방지
@@ -65,20 +71,23 @@ class PresConverterManager(QObject):
             self._log.error("pres codec 없음 — nv2_spec.json 의 codecs 절을 확인할 것")
         else:
             for param in self.codec.context_params:
-                param.sig_value_changed.connect(self.handle_sens_cfg_changed)
+                param.sig_value_changed.connect(self.handle_full_scale_changed)
 
-        self.local_setting.sig_pres_unit_changed.connect(self.handle_sens_cfg_changed)
-        self.local_setting.sig_pres_decimal_places_changed.connect(self.handle_pres_decimal_places_changed)
+        self.local_setting.sig_pres_unit_changed.connect(self.handle_display_unit_changed)
+        self.local_setting.sig_pres_decimal_places_changed.connect(self.handle_decimals_changed)
 
-        self.handle_pres_decimal_places_changed()
-
-    # ------------------------------------------------------------ 갱신 트리거
-    def handle_pres_decimal_places_changed(self):
         self.pres_decimal_places = self.local_setting.pres_decimal_places
-        self.sig_pres_range_changed.emit()
 
-    def handle_sens_cfg_changed(self):
-        self.sig_pres_range_changed.emit()
+    # ------------------------------------------------------------ 갱신 트리거 (원인별 1:1 슬롯)
+    def handle_display_unit_changed(self):
+        self.sig_display_unit_changed.emit()
+
+    def handle_decimals_changed(self):
+        self.pres_decimal_places = self.local_setting.pres_decimal_places
+        self.sig_decimals_changed.emit()
+
+    def handle_full_scale_changed(self):
+        self.sig_full_scale_changed.emit()
 
     # ------------------------------------------------------------ Torr <-> 표시 단위
     def _display_coeff(self) -> tuple[float, float]:
@@ -124,28 +133,48 @@ class PresConverterManager(QObject):
         return self.codec.from_line(iface_max)
 
     def get_dp_max_pres(self) -> float | None:
+        """만압의 표시값. 오프셋 단위(psig)에서는 절대 상한이 아니라 게이지값이다 —
+        범위가 필요하면 get_dp_full_range() 를 쓴다 (N079)."""
         return self.to_display(self.get_dp_max_torr())
+
+    def get_dp_full_range(self) -> tuple[float, float] | None:
+        """차트 Full 범위 — (0 Torr 의 표시값, 만압 Torr 의 표시값). 오프셋 단위(psig)에서는
+        하한이 음수다. 만압 미준비면 None."""
+        max_torr = self.get_dp_max_torr()
+        if max_torr is None:
+            return None
+        return self.to_display(0.0), self.to_display(max_torr)
 
     def get_dp_max_pres_str(self) -> str | None:
         return self._format_dp(self.get_dp_max_pres())
 
-    # ------------------------------------------------------------ sfs <-> 표시 압력
-    def convert_sfs_to_dp_pres(self, value: float) -> float | None:
-        pres_max = self.get_dp_max_pres()
-        if pres_max is None or value is None:
+    # ------------------------------------------------------------ 설정점 sfs (만압 대비 비율 — Torr 도메인에서 정의)
+    def sfs_to_torr(self, sfs: float | None) -> float | None:
+        """sfs → 설정점 Torr (= 설정 만압 Torr × sfs). 만압 미준비면 None. 설정점 버튼이 보내는 값."""
+        max_torr = self.get_dp_max_torr()
+        if max_torr is None or sfs is None:
             return None
-        return pres_max * value
+        return max_torr * sfs
+
+    def torr_to_sfs(self, torr: float | None) -> float | None:
+        """설정점 Torr → sfs. 만압 미준비면 None, 만압이 0 이면 0.0."""
+        max_torr = self.get_dp_max_torr()
+        if max_torr is None or torr is None:
+            return None
+        if max_torr == 0:
+            return 0.0
+        return torr / max_torr
+
+    def convert_sfs_to_dp_pres(self, value: float) -> float | None:
+        """sfs → 표시 단위 압력 (Torr 로 만든 뒤 환산한다 — 표시 단위 만압에 곱하지 않는다)."""
+        return self.to_display(self.sfs_to_torr(value))
 
     def convert_sfs_to_dp_pres_str(self, value: float) -> str | None:
         return self._format_dp(self.convert_sfs_to_dp_pres(value))
 
     def convert_dp_pres_to_sfs(self, value: float) -> float | None:
-        pres_max = self.get_dp_max_pres()
-        if pres_max is None or value is None:
-            return None
-        if pres_max == 0:
-            return 0.0
-        return value / pres_max
+        """표시 단위 압력 → sfs (Torr 로 되돌린 뒤 만압 Torr 로 나눈다)."""
+        return self.torr_to_sfs(self.from_display(value))
 
     def convert_dp_pres_str_to_sfs(self, value: str) -> float | None:
         try:
