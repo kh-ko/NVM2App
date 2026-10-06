@@ -24,8 +24,8 @@ version_info.txt 형식 (ver1 과 동일, 최신이 위):
                -> 성공: .old 삭제 / 실패: .old 복원 -> 앱 재실행 -> 임시 정리
 
 ver1 에서 달라진 점:
-- PRESERVED_RELATIVE_DIRS(3_log) 는 패키지에 들어 있어도 배포하지 않는다.
-  그 외(2_resource 포함)는 ver1 과 같이 배포본으로 덮어쓴다 (사용자 결정).
+- PRESERVED_RELATIVE_DIRS(3_log, 2_resource/temp) 는 패키지에 들어 있어도 배포하지 않는다.
+  그 외(2_resource 의 나머지 포함)는 ver1 과 같이 배포본으로 덮어쓴다 (사용자 결정).
 - 배치 스크립트는 순수 ASCII 로 저장하고 경로(앱 폴더/exe 이름/패키지)는 환경변수
   NVM2APP_* 로 넘긴다 — 코드페이지와 무관하고 & % ! 같은 cmd 특수문자도 재해석되지 않는다
   (ver1 은 UTF-8 한글 + chcp 65001 — cmd 의 UTF-8 배치 해석은 불안정하다. build.bat 주석 참고).
@@ -65,9 +65,11 @@ APP_EXE_NAME = "NVM2App.exe"  # build.bat 의 --name NVM2App
 WORK_DIR = os.path.join(tempfile.gettempdir(), "NVM2App_update")
 INSTALL_SCRIPT_NAME = "nvm2app_update.bat"
 
-# 업데이트가 건드리지 않는 앱 폴더 내 상대 경로 — 패키지에 들어 있어도 배포하지
-# 않는다. 사용자 결정(2026-09-09): 로그만 유지하고 2_resource 는 전부 배포본으로 덮어쓴다
-PRESERVED_RELATIVE_DIRS = ("3_log",)
+# 업데이트가 건드리지 않는 앱 폴더 내 상대 경로 — 패키지에 들어 있어도 배포하지 않는다.
+# 사용자 결정(2026-09-09): 로그는 유지하고 2_resource 는 배포본으로 덮어쓴다.
+# 예외 2_resource/temp (N046): 펌웨어 다운로드 캐시 = Local Files 모드의 원본 — 현장의 마지막 다운로드본을
+# 빌드 시점 파일로 되돌리지 않는다 (build.bat 도 이 폴더를 싣지 않는다)
+PRESERVED_RELATIVE_DIRS = ("3_log", "2_resource/temp")
 
 # PyInstaller --onedir 의 라이브러리 폴더. 새 패키지에 이 폴더가 있으면 복사 전에
 # 앱 폴더의 것을 통째로 교체한다 — 덮어쓰기만 하면 구버전에만 있던 DLL/모듈이 남는다.

@@ -10,8 +10,11 @@ echo ===================================================
 ::   0_build\[YYYYMMDD]-v[version]\
 ::       NVM2App\  : deploy files (NVM2App.exe + _internal\ + 2_resource)
 ::       source\   : project snapshot at build time
-::                   (excludes .git/.venv/__pycache__/temp_build,
+::                   (excludes .git/.venv/.claude/.idea/__pycache__/temp_build/dist/build
+::                    and the firmware download cache 2_resource\temp,
 ::                    0_build and 3_log are included as empty folders)
+::   2_resource\temp (firmware download cache, untracked, per-PC) is never shipped;
+::   only 2_resource\firmware (kernels) is a deploy asset.
 :: app_info.py (APP_VERSION / APP_BUILD_DATE injected) is restored to the dev
 :: version after the build. (the snapshot keeps the injected values)
 
@@ -57,7 +60,6 @@ for /f %%i in ('python -c "from datetime import date; print(date.today().isoform
 python -c "import sys, re; fp='b_core/a_define/app_info.py'; q=chr(34); c=open(fp, encoding='utf-8').read(); c=re.sub('APP_BUILD_DATE = ' + q + '[^' + q + ']*' + q, 'APP_BUILD_DATE = ' + q + sys.argv[1] + q, c, count=1); open(fp, 'w', encoding='utf-8').write(c)" "%TODAY_ISO%"
 if %errorlevel% neq 0 goto :fail
 if exist "%RELEASE_DIR%" rd /s /q "%RELEASE_DIR%"
-mkdir "%RELEASE_DIR%\NVM2App"
 mkdir "%RELEASE_DIR%\source"
 
 :: 6. Build resource file
@@ -78,7 +80,9 @@ if %errorlevel% neq 0 python -m pip install pyinstaller
 ::    ftd2xx.dll is placed in _internal\ too. At runtime dll_setup.py adds that
 ::    dir (sys._MEIPASS) to the DLL search path.
 ::    Output: %RELEASE_DIR%\NVM2App\NVM2App.exe + _internal\  (PyInstaller makes
-::    the NVM2App sub-folder itself from --name, so distpath is the release dir)
+::    the NVM2App sub-folder itself from --name, so distpath is the release dir.
+::    Do NOT pre-create that sub-folder: PyInstaller then stops at a
+::    'Continue? (y/N)' prompt and Enter aborts the build)
 echo [3/5] Running PyInstaller build...
 python -m PyInstaller --noconsole --onedir --name NVM2App --icon="%CD%\a_assets\icons\nova_icon.ico" --add-binary "%CD%\ftd2xx.dll;." --distpath "%RELEASE_DIR%" --workpath "temp_build" --specpath "temp_build" "%CD%\main.py"
 if %errorlevel% neq 0 goto :fail
@@ -91,6 +95,9 @@ if not exist "%RELEASE_DIR%\NVM2App\_internal" (
 echo [4/5] Copying 2_resource to deploy folder...
 if exist "2_resource" (
     xcopy "2_resource" "%RELEASE_DIR%\NVM2App\2_resource" /E /I /H /R /Y > nul
+    rem firmware download cache: per-PC, not a deploy asset (the app update keeps the field's copy)
+    rem (rem, not :: - inside a ( ) block :: is parsed as a label and breaks depending on position)
+    if exist "%RELEASE_DIR%\NVM2App\2_resource\temp" rd /s /q "%RELEASE_DIR%\NVM2App\2_resource\temp"
 ) else (
     echo [WARNING] 2_resource folder not found. Skipping copy.
 )
@@ -98,7 +105,7 @@ if exist "2_resource" (
 :: 10. Source snapshot
 ::     robocopy exit codes 0-7 mean success, 8+ mean failure
 echo [5/5] Creating source snapshot...
-robocopy . "%RELEASE_DIR%\source" /E /XD .git .venv __pycache__ temp_build 0_build 3_build 3_log /XF *.pyc /NFL /NDL /NJH /NJS > nul
+robocopy . "%RELEASE_DIR%\source" /E /XD .git .venv .claude .idea __pycache__ temp_build 0_build 3_log dist build "%CD%\2_resource\temp" /XF *.pyc /NFL /NDL /NJH /NJS > nul
 if %errorlevel% geq 8 goto :fail
 mkdir "%RELEASE_DIR%\source\0_build"
 mkdir "%RELEASE_DIR%\source\3_log"

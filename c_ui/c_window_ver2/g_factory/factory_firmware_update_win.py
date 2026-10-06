@@ -51,6 +51,7 @@ ver1 에서 달라진 점:
 
 import itertools
 import os
+from datetime import datetime
 from enum import Enum, auto
 
 from PySide6.QtGui import QCloseEvent
@@ -362,19 +363,30 @@ class FactoryFirmwareUpdateWin(ParamWin):
                                flash_cpu1=flash_cpu1, flash_cpu2=flash_cpu2,
                                network_version=network_version)
 
-        # 로컬 파일 사전 검사 — Network 모드의 앱 파일은 다운로드가 만들므로 커널만 본다
+        # 로컬 파일 사전 검사 — Network 모드의 앱 파일은 다운로드가 만들므로 커널만 본다.
+        # 커널(2_resource/firmware, 배포 자산)과 앱 파일(2_resource/temp, 다운로드 캐시)은 폴더가 다르므로 경로를 그대로 보인다
         required = {"CPU1 Kernel": job.kernel_cpu1, "CPU2 Kernel": job.kernel_cpu2}
         if not is_network:
             required["CPU1 Firmware"] = job.flash_cpu1
             required["CPU2 Firmware"] = job.flash_cpu2
 
-        missing = [name for name, file_path in required.items() if not os.path.isfile(file_path)]
+        missing = [(name, file_path) for name, file_path in required.items() if not os.path.isfile(file_path)]
         if missing:
-            msg = "Firmware file(s) not found in 2_resource/temp:\n - " + "\n - ".join(missing)
+            msg = "Firmware file(s) not found:\n - " + "\n - ".join(f"{name}: {file_path}" for name, file_path in missing)
+            if not is_network:
+                # 캐시는 어댑터 종류별(RS232: fcpua/b, USB: fcpuan/bn)이라 마지막 Network 업데이트의 어댑터와 같아야 한다
+                msg += ("\n\nLocal Files uses the firmware downloaded by the last Network update"
+                        " made with the same adapter type (RS232 / USB).")
             self._log.error(f"[Cancelled] {msg}")
             QMessageBox.warning(self, "Warning", msg)
             self._cancel_selection()
             return
+
+        if not is_network:
+            # 어떤 다운로드본을 굽는지는 LogView 에만 남긴다 (N127) — GUI 는 선택 결과만 보인다
+            for name in ("CPU1 Firmware", "CPU2 Firmware"):
+                modified = datetime.fromtimestamp(os.path.getmtime(required[name])).strftime("%Y-%m-%d %H:%M")
+                self._log.info(f"[Local Files] {name}: {required[name]} (modified {modified})")
 
         # 재연결용 설정 스냅샷은 닫기 전에 — close() 가 ServicePort 의 설정을 지운다.
         # 업데이트 전 미연결이면 None (완료 후 재부팅 대기 없이 끝낸다)

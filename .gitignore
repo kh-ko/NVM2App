@@ -31,6 +31,12 @@ temp_build/
 # App runtime logs
 3_log/
 
+# Generated Qt resource module (pyside6-rcc; build.bat regenerates it)
+resources_rc.py
+
+# Firmware download cache (FTP, per-PC, not deployed) - deploy assets (kernels) live in 2_resource/firmware/
+2_resource/temp/
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt

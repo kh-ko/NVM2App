@@ -38,7 +38,7 @@ from b_core.g_protocol.codec import ScaleCodec, TextCodec  # noqa: E402
 from b_core.g_protocol.nv1_spec import Nv1ReadSpec  # noqa: E402
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 
-SRC_NV1 = os.path.join(ROOT, "2_resource", "param_schema", "param_nv1.json")
+SRC_NV1 = os.path.join(ROOT, "tools", "fixtures", "param_nv1.json")
 PREFIX_LEN = 6
 TYPO_FIX = {"No ADC Siganl On Logic": "No ADC Signal On Logic"}
 DISPLAY = {"posiold": ParamDisplayType.POSI, "scale1000": ParamDisplayType.SCALE, "enum": ParamDisplayType.ENUM,

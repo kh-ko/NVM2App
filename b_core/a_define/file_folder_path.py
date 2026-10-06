@@ -50,13 +50,20 @@ RSRC_FTP_SETTING_FILE = os.path.join(RSRC_CONFIG_PATH, "ftp_connection.json")
 
 
 
+# 펌웨어 — 배포 자산과 다운로드 캐시를 폴더로 나눈다 (N046):
+#   firmware/ : 커널. git 추적·배포되고 앱 업데이트가 덮어쓴다
+#   temp/     : FTP 다운로드 목적지 = Local Files 모드의 원본(이 PC 의 마지막 다운로드본).
+#               git 비추적, 배포본에서 제외(build.bat), 앱 업데이트가 보존(app_update_helper.PRESERVED_RELATIVE_DIRS).
+#               폴더는 다운로드가 만든다 — 다운로드한 적이 없으면 Local Files 는 사전 검사에서 멈춘다
+RSRC_FIRMWARE_PATH = os.path.join(RSRC_BASE, "firmware")
+RSRC_KERNEL_CPU1_FILE     = os.path.join(RSRC_FIRMWARE_PATH, "fknlcp1.dlla")
+RSRC_KERNEL_CPU2_FILE     = os.path.join(RSRC_FIRMWARE_PATH, "fknlcp2.dlla")
+
 RSRC_TEMP_PATH = os.path.join(RSRC_BASE, "temp")
 RSRC_APP_CPU1_NEW_FILE    = os.path.join(RSRC_TEMP_PATH, "fcpuan.dlla")
 RSRC_APP_CPU2_NEW_FILE    = os.path.join(RSRC_TEMP_PATH, "fcpubn.dlla")
 RSRC_APP_CPU1_FILE        = os.path.join(RSRC_TEMP_PATH, "fcpua.dlla")
 RSRC_APP_CPU2_FILE        = os.path.join(RSRC_TEMP_PATH, "fcpub.dlla")
-RSRC_KERNEL_CPU1_FILE     = os.path.join(RSRC_TEMP_PATH, "fknlcp1.dlla")
-RSRC_KERNEL_CPU2_FILE     = os.path.join(RSRC_TEMP_PATH, "fknlcp2.dlla")
 
 RSRC_PARAM_SCHEMA_PATH = os.path.join(RSRC_BASE, "param_schema")
 # 값 정의(params) 와 전송 규약(nv2/nv1 spec) 을 파일로 분리한다 — g_protocol/spec_loader 참고

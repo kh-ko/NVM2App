@@ -40,7 +40,7 @@ from b_core.g_protocol.nv1_spec import Nv1ReadSpec, Nv1WriteSpec  # noqa: E402
 from b_core.g_protocol.nv2_spec import Nv2ReadSpec, Nv2WriteSpec  # noqa: E402
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 
-SRC_NV1 = os.path.join(ROOT, "2_resource", "param_schema", "param_nv1.json")
+SRC_NV1 = os.path.join(ROOT, "tools", "fixtures", "param_nv1.json")
 OPTION_PREFIX_LEN = 8
 OPTION_PATHS = {  # ver1 이름 → 정리된 path 끝부분
     "Homing.End Position": "Setting.Homing End Position",

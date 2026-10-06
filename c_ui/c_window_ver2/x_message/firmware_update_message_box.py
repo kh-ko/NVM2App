@@ -85,7 +85,8 @@ def ask_update_method(parent) -> FirmwareSource | None:
     box.setWindowTitle("Select Firmware Update Method")
     box.setText("Please select the firmware update method.\n\n"
                 "- From Network : select a version from the FTP repository\n"
-                "- From Local Files : use the firmware files in 2_resource/temp (last downloaded)")
+                "- From Local Files : use the firmware downloaded by the last Network update\n"
+                "                     with the same adapter type (2_resource/temp)")
 
     btn_network = box.addButton("From Network", QMessageBox.ButtonRole.AcceptRole)
     btn_local = box.addButton("From Local Files", QMessageBox.ButtonRole.AcceptRole)
