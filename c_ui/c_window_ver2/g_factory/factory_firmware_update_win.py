@@ -63,6 +63,7 @@ from b_core.e_worker_ver2.firmware_run_worker import (AdapterType, FirmwarePhase
                                                       FirmwareRunWorker, FirmwareSource,
                                                       FirmwareWriteJob, list_com_port_names)
 from b_core.e_worker_ver2.parameter_run_worker import StartResult
+from b_core.f_helper import firmware_ftp_helper
 
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.b_base.labels import CheckLabel
@@ -381,15 +382,22 @@ class FactoryFirmwareUpdateWin(ParamWin):
             return
 
         if not is_network:
-            # 어떤 다운로드본을 굽는지는 LogView 에만 남긴다 (N127) — GUI 는 선택 결과만 보인다
+            # 다운로드 기록(어댑터별 버전·시각)은 선택 결과 행에 — 어떤 쌍을 굽는지 사용자가 본다 (N053).
+            # 파일 경로·수정일은 LogView 에만 남긴다 (N127)
+            record = firmware_ftp_helper.read_version_record(os.path.dirname(job.flash_cpu1),
+                                                             adapter_type == AdapterType.RS232)
+            version_text = f"{record['version']}, {record['downloaded']}" if record else "version unknown"
+            self.row_method.set_text(f"Update Method : Local Files ({version_text})")
             for name in ("CPU1 Firmware", "CPU2 Firmware"):
                 modified = datetime.fromtimestamp(os.path.getmtime(required[name])).strftime("%Y-%m-%d %H:%M")
-                self._log.info(f"[Local Files] {name}: {required[name]} (modified {modified})")
+                self._log.info(f"[Local Files] {name}: {required[name]} (modified {modified}, {version_text})")
 
         # 재연결용 설정 스냅샷은 닫기 전에 — close() 가 ServicePort 의 설정을 지운다.
-        # 업데이트 전 미연결이면 None (완료 후 재부팅 대기 없이 끝낸다)
+        # 연결 중일 때만 갱신한다 — 실패 뒤 재시도 때는 포트가 닫혀 있어 None 으로 덮으면 재부팅 대기·재연결·
+        # 복원 절차가 통째로 빠졌다 (F091). 창을 연 뒤 한 번도 연결된 적이 없으면 None 그대로 (완료 후 대기 없이 끝)
         svc = self.svc_port
-        self._saved_port_setting = svc.setting  # 미연결이면 None
+        if svc.setting is not None:
+            self._saved_port_setting = svc.setting
 
         # 워커가 같은 COM 포트를 직접 열므로 ServicePort 는 여기서 닫는다 —
         # 끊김 시그널은 ParamWin 의 공통 처리(상태바/param_worker 중지)가 받는다

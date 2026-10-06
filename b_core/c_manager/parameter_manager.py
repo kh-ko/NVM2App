@@ -77,11 +77,24 @@ class ParamManager:
             self._fail(f"params 스키마 템플릿 오류: {e}")
             param_list = []
 
-        for param in param_list:
+        for index, param in enumerate(param_list):
+            if not isinstance(param, dict):
+                self._fail(f"params 스키마: {index}번째 원소가 객체가 아님: {param!r}")  # N029 — 같은 정책 (기동 대화상자)
+                continue
+
             param_type = param.get("type", "")
 
             display_type = PARAM_DISPLAY_TYPE_MAP.get(param_type)
-            self._add_param(param, display_type)
+            if display_type is None:
+                self._fail(f"params 스키마: 알 수 없는 type '{param_type}' — {param.get('path')}")  # F012
+                continue
+
+            try:
+                self._add_param(param, display_type)
+            except Exception as e:
+                # enum/acc 오타, path 에 '.' 없음, min 비문자열 등 — 항목 단위로 모아 기동 대화상자로 (N022/F013).
+                # 창 생성 시점의 TypeError 크래시(대화상자 없음) 대신 main.py 의 스키마 오류 경로를 탄다
+                self._fail(f"params 스키마 항목 오류 — {param.get('path')}: {e}")
 
         if not self._parameters and not self.load_errors:
             self._fail(f"params 스키마에 param 이 없음: {path_def.RSRC_PARAMS_JSON_FILE}")

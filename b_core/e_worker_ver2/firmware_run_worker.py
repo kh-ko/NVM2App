@@ -576,9 +576,17 @@ class FirmwareWriteThread(_FirmwareThreadBase):
         except RuntimeError:
             raise  # 중단 요청
         except Exception as e:
+            self._check_abort()  # 중단 중에는 ftplib 가 먼저 낸 오류(426 등)보다 '중단' 으로 보고한다 (F023)
             raise RuntimeError(f"Failed to download firmware files from FTP: {e}") from e
 
         self.sig_log.emit(False, f"[FTP] downloaded -> {job.flash_cpu1}, {job.flash_cpu2}")
+
+        # 어댑터별 버전 기록 — 안내용이라 실패해도 업데이트는 계속한다 (파일 쌍은 이미 완성됐다, N053)
+        try:
+            firmware_ftp_helper.write_version_record(os.path.dirname(job.flash_cpu1),
+                                                     job.adapter_type == AdapterType.RS232, job.network_version)
+        except OSError as e:
+            self.sig_log.emit(True, f"[FTP] version record not written ({e}) - continuing")
 
     # ------------------------------------------------------------ FTDI
     def _ensure_cbus_iomode(self) -> bool:
@@ -707,11 +715,20 @@ class FirmwareWriteThread(_FirmwareThreadBase):
         return words
 
     # ----------------------------------------------------------- 소거 / 리셋
+    def _check_status(self, cmd: int, status: list[int]):
+        """상태 패킷 판정 — status[0] 이 NO_ERROR 가 아니면 RuntimeError (ERASE / DFU / VERIFY 공통)."""
+        if not status or status[0] != NO_ERROR:
+            s0 = status[0] if len(status) > 0 else 0
+            s3 = status[3] if len(status) > 3 else 0
+            err  = STATUS_ERR_STR.get(s0, "ERROR Status: Not Recognized Error")
+            err2 = FLASH_API_ERR_STR.get(s3, "Error not recognized")
+            raise RuntimeError(f"Command 0x{cmd:04X} failed\n{err}\n{err2}")
+
     def _erase_cpu(self, cmd: int):
-        """C++ eraseCPU : 오토보 -> ERASE 패킷(sectorMask 4바이트 LE) -> 상태 패킷."""
+        """C++ eraseCPU : 오토보 -> ERASE 패킷(sectorMask 4바이트 LE) -> 상태 패킷 판정."""
         self._autobaud_lock()
         self._send_packet(cmd, ERASE_SECTOR_MASK.to_bytes(4, "little"))
-        self._get_packet(cmd)
+        self._check_status(cmd, self._get_packet(cmd))  # 소거 실패를 'completed' 로 기록하지 않는다 (F024)
         self.sig_log.emit(False, f"[Erase] Command 0x{cmd:04X} completed")
 
     def _reset_cpu(self, cmd: int):
@@ -724,15 +741,7 @@ class FirmwareWriteThread(_FirmwareThreadBase):
         """C++ downloadApp : DFU/VERIFY 패킷 -> downloadImage -> 상태 패킷 판정."""
         self._send_packet(cmd)
         self._download_image(data)
-        status = self._get_packet(cmd)
-
-        if not status or status[0] != NO_ERROR:
-            s0 = status[0] if len(status) > 0 else 0
-            s3 = status[3] if len(status) > 3 else 0
-            err  = STATUS_ERR_STR.get(s0, "ERROR Status: Not Recognized Error")
-            err2 = FLASH_API_ERR_STR.get(s3, "Error not recognized")
-            raise RuntimeError(f"Command 0x{cmd:04X} failed\n{err}\n{err2}")
-
+        self._check_status(cmd, self._get_packet(cmd))
         self._ser.reset_input_buffer()
 
     def _download_image(self, data: bytes):

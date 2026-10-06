@@ -36,6 +36,15 @@ class ParamCondition(QObject):
         self.values: List[Union[int, float, str, None]] = []
 
 
+def _lookup_enum(enum_str) -> Type[p_enum.DescriptionEnum]:
+    """스키마의 enum 이름 -> param_enum 클래스. 없거나 오타면 ValueError — 창을 만들 때 TypeError 로 죽는 대신
+    ParamManager 가 load_errors 로 모아 기동 대화상자에 보인다 (N022)."""
+    enum_class = getattr(p_enum, enum_str, None) if isinstance(enum_str, str) else None
+    if enum_class is None:
+        raise ValueError(f"unknown enum '{enum_str}'")
+    return enum_class
+
+
 class Parameter(QObject):
     # 값이 변경되었을 때 발생하는 시그널 (페이로드 없음 — 수신측이 param.value 를 읽는다)
     sig_value_changed = Signal()
@@ -58,7 +67,9 @@ class Parameter(QObject):
         full_path         = param_json.get("path", "")
         path, name        = full_path.rsplit(".", 1)
         acc_str           = param_json.get("acc", "RO")
-        acc               = getattr(ParamAccType, acc_str, ParamAccType.RO)
+        acc               = getattr(ParamAccType, acc_str, None)
+        if acc is None:
+            raise ValueError(f"unknown acc '{acc_str}'")  # 스키마 오류 — ParamManager 가 load_errors 로 모은다 (F012)
         local_acc         = param_json.get("local_acc", False)
         nor_backup        = param_json.get("nor_backup", False)
         fu_backup         = param_json.get("fu_backup", False)
@@ -139,7 +150,7 @@ class Parameter(QObject):
 
     def _init_enum(self, param_json):
         self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
-        enum_str = param_json.get("enum"); enum_class = getattr(p_enum, enum_str, None); self.ref_list = enum_class
+        self.ref_list = _lookup_enum(param_json.get("enum"))
 
         if not self.description:
             items = [f"{item.value}: {item.description}" for item in self.ref_list]
@@ -150,7 +161,7 @@ class Parameter(QObject):
 
     def _init_bitmap(self, param_json):
         self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
-        enum_str = param_json.get("enum"); enum_class = getattr(p_enum, enum_str, None); self.ref_list = enum_class
+        self.ref_list = _lookup_enum(param_json.get("enum"))
 
         if not self.description:
             items = [f"{item.value}: {item.description}" for item in self.ref_list]
@@ -191,12 +202,9 @@ class Parameter(QObject):
 
     def _init_errnum(self, param_json):
         self.data_type = ParamDataType.UINT32; self.min_value = 0; self.max_value = 0xFFFFFFFF
-        component_enum_str = param_json.get("component_enum",None)
-        component_enum_class = getattr(p_enum, component_enum_str, None)
-        mode_enum_str = param_json.get("mode_enum",None)
-        mode_enum_class = getattr(p_enum, mode_enum_str, None)
-        type_enum_str = param_json.get("type_enum",None)
-        type_enum_class = getattr(p_enum, type_enum_str, None)
+        component_enum_class = _lookup_enum(param_json.get("component_enum"))
+        mode_enum_class = _lookup_enum(param_json.get("mode_enum"))
+        type_enum_class = _lookup_enum(param_json.get("type_enum"))
 
         self.ref_list : List[Tuple[str, Type[p_enum.DescriptionEnum]]] = []
         self.ref_list.append(("Component", component_enum_class))

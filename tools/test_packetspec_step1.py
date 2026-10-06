@@ -8,7 +8,8 @@ parameter.py 와 param.json 을 git 에서 꺼내 그대로 실행한 결과다.
 
 검사 항목
   1. 정적: 2,679 param 의 경로/타입/범위/acc/플래그/설명/enum 참조가 동일
-     (의도된 편차 1건: "num " 오타 수정 → 표시 타입 None → NUMBER)
+     (의도된 편차 3종: "num " 오타 수정 → 표시 타입 None → NUMBER; Compound hex 슬롯 100개 max 기본 0x7FFFFFFF →
+      스키마 명시 0xFFFFFFFF (N004); RO 2건 nor/fu_backup true → false (N002))
   2. enable/visible 조건: 옛 ref id → 마이그레이션이 고른 path 가 새 ref_path 와 동일
   3. 요청 문자열/응답 접두: 읽기·쓰기 요청과 정상 응답 접두가 바이트 단위 동일
   4. NV2 역조회: get_nv2_key == 옛 (id, idx), get_by_nv2_key == 옛 dict(마지막 등록 우선)
@@ -41,6 +42,11 @@ from b_core.g_protocol.codec import TextCodec  # noqa: E402
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 
 NUM_TYPO_PATH = "Interface RS232/RS485.Settings.Address"  # "num " → "num" 의도된 편차
+# 2026-10-06 스키마 정정 (의도된 편차): Compound hex 슬롯 100개에 min/max 명시 — 기본값 0x7FFFFFFF 로 상위 비트가 선
+# NV2 id 를 표시·입력하지 못하던 문제 (N004); RO param 2건의 죽은 백업 플래그 false (N002)
+HEX_RANGE_FIX_PREFIX = "Compound Commands."
+RO_BACKUP_FLAG_PATHS = {"Valve.Option.Position Restriction.Restriction Active",
+                        "Pressure Control.General Settings.Profile Ramp.Actual Slope"}
 
 
 class Report:
@@ -150,11 +156,22 @@ def main() -> int:
     static_fields = ("path", "name", "data_type", "min_value", "max_value", "acc", "is_only_local_acc",
                      "is_nor_backup", "is_fu_backup", "description", "is_need_reconnect", "ref_list")
     ambiguous_refs = set()
+    hex_range_fixed = 0
+    ro_flag_fixed = 0
     for o, n in zip(olds, news):
         tag = f"{o.path}.{o.name}"
         for f in static_fields:
             if tag == NUM_TYPO_PATH and f in ("data_type", "min_value", "max_value"):
                 continue  # 의도된 편차: 표시 타입이 바뀌어 FLOAT(범위 없음) → UINT32(0~255)
+            if (f == "max_value" and o.display_type is ParamDisplayType.HEX and tag.startswith(HEX_RANGE_FIX_PREFIX)
+                    and o.max_value == 0x7FFFFFFF):
+                rep.check(n.max_value == 0xFFFFFFFF, f"{tag}: 의도된 편차(N004) 결과가 아님: max {n.max_value!r}")
+                hex_range_fixed += 1
+                continue  # 의도된 편차: 슬롯 범위를 스키마에 명시 (기본 0x7FFFFFFF → 0xFFFFFFFF)
+            if tag in RO_BACKUP_FLAG_PATHS and f in ("is_nor_backup", "is_fu_backup"):
+                rep.check(getattr(n, f) is False, f"{tag}: 의도된 편차(N002) 결과가 아님: {f} {getattr(n, f)!r}")
+                ro_flag_fixed += 1
+                continue  # 의도된 편차: RO 의 죽은 백업 플래그 false
             rep.check(getattr(o, f) == getattr(n, f), f"{tag}: {f} {getattr(o, f)!r} != {getattr(n, f)!r}")
         if tag == NUM_TYPO_PATH:
             rep.check(o.display_type is None and n.display_type is ParamDisplayType.NUMBER,
@@ -180,6 +197,11 @@ def main() -> int:
                     rep.check(a.values == b.values, f"{tag}: {attr} values")
                     if len(params_per_id.get(a.ref_id, ())) > 1:
                         ambiguous_refs.add(a.ref_id)
+
+    rep.check(hex_range_fixed == 100, f"의도된 편차(N004) 대상 수: {hex_range_fixed} (100 이어야 함)")
+    rep.check(ro_flag_fixed == 4, f"의도된 편차(N002) 대상 수: {ro_flag_fixed} (2건 × 2플래그 = 4 이어야 함)")
+    rep.notes.append(f"의도된 편차: Compound hex 슬롯 {hex_range_fixed}개 max 기본 0x7FFFFFFF → 스키마 명시 0xFFFFFFFF (N004), "
+                     f"RO 2건 백업 플래그 true → false (N002)")
 
     # ---------------------------------------------------------------- 3. 요청/응답 접두
     for o, n in zip(olds, news):
