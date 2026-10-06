@@ -1,10 +1,10 @@
 """도메인 중립화(3단계) 차등 테스트 — 구 컨버터(UI 변환) vs 새 codec + 표시 변환.
 
-"화면 결과 불변" 을 기계적으로 확인한다. 비교 대상은 직전 커밋(기본 b88c40b)의
-c_ui/a_converter 두 파일을 git 에서 꺼내 그대로 실행한 결과다.
+"화면 결과 불변" 을 기계적으로 확인한다. 비교 대상은 도메인 중립화 직전 커밋(b88c40b)의
+c_ui/a_converter 두 파일이며, tools/fixtures 에 고정 사본으로 둔다 (git 이력에 의존하지 않는다 — F109).
 
-    python tools/test_domain_step3.py
-    python tools/test_domain_step3.py --old-commit <sha>
+    python tools/tests/test_domain_step3.py
+    python tools/tests/test_domain_step3.py --old-commit <sha>   # 다른 커밋과 비교 (git show, 임시 폴더는 종료 시 삭제)
 
 검사 항목
   1. 위치: 단위 8종 × USER_SPECIFIC (min,max) 조합 × 선로값 표본 → 구 convert_posi_to_dp / _str
@@ -31,7 +31,12 @@ import tempfile
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, TOOLS)
+import _harness  # noqa: E402
+
+ROOT = _harness.ROOT
+_harness.isolate_runtime()  # 실제 2_resource/config · 3_log 를 건드리지 않는다 — 매니저 import 전에
 sys.path.insert(0, ROOT)
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
@@ -71,11 +76,12 @@ def git_show(commit: str, path: str) -> str:
     return subprocess.check_output(["git", "-C", ROOT, "show", f"{commit}:{path}"]).decode("utf-8")
 
 
-def load_old_module(commit: str, path: str, name: str):
-    tmp = tempfile.mkdtemp(prefix="domain_old_")
-    file_path = os.path.join(tmp, os.path.basename(path))
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(git_show(commit, path))
+OLD_POSI_PY = os.path.join(_harness.FIXTURES_DIR, "old_b88c40b_position_converter_manager.py")
+OLD_PRES_PY = os.path.join(_harness.FIXTURES_DIR, "old_b88c40b_pressure_converter_manager.py")
+
+
+def load_old_module(file_path: str, name: str):
+    """구 컨버터 모듈을 파일에서 적재한다 (기본은 tools/fixtures 의 고정 사본 — F109)."""
     spec = importlib.util.spec_from_file_location(name, file_path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -112,15 +118,24 @@ def seq(a: str | None, b: str | None, decimals: int | None = None) -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--old-commit", default="b88c40b")
+    ap.add_argument("--old-commit", default=None, help="픽스처 대신 이 커밋의 컨버터 2파일과 비교")
     args = ap.parse_args()
 
     rep = Report()
     pm = ParamManager()
     reg = SpecRegistry()
 
-    old_posi_mod = load_old_module(args.old_commit, "c_ui/a_converter/position_converter_manager.py", "old_posi_conv")
-    old_pres_mod = load_old_module(args.old_commit, "c_ui/a_converter/pressure_converter_manager.py", "old_pres_conv")
+    with tempfile.TemporaryDirectory(prefix="domain_old_") as tmp:   # --old-commit 일 때만 쓰인다 (종료 시 삭제, F106)
+        posi_py, pres_py = OLD_POSI_PY, OLD_PRES_PY
+        if args.old_commit is not None:
+            posi_py = os.path.join(tmp, "position_converter_manager.py")
+            pres_py = os.path.join(tmp, "pressure_converter_manager.py")
+            for file_path, rel in ((posi_py, "c_ui/a_converter/position_converter_manager.py"),
+                                   (pres_py, "c_ui/a_converter/pressure_converter_manager.py")):
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(git_show(args.old_commit, rel))
+        old_posi_mod = load_old_module(posi_py, "old_posi_conv")
+        old_pres_mod = load_old_module(pres_py, "old_pres_conv")
     from c_ui.a_converter.position_converter_manager import PosiConverterManager
     from c_ui.a_converter.pressure_converter_manager import PresConverterManager
 

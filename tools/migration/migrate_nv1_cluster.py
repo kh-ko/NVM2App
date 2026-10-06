@@ -19,8 +19,8 @@ Position Offset 은 다른 NV2 posi 와 같은 codec, backup 플래그 전부 fa
 정해진 자리에 다시 넣고, nv1_spec.json 은 전체를 다시 쓴다. 원본 줄바꿈(CRLF)을 보존한다.
 param_nv1.json 은 tools/fixtures 에 남긴다 (참고 자료 — 배포 리소스가 아니므로 2_resource 밖, F102).
 
-사용:  python tools/migrate_nv1_cluster.py   (프로젝트 루트에서)
-검증:  python tools/test_nv1_step4.py && python tools/test_nv1_step6.py
+사용:  python tools/migration/migrate_nv1_cluster.py   (프로젝트 루트에서)
+검증:  python tools/run_tests.py --only nv1
 """
 
 import json
@@ -28,7 +28,7 @@ import os
 import re
 import sys
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SCHEMA_DIR = os.path.join(ROOT, "2_resource", "param_schema")
 SRC_NV1 = os.path.join(ROOT, "tools", "fixtures", "param_nv1.json")
 PARAMS = os.path.join(SCHEMA_DIR, "params.json")

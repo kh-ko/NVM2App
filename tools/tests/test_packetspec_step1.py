@@ -1,10 +1,10 @@
 """PacketSpec 1단계 차등 테스트 — 구 Parameter(프로토콜 내장) vs 새 SpecRegistry + Nv2 spec.
 
-"외부 동작 불변" 을 기계적으로 확인한다. 비교 대상은 마지막 커밋(기본 61025d3)의
-parameter.py 와 param.json 을 git 에서 꺼내 그대로 실행한 결과다.
+"외부 동작 불변" 을 기계적으로 확인한다. 비교 대상은 PacketSpec 도입 직전 커밋(61025d3)의
+parameter.py 와 param.json 이며, tools/fixtures 에 고정 사본으로 둔다 (git 이력에 의존하지 않는다 — F109).
 
-    python tools/test_packetspec_step1.py                      # git show 61025d3:... 로 구 코드 확보
-    python tools/test_packetspec_step1.py --old-commit <sha>
+    python tools/tests/test_packetspec_step1.py
+    python tools/tests/test_packetspec_step1.py --old-commit <sha>   # 다른 커밋과 비교 (git show, 임시 폴더는 종료 시 삭제)
 
 검사 항목
   1. 정적: 2,679 param 의 경로/타입/범위/acc/플래그/설명/enum 참조가 동일
@@ -28,7 +28,12 @@ import subprocess
 import sys
 import tempfile
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, TOOLS)
+import _harness  # noqa: E402
+
+ROOT = _harness.ROOT
+_harness.isolate_runtime()  # 실제 2_resource/config · 3_log 를 건드리지 않는다 — 매니저 import 전에
 sys.path.insert(0, ROOT)
 
 from PySide6.QtCore import QCoreApplication  # noqa: E402
@@ -67,23 +72,28 @@ def git_show(commit: str, path: str) -> str:
     return subprocess.check_output(["git", "-C", ROOT, "show", f"{commit}:{path}"]).decode("utf-8")
 
 
-def load_old(commit: str, parameter_py: str | None, schema_json: str | None):
-    tmp = tempfile.mkdtemp(prefix="packetspec_old_")
-    if parameter_py is None:
-        parameter_py = os.path.join(tmp, "old_parameter.py")
-        with open(parameter_py, "w", encoding="utf-8") as f:
-            f.write(git_show(commit, "b_core/b_datatype/parameter.py"))
-    if schema_json is None:
-        schema_json = os.path.join(tmp, "old_param.json")
-        with open(schema_json, "w", encoding="utf-8") as f:
-            f.write(git_show(commit, "2_resource/param_schema/param.json"))
+OLD_PARAMETER_PY = os.path.join(_harness.FIXTURES_DIR, "old_61025d3_parameter.py")
+OLD_SCHEMA_JSON = os.path.join(_harness.FIXTURES_DIR, "old_61025d3_param.json")
 
-    spec = importlib.util.spec_from_file_location("old_parameter", parameter_py)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
 
-    with open(schema_json, "r", encoding="utf-8") as f:
-        items = json.load(f)
+def load_old(parameter_py: str, schema_json: str, commit: str | None = None):
+    """기준 구 코드/스키마를 적재한다. 기본은 tools/fixtures 의 고정 사본(F109); --old-commit 이 주어지면 그 커밋에서
+    git show 로 꺼내 임시 폴더에 두고 비교한다 (폴더는 블록 종료 시 삭제 — N131)."""
+    with tempfile.TemporaryDirectory(prefix="packetspec_old_") as tmp:
+        if commit is not None:
+            parameter_py = os.path.join(tmp, "old_parameter.py")
+            with open(parameter_py, "w", encoding="utf-8") as f:
+                f.write(git_show(commit, "b_core/b_datatype/parameter.py"))
+            schema_json = os.path.join(tmp, "old_param.json")
+            with open(schema_json, "w", encoding="utf-8") as f:
+                f.write(git_show(commit, "2_resource/param_schema/param.json"))
+
+        spec = importlib.util.spec_from_file_location("old_parameter", parameter_py)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        with open(schema_json, "r", encoding="utf-8") as f:
+            items = json.load(f)
     olds = [mod.Parameter(item, PARAM_DISPLAY_TYPE_MAP.get(item.get("type", ""))) for item in items]
     return olds, items
 
@@ -126,13 +136,13 @@ def write_cases(id_code: str, idx: int):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--old-commit", default="61025d3")
-    ap.add_argument("--old-parameter")
-    ap.add_argument("--old-schema")
+    ap.add_argument("--old-commit", default=None, help="픽스처 대신 이 커밋의 parameter.py/param.json 과 비교")
+    ap.add_argument("--old-parameter", default=OLD_PARAMETER_PY)
+    ap.add_argument("--old-schema", default=OLD_SCHEMA_JSON)
     args = ap.parse_args()
 
     rep = Report()
-    olds, old_items = load_old(args.old_commit, args.old_parameter, args.old_schema)
+    olds, old_items = load_old(args.old_parameter, args.old_schema, args.old_commit)
     all_news = ParamManager().get_param_list()
     reg = SpecRegistry()
     # 4·6단계에서 추가된 Cluster.Device n.* param 은 옛 param.json 에 없다 — 옛 스키마에 있는 path 만 대조

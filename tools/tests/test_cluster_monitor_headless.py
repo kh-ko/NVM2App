@@ -1,6 +1,6 @@
 """Cluster Monitor 창 헤드리스 테스트 — 장비 없이 표 구성 · 장치 수 연동 · 값 표시 · 장치 선택 패널을 확인한다.
 
-    python tools/test_cluster_monitor_headless.py
+    python tools/tests/test_cluster_monitor_headless.py
 
 검사 항목
   1. 생성: 열 17개(Device 0 Status 의 param 순서), 행 0개(장치 수 미수신), 워커 읽기 등록 = Number of Valves 1개,
@@ -21,7 +21,12 @@ import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, TOOLS)
+import _harness  # noqa: E402
+
+ROOT = _harness.ROOT
+_harness.isolate_runtime()  # 실제 2_resource/config · 3_log 를 건드리지 않는다 — 매니저 import 전에
 sys.path.insert(0, ROOT)
 
 from PySide6.QtWidgets import QApplication  # noqa: E402

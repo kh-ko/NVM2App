@@ -1,6 +1,6 @@
 """NV1 읽기 spec (4단계) 테스트 — 실제 로더 / Nv1ReadSpec / 워커로 Cluster Status 30대분을 확인한다.
 
-    python tools/test_nv1_step4.py
+    python tools/tests/test_nv1_step4.py
 
 검사 항목
   1. 로더: load_errors 없음. Cluster.Device n.Status param 510개, 읽기 spec 30개(각 17 param),
@@ -24,7 +24,12 @@ import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, TOOLS)
+import _harness  # noqa: E402
+
+ROOT = _harness.ROOT
+_harness.isolate_runtime()  # 실제 2_resource/config · 3_log 를 건드리지 않는다 — 매니저 import 전에
 sys.path.insert(0, ROOT)
 
 from PySide6.QtWidgets import QApplication  # noqa: E402

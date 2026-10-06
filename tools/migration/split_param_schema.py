@@ -7,7 +7,7 @@
 - nv2_spec.json: NV2 요청/응답 템플릿 + (path, id, idx) 목록.
 - 항목 순서는 원본 그대로, 한 항목 = 한 줄 (diff 가독성).
 
-사용:  python tools/split_param_schema.py   (프로젝트 루트에서)
+사용:  python tools/migration/split_param_schema.py   (프로젝트 루트에서)
 결과 확인 후 원본 param.json 은 삭제한다.
 """
 
@@ -15,7 +15,7 @@ import json
 import os
 import sys
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SCHEMA_DIR = os.path.join(ROOT, "2_resource", "param_schema")
 SRC = os.path.join(SCHEMA_DIR, "param.json")
 DST_PARAMS = os.path.join(SCHEMA_DIR, "params.json")

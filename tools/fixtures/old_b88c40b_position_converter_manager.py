@@ -1,0 +1,185 @@
+from b_core.c_manager.local_setting_manager import LocalSettingManager
+import threading
+import math
+
+from decimal import Decimal
+from PySide6.QtCore import Signal, QObject
+
+from b_core.b_datatype import param_enum as p_enum
+from b_core.c_manager.parameter_manager import ParamManager
+from b_core.f_helper.float_util import to_sig_str
+
+class PosiConverterManager(QObject):
+    _instance = None
+    _creation_lock = threading.Lock()
+
+    sig_posi_range_changed = Signal()
+
+    def __new__(cls, *args, **kwargs):
+        # 멀티스레드 환경에서 동시에 생성되는 것을 방지
+        with cls._creation_lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        # 중복 초기화 방어
+        if self._initialized:
+            return
+
+        super().__init__()
+
+        self._initialized = True
+        self.local_setting = LocalSettingManager()
+
+        self.posi_unit = p_enum.RS232PositionUnitEnum.USER_SPECIFIC.value
+        self.posi_min  = 0.0
+        self.posi_max  = 100.0
+        self.posi_decimal_places = 2
+
+        self.posi_unit_param = ParamManager().get_by_full_path("Interface.Scaling.Position.Position Unit"         )
+        self.posi_min_param  = ParamManager().get_by_full_path("Interface.Scaling.Position.Value Closest Position")
+        self.posi_max_param  = ParamManager().get_by_full_path("Interface.Scaling.Position.Value Open Position"   )     
+        
+        self.posi_unit_param.sig_value_changed.connect(self.handle_posi_range_changed)
+        self.posi_min_param.sig_value_changed.connect(self.handle_posi_range_changed)
+        self.posi_max_param.sig_value_changed.connect(self.handle_posi_range_changed)    
+        self.local_setting.sig_posi_decimal_places_changed.connect(self.handle_posi_decimal_places_changed) 
+
+        self.handle_posi_decimal_places_changed() 
+
+    def handle_posi_decimal_places_changed(self):
+        self.posi_decimal_places = self.local_setting.posi_decimal_places
+        self.sig_posi_range_changed.emit()
+
+    def handle_posi_range_changed(self):
+        if not self.posi_unit_param.str_value:
+            return
+
+        self.posi_unit = self.posi_unit_param.value
+
+        if self.posi_unit == p_enum.RS232PositionUnitEnum.USER_SPECIFIC.value:
+            if not self.posi_min_param.str_value or not self.posi_max_param.str_value:
+                return
+            self.posi_min  = self.posi_min_param.value
+            self.posi_max  = self.posi_max_param.value
+        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_1.value:
+            self.posi_min = 0.0
+            self.posi_max = 1.0
+        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_10.value:
+            self.posi_min = 0.0
+            self.posi_max = 10.0
+        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_90.value:
+            self.posi_min = 0.0
+            self.posi_max = 90.0
+        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_100.value:
+            self.posi_min = 0.0
+            self.posi_max = 100.0
+        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_1000.value:
+            self.posi_min = 0.0
+            self.posi_max = 1000.0
+        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_10000.value:
+            self.posi_min = 0.0
+            self.posi_max = 10000.0            
+        elif self.posi_unit == p_enum.RS232PositionUnitEnum.ZERO_TO_100000.value:
+            self.posi_min = 0.0
+            self.posi_max = 100000.0  
+        else:
+            self.posi_unit = -1
+
+        self.sig_posi_range_changed.emit()
+
+    def convert_posi_to_dp(self, ori_value: float) -> float:
+        if ori_value is None:
+            return None 
+        
+        if self.posi_unit == -1:
+            return None
+
+        range_value = self.posi_max - self.posi_min
+
+        if range_value == 0:
+            return 0.0
+        else:
+            converted_value = (ori_value - self.posi_min) / range_value * 100
+
+            return converted_value
+
+    def convert_posi_to_dp_str(self, ori_value: float) -> str:
+        converted_value = self.convert_posi_to_dp(ori_value)
+
+        if converted_value is None:
+            return None
+        
+        fmt_spec = f".{self.posi_decimal_places}f"
+        return format(Decimal(str(converted_value)), fmt_spec)      
+
+    def convert_dp_str_to_posi(self, display_value: str) -> float:
+        if display_value is None:
+            return None
+
+        try:
+            dp_value = float(display_value)
+        except Exception:
+            return None
+
+        return self.convert_dp_to_posi(dp_value)       
+
+    def convert_dp_str_to_posi_str(self, display_value: str) -> str:
+        if display_value is None:
+            return None
+
+        try:
+            dp_value = float(display_value)
+        except Exception:
+            return None
+
+        return self.convert_dp_to_posi_str(dp_value)          
+
+    def convert_dp_to_posi(self, display_value: float) -> float:
+        if self.posi_unit == -1 or display_value is None:
+            return None
+
+        range_value = self.posi_max - self.posi_min
+
+        if range_value == 0:
+            return self.posi_min
+        else:
+            ori_value = (display_value / 100.0) * range_value + self.posi_min
+            return ori_value
+
+    def convert_dp_to_posi_str(self, display_value: float) -> str:
+        if self.posi_unit == -1 or display_value is None:
+            return None
+
+        result_value = 0
+
+        range_value = self.posi_max - self.posi_min
+
+        if range_value != 0:
+            result_value = (display_value / 100.0) * range_value + self.posi_min
+        
+        return to_sig_str(result_value)
+
+    def convert_dp_to_pfs(self, display_value: float) -> float:
+        if self.posi_max == 0:
+            return 0.0
+        
+        return display_value / self.posi_max
+
+
+    def convert_pfs_to_dp_str(self, value):
+        if value == None:
+            return ""
+
+        converted_value = self.posi_max * value
+
+        return self.convert_posi_to_dp_str(converted_value)
+
+    def convert_pfs_to_dp(self, value):
+
+        converted_value = self.posi_max * value
+
+        return self.convert_posi_to_dp(converted_value)
+

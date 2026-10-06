@@ -1,6 +1,6 @@
 """창 생성 헤드리스 테스트 — 장비 없이 주요 창이 생성·정리되는지만 확인한다.
 
-    python tools/test_windows_headless.py
+    python tools/tests/test_windows_headless.py
 
 QT_QPA_PLATFORM=offscreen 으로 QApplication 을 띄우고, ParamWin 계열 / BackupWin /
 RestoreWin 을 만들었다가 닫는다 (closeEvent 가 워커 cleanup 을 수행). MainWin 은
@@ -15,7 +15,12 @@ import traceback
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, TOOLS)
+import _harness  # noqa: E402
+
+ROOT = _harness.ROOT
+_harness.isolate_runtime()  # 실제 2_resource/config · 3_log 를 건드리지 않는다 — 매니저 import 전에
 sys.path.insert(0, ROOT)
 
 from PySide6.QtWidgets import QApplication  # noqa: E402

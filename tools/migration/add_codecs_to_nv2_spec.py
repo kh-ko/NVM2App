@@ -5,14 +5,14 @@
     s1pres → pres_s1, s2pres → pres_s2, scale → scale100, ifgain → scale10000
 그 외 타입은 "as" 없음 (형 변환만).
 
-사용:  python tools/add_codecs_to_nv2_spec.py   (프로젝트 루트에서, 다시 실행해도 결과 동일)
+사용:  python tools/migration/add_codecs_to_nv2_spec.py   (프로젝트 루트에서, 다시 실행해도 결과 동일)
 """
 
 import json
 import os
 import sys
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SCHEMA_DIR = os.path.join(ROOT, "2_resource", "param_schema")
 PARAMS = os.path.join(SCHEMA_DIR, "params.json")
 NV2 = os.path.join(SCHEMA_DIR, "nv2_spec.json")

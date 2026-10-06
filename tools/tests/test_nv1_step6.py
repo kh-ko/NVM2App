@@ -1,6 +1,6 @@
 """NV1 쓰기 spec (6단계) 테스트 — Cluster.Device x 의 Setting / Control 을 실제 로더 / spec / 워커로 확인한다.
 
-    python tools/test_nv1_step6.py
+    python tools/tests/test_nv1_step6.py
 
 검사 항목
   1. 로더: load_errors 없음. Setting 8 + Control 4 param × 30대. Option 6개는 읽기 device_option + 쓰기 device_option
@@ -26,7 +26,12 @@ import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, TOOLS)
+import _harness  # noqa: E402
+
+ROOT = _harness.ROOT
+_harness.isolate_runtime()  # 실제 2_resource/config · 3_log 를 건드리지 않는다 — 매니저 import 전에
 sys.path.insert(0, ROOT)
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
