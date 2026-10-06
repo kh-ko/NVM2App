@@ -160,7 +160,6 @@ class HelpAboutWin(ParamWin):
         self.splitter.addWidget(self.license_panel)
 
         self.splitter.setSizes([380, 520])
-        self.content_widget.setEnabled(True)  # 모듈 주석 '본문은 항상 활성' 참고
 
     def _build_about_panel(self) -> PanelWidget:
         panel = PanelWidget(title="About", is_big_title=True)

@@ -90,7 +90,10 @@ class ClusterMonitorWin(ParamWin):
 
         # 장치 수가 이미 알려져 있으면(값 캐시) 바로 행을 만든다 — 아니면 첫 읽기의 값 변경이 만든다
         self.handle_changed_num_valves()
-        self.content_widget.setEnabled(not self.param_worker.is_working)
+
+        # 본문 잠금을 다시 확정 — ParamWin.__init__ 의 확정은 _build_central 이 content_widget 을 바꾸기 전의
+        # 원래 위젯에 적용됐다. 연결 직후 열면 기준 워커 refresh 동안(PENDING) 잠겨 있어야 한다
+        self.handle_changed_working(self.param_worker.is_working)
 
     def additional_param_settings(self):
         # 장치 상태 param 을 장치 번호별로 모아 둔다 (스키마 순서 = 열 순서). 읽기 등록은 장치 수에 따른다

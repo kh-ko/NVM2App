@@ -541,6 +541,23 @@ class ParameterRunWorker(QObject):
         ServicePort().close()
         return self._start_reboot(port_setting)
 
+    def reconnect(self) -> bool:
+        """재부팅 없이 즉시 재접속 — 포트를 닫았다 같은 설정으로 다시 연다.
+
+        워커 밖의 요인(백업 복원 등)으로 장비 param 이 바뀌었을 때 쓴다. 재접속과 같은 경로
+        (connect_info_changed → 창마다 refresh, 기준 워커 먼저)로 열린 창 전부가 다시 읽는다 —
+        start_reboot_wait 의 '재부팅 없는' 형제이며, 창이 ServicePort 를 직접 여닫지 않게 하는 단일 지점.
+        열려 있지 않으면(재부팅 대기 중 포함) False 로 아무것도 하지 않고, 다시 열기 실패도 False —
+        끊김 상태로 남아 상태바·로그에 드러난다 (N077, 2026-10-06 결정)."""
+        svc = ServicePort()
+        setting = svc.setting  # close() 가 지우므로 먼저 스냅샷
+        if setting is None:
+            return False
+
+        self._log.info("reconnect requested - reopening the port so every window refreshes")
+        svc.close()
+        return svc.open(setting)
+
     def _start_reboot(self, port_setting: SerialSetting | None = None) -> bool:
         """port_setting 이 None 이면(쓰기 경로) 현재 ServicePort 설정을 백업한 뒤
         닫는다. 주어지면(외부 시작 경로) 그 값을 재연결에 쓴다."""

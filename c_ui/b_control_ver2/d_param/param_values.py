@@ -406,7 +406,7 @@ class ParamReadOnlyPresValueWidget(ParamWidget, ReadOnlyTextValueWidget):
     def import_backup_value(self, value, unit=None):
         # 저장 당시 표시 단위가 현재와 다르면 현재 표시 단위로 환산해 넣는다
         current_unit = self.converter.local_setting.pres_unit
-        if value is not None and unit is not None and unit != current_unit:
+        if unit is not None and unit != current_unit:  # value 없음(null)은 호출측(Load File)이 먼저 거른다
             try:
                 converted = self.converter.convert_pressure(float(value), unit, current_unit)
                 value = to_sig_str(converted)
@@ -469,7 +469,7 @@ class ParamReadWritePresValueSpinBoxWidget(ParamWidget, ReadWriteFloatValueSpinB
     def import_backup_value(self, value, unit=None):
         # 저장 당시 표시 단위가 현재와 다르면 현재 표시 단위로 환산해 넣는다
         current_unit = self.converter.local_setting.pres_unit
-        if value is not None and unit is not None and unit != current_unit:
+        if unit is not None and unit != current_unit:  # value 없음(null)은 호출측(Load File)이 먼저 거른다
             value = self.converter.convert_pressure(value, unit, current_unit)
         super().set_value(value)
 
@@ -537,7 +537,7 @@ class ParamReadWritePresValueWidget(ParamWidget, ReadWriteFloatValueWidget):
     def import_backup_value(self, value, unit=None):
         # 저장 당시 표시 단위가 현재와 다르면 현재 표시 단위로 환산해 넣는다
         current_unit = self.converter.local_setting.pres_unit
-        if value is not None and unit is not None and unit != current_unit:
+        if unit is not None and unit != current_unit:  # value 없음(null)은 호출측(Load File)이 먼저 거른다
             value = self.converter.convert_pressure(value, unit, current_unit)
         super().set_value(value)
 

@@ -7,7 +7,7 @@ sig_wait_started(title, message) / sig_wait_finished 시그널만 내고,
 
 import serial.tools.list_ports
 
-from PySide6.QtCore import QThread, Signal, QObject, QCoreApplication, Qt
+from PySide6.QtCore import QThread, Signal, QObject, QCoreApplication
 
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.d_dal.serial_setting import SerialSetting, probe_once
@@ -66,6 +66,7 @@ class ComportScanRunWorker(QObject):
         super().__init__(parent)
         self._thread = None
         self._next_setting = None
+        self._on_finished = None  # 스캔 스레드가 끝나면 할 일(_start_thread / _stopped_thread) — 중지 요청 때 기록 (N035)
         self.port_found_slot = port_found_slot
         self.port_checked_slot = port_checked_slot
         self.scan_stopped_slot = scan_stopped_slot
@@ -87,7 +88,13 @@ class ComportScanRunWorker(QObject):
 
         self._start_thread()
 
-    def _stop_thread(self, title, message, finished_slot):
+    def _stop_thread(self, title, message, on_finished):
+        """실행 중인 스캔에 중지를 요청하고, 끝나면 on_finished 를 수행하도록 기록한다.
+
+        finished 는 스레드를 만들 때 이미 연결돼 있다 — 호출측의 isRunning() 검사와 이 호출 사이에
+        스레드가 먼저 끝나 finished 가 큐에 들어가 있어도 _handle_thread_finished 가 기록된 on_finished 를
+        수행하므로 놓치지 않는다 (N035: 놓치면 대기 박스가 영구히 남아 앱이 고착됐다)."""
+        self._on_finished = on_finished
         self.sig_wait_started.emit(title, message)
 
         try:
@@ -96,16 +103,22 @@ class ComportScanRunWorker(QObject):
         except Exception:
             pass
 
-        self._thread.finished.connect(finished_slot, type=Qt.UniqueConnection)
         self._thread.stop()
 
     def _start_thread(self):
         self._clean_thread()
-        if hasattr(self, '_next_setting'):
-            self._thread = PortScanThread(ServicePort().get_port_name(), self._next_setting, parent=self)
-            self._thread.ports_found.connect(self.port_found_slot)
-            self._thread.port_checked.connect(self.port_checked_slot)
-            self._thread.start()          
+        self._thread = PortScanThread(ServicePort().get_port_name(), self._next_setting, parent=self)
+        self._thread.ports_found.connect(self.port_found_slot)
+        self._thread.port_checked.connect(self.port_checked_slot)
+        self._thread.finished.connect(self._handle_thread_finished)  # 시작 전에 — 종료를 놓치지 않는다 (N035)
+        self._thread.start()
+
+    def _handle_thread_finished(self):
+        if self.sender() is not self._thread:
+            return  # _clean_thread 로 교체된 옛 스레드의 늦은 finished
+        on_finished, self._on_finished = self._on_finished, None
+        if on_finished is not None:
+            on_finished()
 
     def stop(self) -> bool:
         if self._thread is not None and self._thread.isRunning():

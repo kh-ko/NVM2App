@@ -161,8 +161,6 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         self.statusbar.btn_log.clicked.connect(self.on_clicked_log_view)
         self.setStatusBar(self.statusbar)
 
-        self.content_widget.setEnabled(False)
-
         '''
         기능 설정
         '''
@@ -253,6 +251,11 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         self.svc_port = ServicePort()
         self.svc_port.connect_info_changed.connect(self.handle_changed_connection_info)
         self.handle_changed_connection_info(self.svc_port.connect_info)
+
+        # 본문 잠금은 여기서 워커 상태로 확정한다 — sig_is_working_changed 만 믿으면 refresh 가 읽을 것이
+        # 없어 EMPTY 로 끝나는 WO 전용 창(ADC Calibration)은 시그널이 한 번도 오지 않아 영구히 잠겼다 (N095).
+        # 편집 잠금 창(is_editblock_win)은 handle_changed_working 이 항상 잠근다
+        self.handle_changed_working(self.param_worker.is_working)
 
     # 특수 param window일 경우 따로 설정할 param이 있다면 이 메서드를 override
     def additional_param_settings(self):
@@ -381,6 +384,9 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
 
             if not param_widget.isVisible():
                 continue  # 숨겨진(현재 모드가 다루지 않는) 항목도 무시 — save 와 대칭
+
+            if item["value"] is None:
+                continue  # 저장 당시 값 없음(Unknown) — 적용하지 않고 집계에도 넣지 않는다 (N096, 사용자 결정)
 
             try:
                 param_widget.import_backup_value(item["value"], item.get("unit"))

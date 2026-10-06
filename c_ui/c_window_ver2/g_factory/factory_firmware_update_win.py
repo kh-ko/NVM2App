@@ -44,9 +44,8 @@ ver1 에서 달라진 점:
 - 창 상단에 System.Identification.Firmware 폴더 카드를 둔다 — 업데이트 전후의
   Firmware Version 을 같은 창에서 확인하고, 재연결 refresh 완료 시그널의
   근거(읽기 param)가 된다.
-- 본문은 항상 활성 상태다 — ParamWin 기본(첫 refresh 완료까지 잠금)은 미연결
-  상태에서 창을 열면 본문이 영영 잠긴 채 남는다. 이 창의 본문은 표시 전용이라
-  잠글 이유가 없다 (ver1 도 content_widget.setEnabled(True) 를 명시했다).
+- 본문은 항상 활성 상태다 — 표시 전용이라 워커 동작 여부와 무관하게 잠글 이유가 없다
+  (handle_changed_working 오버라이드가 담당한다).
 """
 
 import itertools
@@ -195,7 +194,6 @@ class FactoryFirmwareUpdateWin(ParamWin):
         self.fw_worker.sig_write_finished.connect(self.handle_write_finished)
 
         self._build_body()
-        self.content_widget.setEnabled(True)  # 모듈 주석 '본문은 항상 활성' 참고
 
     def additional_param_settings(self):
         # WO 버튼 param — 업데이트 후 복원 질문에 Restore 를 고르면 쓴다 (reconnect param)

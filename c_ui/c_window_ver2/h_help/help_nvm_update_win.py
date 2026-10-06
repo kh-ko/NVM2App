@@ -17,8 +17,8 @@ ParamWin 을 상속하는 이유: 장비 param 은 다루지 않지만 상태바
 Log View)와 창 규약(win_name, closeEvent 정리)을 다른 창들과 통일하기 위함
 (사용자 결정). 그에 따른 되돌림은 펌웨어 창과 같은 수준이다:
 - paths=[] 라 Save/Load/Apply 는 ParamWin 이 스스로 숨기고, Refresh 만 제거한다.
-- 본문은 항상 활성 — param 이 없어 sig_finish_refresh 가 오지 않으므로
-  ParamWin 기본(첫 refresh 까지 잠금)대로면 본문이 영영 잠긴다.
+- 본문은 항상 활성 — 표시 전용이라 워커 동작 여부와 무관하게 잠글 이유가 없다
+  (handle_changed_working 오버라이드가 담당한다).
 - monitor_tick=1000 — 읽을 param 이 없는 모니터를 100ms 로 돌릴 이유가 없다.
 - 미연결 시 상태바 경고색은 정상 표시이므로 그대로 둔다.
 
@@ -181,7 +181,6 @@ class HelpNvmUpdateWin(ParamWin):
         self.splitter.addWidget(self.notes_panel)
 
         self.splitter.setSizes([250, 500])
-        self.content_widget.setEnabled(True)  # 모듈 주석 '본문은 항상 활성' 참고
 
     def _set_stage(self, stage: _Stage):
         self._stage = stage

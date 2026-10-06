@@ -386,6 +386,8 @@ class RestoreWin(ParamWin):
             self._log.info("[Restore Completed !!!]")
             self._finish_restore()
             self._show_restore_summary()
+            # 복원된 값·codec 문맥을 열린 창 전부가 다시 읽는다 — 재접속 경로 (N077). 끊김 중단 경로에는 없다
+            self.param_worker.reconnect()
 
     def _finish_restore(self):
         self._is_restore_running = False
