@@ -111,7 +111,11 @@ class _WorkerState(Enum):
 
 
 class ParameterThread(QObject):
-    """요청 1건을 처리하고 결과를 되돌려주는 워커 스레드 슬롯 모음."""
+    """요청 1건을 처리하고 결과를 되돌려주는 워커 스레드 슬롯 모음.
+
+    transport: request_string(packet) -> (response, SvcPortErrType) 을 가진 객체. 앱에서는 ServicePort 싱글턴이고,
+    테스트 하네스는 {요청: 응답} 스크립트 객체를 꽂아 장비 없이 상태 전이를 확인한다 (F110).
+    요청 3종(시퀀스/단건 읽기/raw 쓰기)이 모두 이 한 지점을 지난다. 재부팅 probe 는 임시 raw 포트라 별도."""
 
     sig_result = Signal(int, str, str, object, SvcPortErrType)         # seq, packet, response, spec, err
     sig_single_read_result = Signal(str, str, object, SvcPortErrType)  # packet, response, param, err
@@ -120,9 +124,13 @@ class ParameterThread(QObject):
 
     ERROR_DELAY_MS = 100  # 통신 오류 시 인위적 지연 (즉시 실패 경로의 부하 방지)
 
+    def __init__(self, transport=None, parent=None):
+        super().__init__(parent)
+        self._transport = transport if transport is not None else ServicePort()
+
     @Slot(int, str, object)
     def process_request(self, seq: int, packet: str, spec):
-        response, err_type = ServicePort().request_string(packet)
+        response, err_type = self._transport.request_string(packet)
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(self.ERROR_DELAY_MS)
 
@@ -130,7 +138,7 @@ class ParameterThread(QObject):
 
     @Slot(str, object)
     def process_single_read(self, packet: str, param):
-        response, err_type = ServicePort().request_string(packet)
+        response, err_type = self._transport.request_string(packet)
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(self.ERROR_DELAY_MS)
 
@@ -138,7 +146,7 @@ class ParameterThread(QObject):
 
     @Slot(str, str)
     def process_raw_write(self, tag: str, packet: str):
-        response, err_type = ServicePort().request_string(packet)
+        response, err_type = self._transport.request_string(packet)
         if err_type != SvcPortErrType.NONE:
             QThread.msleep(self.ERROR_DELAY_MS)
 
@@ -209,7 +217,8 @@ class ParameterRunWorker(QObject):
             self.sig_is_working_changed.emit(is_working)
 
     def __init__(self, parent=None, log_source: str = "ParameterRunWorker", monitor_tick: int = 100,
-                 is_primary: bool = False):
+                 is_primary: bool = False, transport=None):
+        """transport: 테스트용 통신 대역(ParameterThread 참고). None 이면 ServicePort — 앱은 항상 None."""
         super().__init__(parent)
 
         self._log = AppLogManager().get_logger(log_source)
@@ -258,7 +267,7 @@ class ParameterRunWorker(QObject):
 
         # 워커 스레드 구성
         self._thread = QThread()
-        self._param_thread = ParameterThread()
+        self._param_thread = ParameterThread(transport)
         self._param_thread.moveToThread(self._thread)
 
         self.sig_request.connect(self._param_thread.process_request)

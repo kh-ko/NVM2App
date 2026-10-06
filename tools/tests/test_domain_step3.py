@@ -51,19 +51,7 @@ from b_core.g_protocol.codec import DOMAIN_PRES_UNIT, PosiCodec, PresCodec, Scal
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 
 
-class Report:
-    def __init__(self):
-        self.fail = 0
-        self.checks = 0
-        self.notes: list[str] = []
-
-    def check(self, ok: bool, msg: str):
-        self.checks += 1
-        if not ok:
-            self.fail += 1
-            if self.fail <= 30:
-                print(f"  FAIL {msg}")
-
+Report = _harness.Report  # 집계·출력은 하네스 단일본 (F107)
 
 class FakeLocalSetting:
     def __init__(self, pres_unit, pres_decimal_places=3, posi_decimal_places=2):
@@ -386,10 +374,7 @@ def main() -> int:
     rep.check(wdg.value_widget.text() == "55", f"scale RO 위젯 표시 (배율은 codec): {wdg.value_widget.text()!r}")
 
     print()
-    for note in rep.notes:
-        print(f"  note: {note}")
-    print(f"\nchecks {rep.checks:,}  fail {rep.fail}  → {'ALL PASS' if rep.fail == 0 else 'FAILED'}")
-    return 0 if rep.fail == 0 else 1
+    return rep.summary()
 
 
 if __name__ == "__main__":

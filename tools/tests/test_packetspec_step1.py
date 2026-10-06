@@ -54,19 +54,7 @@ RO_BACKUP_FLAG_PATHS = {"Valve.Option.Position Restriction.Restriction Active",
                         "Pressure Control.General Settings.Profile Ramp.Actual Slope"}
 
 
-class Report:
-    def __init__(self):
-        self.fail = 0
-        self.checks = 0
-        self.notes: list[str] = []
-
-    def check(self, ok: bool, msg: str):
-        self.checks += 1
-        if not ok:
-            self.fail += 1
-            if self.fail <= 30:
-                print(f"  FAIL {msg}")
-
+Report = _harness.Report  # 집계·출력은 하네스 단일본 (F107)
 
 def git_show(commit: str, path: str) -> str:
     return subprocess.check_output(["git", "-C", ROOT, "show", f"{commit}:{path}"]).decode("utf-8")
@@ -96,6 +84,37 @@ def load_old(parameter_py: str, schema_json: str, commit: str | None = None):
             items = json.load(f)
     olds = [mod.Parameter(item, PARAM_DISPLAY_TYPE_MAP.get(item.get("type", ""))) for item in items]
     return olds, items
+
+
+def _set_ctx(param, value):
+    """문맥 param 값을 시그널 없이 넣는다 (test_domain_step3.set_param 과 동일)."""
+    if param is None:
+        return
+    param._value = value
+    param.str_value = "" if value is None else str(value)
+
+
+def set_codec_context(reg):
+    """posi / pres codec 의 문맥 param 에 대표값 — Position Unit 0~100000, Interface 압력 USER_SPECIFIC 0~1000 (선로값은
+    Interface Scaling 눈금), Sensor 1 Torr 0~10 활성, Sensor 2 비활성."""
+    from b_core.b_datatype import param_enum as p_enum
+    posi = reg.get_codec("posi")
+    _set_ctx(posi.unit_param, p_enum.RS232PositionUnitEnum.ZERO_TO_100000.value)
+    pres = reg.get_codec("pres")
+    _set_ctx(pres.iface_unit, p_enum.RS232PressureUnitEnum.USER_SPECIFIC.value)
+    _set_ctx(pres.iface_min, 0.0); _set_ctx(pres.iface_max, 1000.0)
+    for key, val in zip(("avail", "enable", "unit", "min", "max"), (1, 1, p_enum.SensUnitEnum.TORR.value, 0.0, 10.0)):
+        _set_ctx(pres.sens1.get(key), val)
+    for key, val in zip(("avail", "enable", "unit", "min", "max"), (1, 0, p_enum.SensUnitEnum.TORR.value, 0.0, 10.0)):
+        _set_ctx(pres.sens2.get(key), val)
+
+
+def clear_codec_context(reg):
+    posi = reg.get_codec("posi")
+    _set_ctx(posi.unit_param, None)
+    pres = reg.get_codec("pres")
+    for param in (pres.iface_unit, pres.iface_min, pres.iface_max, *pres.sens1.values(), *pres.sens2.values()):
+        _set_ctx(param, None)
 
 
 def reset(param):
@@ -241,29 +260,37 @@ def main() -> int:
     rep.notes.append(f"(id, idx) 중복 {dup}건 → 역조회는 마지막 등록 우선 (기존 동작 유지)")
 
     # ---------------------------------------------------------------- 5. 응답 차등
+    # codec param(posi/pres)의 value 는 도메인 값이라 문맥(Position Unit, Interface Scaling, Sensor 1/2)이 있어야
+    # 계산된다 — 케이스마다 대표값을 넣어 value 가 실제로 대조되게 한다 (N132: 문맥 없이는 None == None 뿐이었다)
     cases = 0
     codec_cases = 0
+    codec_valued = 0
     for o, n in zip(olds, news):
         tag = f"{o.path}.{o.name}"
         rs, ws = reg.get_read_spec(n), reg.get_write_spec(n)
         if rs is None or ws is None or tag == NUM_TYPO_PATH:
             continue
-        # 3단계: codec 이 붙은 param(posi/pres/scale)은 value 가 도메인 값이라 구 값(선로 숫자)과
-        # 다르다 — 그 param 은 value 를 codec.from_line(구 값) 과 비교한다 (문맥 없는 테스트라 None)
+        # 3단계: codec 이 붙은 param(posi/pres/scale)은 value 가 도메인 값이라 구 값(선로 숫자)과 다르다 — 그 param 은
+        # 문맥 대표값 아래에서 value 를 codec.from_line(구 값) 과 비교한다. 문맥 param 자신도 이 루프에서 reset 되므로
+        # 케이스마다 문맥을 다시 넣고, 기대값은 apply 전에 구한다(apply 가 문맥 param 자신을 바꿀 수 있다)
         codec = reg.get_param_codec(n)
         is_text = isinstance(codec, TextCodec)
         for name, resp in read_cases(o.id, o.index, o.data_type):
             reset(o); reset(n)
             r_old = o.set_read_response_packet(resp)
-            r_new = rs.apply_response(resp)
             if is_text:
+                r_new = rs.apply_response(resp)
                 s_old = (r_old, o.is_err, o.is_not_support, o.value, o.str_value)
                 s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
             else:
+                set_codec_context(reg)
                 expected_value = codec.from_line(o.value) if o.value is not None else None
+                r_new = rs.apply_response(resp)
                 s_old = (r_old, o.is_err, o.is_not_support, expected_value, o.str_value)
                 s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
                 codec_cases += 1
+                if expected_value is not None:
+                    codec_valued += 1
             rep.check(s_old == s_new, f"{tag}: read/{name} {s_old} != {s_new}")
             cases += 1
         for name, resp in write_cases(o.id, o.index):
@@ -274,7 +301,11 @@ def main() -> int:
             s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
             rep.check(s_old == s_new, f"{tag}: write/{name} {s_old} != {s_new}")
             cases += 1
-    rep.notes.append(f"응답 차등 {cases:,} 케이스 (그중 codec param 읽기 {codec_cases:,} 건은 value 를 codec.from_line(구 값) 과 대조)")
+    rep.check(codec_valued > 0, f"codec param 읽기에서 실제 값이 대조된 건수 {codec_valued} (문맥 미적용 의심)")
+    rep.notes.append(f"응답 차등 {cases:,} 케이스 (그중 codec param 읽기 {codec_cases:,} 건은 문맥 대표값 아래에서 "
+                     f"value 를 codec.from_line(구 값) 과 대조, 값이 실제로 계산된 건 {codec_valued:,} — 문맥: Position Unit 0~100000, "
+                     f"Interface 압력 USER_SPECIFIC 0~1000, Sensor 1 Torr 0~10 활성 / Sensor 2 비활성)")
+    clear_codec_context(reg)
 
     # ---------------------------------------------------------------- 6. 워커 큐 구성
     # 구 워커(61025d3)의 규칙을 그대로 기대값으로 쓴다:
@@ -358,14 +389,11 @@ def main() -> int:
         acc._value = None
         w.cleanup()
 
-    print()
-    for note in rep.notes:
-        print(f"  note: {note}")
     if ambiguous_refs:
-        print(f"  note: enable/visible 참조 중 여러 param 이 공유하는 id {len(ambiguous_refs)}건 "
-              f"(마이그레이션은 idx 0 param 의 path 를 택함): {sorted(ambiguous_refs)}")
-    print(f"\nchecks {rep.checks:,}  fail {rep.fail}  → {'ALL PASS' if rep.fail == 0 else 'FAILED'}")
-    return 0 if rep.fail == 0 else 1
+        rep.note(f"enable/visible 참조 중 여러 param 이 공유하는 id {len(ambiguous_refs)}건 "
+                 f"(마이그레이션은 idx 0 param 의 path 를 택함): {sorted(ambiguous_refs)}")
+    print()
+    return rep.summary()
 
 
 if __name__ == "__main__":

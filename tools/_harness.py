@@ -10,9 +10,13 @@
                            임시 폴더는 프로세스 종료 때 지운다 (F106/N131 — %TEMP% 누적 없음).
 - Report                 : 검사 수 / 실패 수 / 메모 집계와 결과 출력 (파일마다 복사되던 클래스의 단일본, F107).
 - make_app()             : offscreen QApplication (이미 있으면 그것).
-- fake_connected(svc)    : ServicePort 를 '연결된 것처럼' 두는 컨텍스트 — 포트는 열지 않는다. 워커 큐 구성 검사용.
-- assert_no_zombie()     : 창을 만들었다 파괴한 뒤 싱글턴 시그널을 쏴서 파괴된 창의 슬롯이 남아 있지 않은지(좀비 연결,
-                           F111) 확인한다. 문제가 있으면 그 내용을 돌려준다.
+- fake_connected(svc)    : ServicePort 를 '연결된 것처럼' 두는 컨텍스트 — 포트는 열지 않는다. transport 를 주입하지 않은
+                           워커는 큐 구성만 보고 _stop_all() 로 멈추고, ScriptedTransport 를 주입하면(F110) 상태 전이를 끝까지 돌린다.
+- destroy_window(win)    : 창을 WA_DeleteOnClose 로 닫아 파괴한다 (closeEvent 가 워커 cleanup).
+- emit_signals_capture() : 시그널(또는 호출 가능 항목)을 차례로 쏘며 excepthook/stderr 의 'already deleted'/RuntimeError 를 모은다.
+- assert_no_zombie()     : 위 둘의 합성 — 창을 만들었다 파괴한 뒤 싱글턴 시그널을 쏴서 파괴된 창의 슬롯이 남아 있지 않은지
+                           (좀비 연결, F111) 확인한다. 문제가 있으면 그 내용을 돌려준다.
+- silence_message_boxes(): QMessageBox 정적 대화상자와 QMessageBox/QDialog 의 exec() 를 무음으로 — 헤드리스 창 테스트용.
 
 사용 (각 테스트 머리):
     TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -173,8 +177,9 @@ def make_app():
 def fake_connected(svc, info: str = "test"):
     """ServicePort 를 연결 상태로 보이게 한다 (포트는 열지 않는다, 시그널 없음).
 
-    워커의 refresh()/write() 가 NOT_CONNECTED 가 아닌 경로로 큐를 만드는지 검사할 때 쓴다 — 실제 송수신은 없으므로
-    큐를 본 뒤 _stop_all() 등으로 멈춰야 한다. 블록을 나가면 미연결로 되돌린다."""
+    워커의 refresh()/write() 가 NOT_CONNECTED 가 아닌 경로를 타게 한다. transport 를 주입하지 않은 워커는 요청이 즉시
+    실패하므로 큐만 보고 _stop_all() 로 멈추고, ScriptedTransport 를 주입하면(F110, test_worker_state) 상태 전이를 끝까지
+    돌릴 수 있다. 블록을 나가면 미연결로 되돌린다."""
     svc._connect_info = info
     try:
         yield svc
@@ -182,24 +187,29 @@ def fake_connected(svc, info: str = "test"):
         svc._connect_info = ""
 
 
-def assert_no_zombie(win_factory, signals, app=None) -> list[str]:
-    """창을 만들고 닫아 파괴(WA_DeleteOnClose + DeferredDelete 처리)한 뒤 signals 를 차례로 발화한다.
-
-    파괴된 창의 바운드 슬롯이 싱글턴 시그널에 남아 있으면(좀비 연결, F111) PySide6 가 'Internal C++ object already
-    deleted' RuntimeError 를 내는데, 이를 sys.excepthook 과 stderr 양쪽에서 잡아 문제 목록으로 돌려준다 (빈 목록 = 정상).
-    signals: 인자 없이 emit() 할 수 있는 시그널 목록, 또는 (signal, args 튜플) 목록."""
+def destroy_window(win, app=None) -> None:
+    """창을 닫아 파괴한다 (WA_DeleteOnClose + DeferredDelete 처리) — closeEvent 가 워커 cleanup 을 수행한다."""
     from PySide6.QtCore import QCoreApplication, QEvent, Qt
 
     app = app or make_app()
-    win = win_factory()
     win.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-    win.show()
+    if not win.isVisible():
+        win.show()
     app.processEvents()
     win.close()
     app.processEvents()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     app.processEvents()
 
+
+def emit_signals_capture(signals, app=None, process_events_each: bool = True) -> list[str]:
+    """signals 를 차례로 발화하면서 슬롯 예외를 모은다 (빈 목록 = 정상).
+
+    파괴된 창의 슬롯이 싱글턴 시그널에 남아 있으면(좀비 연결, F111) PySide6 가 'Internal C++ object already deleted'
+    RuntimeError 를 내는데, 이를 sys.excepthook 과 stderr 양쪽에서 잡는다.
+    signals: 인자 없이 emit() 할 수 있는 시그널, (signal, args 튜플), 또는 인자 없는 호출 가능 객체(시그널을 내는 호출)의 목록.
+    process_events_each: 항목마다 processEvents (기본). 수천 개를 쏠 때는 False 로 두고 끝에 한 번 처리한다."""
+    app = app or make_app()
     problems: list[str] = []
     captured = io.StringIO()
     old_hook = sys.excepthook
@@ -211,9 +221,14 @@ def assert_no_zombie(win_factory, signals, app=None) -> list[str]:
     try:
         with contextlib.redirect_stderr(captured):
             for entry in signals:
-                signal, args = (entry if isinstance(entry, tuple) else (entry, ()))
-                signal.emit(*args)
-                app.processEvents()
+                if callable(entry) and not hasattr(entry, "emit"):
+                    entry()
+                else:
+                    signal, args = (entry if isinstance(entry, tuple) else (entry, ()))
+                    signal.emit(*args)
+                if process_events_each:
+                    app.processEvents()
+            app.processEvents()
     finally:
         sys.excepthook = old_hook
 
@@ -221,3 +236,26 @@ def assert_no_zombie(win_factory, signals, app=None) -> list[str]:
     if "already deleted" in text or "RuntimeError" in text:
         problems.append(text.strip())
     return problems
+
+
+def assert_no_zombie(win_factory, signals, app=None) -> list[str]:
+    """창을 만들고 파괴한 뒤 signals 를 발화해 좀비 연결 문제 목록을 돌려준다 (destroy_window + emit_signals_capture)."""
+    app = app or make_app()
+    destroy_window(win_factory(), app)
+    return emit_signals_capture(signals, app)
+
+
+def silence_message_boxes() -> None:
+    """모달 대화상자가 헤드리스 이벤트 루프를 삼키지 않게 한다 (프로세스 전체).
+
+    - QMessageBox 정적 대화상자(information/warning/critical)는 Ok, question 은 '아니오' 쪽(StandardButton.No).
+    - 인스턴스 exec()(QMessageBox / QDialog)는 즉시 0(Rejected) 으로 돌아온다 — clickedButton() 은 None 이므로
+      x_message 의 ask_* 함수들은 '닫음' 분기를 탄다. 특정 답이 필요한 테스트는 해당 ask_* 를 직접 스텁한다."""
+    from PySide6.QtWidgets import QDialog, QMessageBox
+
+    QMessageBox.information = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok)
+    QMessageBox.warning = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok)
+    QMessageBox.critical = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok)
+    QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.No)
+    QMessageBox.exec = lambda self: 0
+    QDialog.exec = lambda self: 0

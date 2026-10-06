@@ -67,18 +67,7 @@ SAMPLES = [
 ]
 
 
-class Report:
-    def __init__(self):
-        self.fail = 0
-        self.checks = 0
-
-    def check(self, ok: bool, msg: str):
-        self.checks += 1
-        if not ok:
-            self.fail += 1
-            if self.fail <= 30:
-                print(f"  FAIL {msg}")
-
+Report = _harness.Report  # 집계·출력은 하네스 단일본 (F107)
 
 def ver1_expected(sub: dict, resp: str):
     """ver1 규칙: 절대 offset 절단 → 타입별 형 변환 → 배율(사용자 요구 4·5)."""
@@ -266,9 +255,7 @@ def main() -> int:
         svc._connect_info = ""
         w.cleanup()
 
-    print(f"\nchecks {rep.checks} / fail {rep.fail}")
-    print("ALL PASS" if rep.fail == 0 else f"{rep.fail} FAIL")
-    return 0 if rep.fail == 0 else 1
+    return rep.summary()
 
 
 if __name__ == "__main__":

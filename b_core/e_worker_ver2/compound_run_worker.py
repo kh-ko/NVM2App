@@ -12,8 +12,8 @@ ver1 에서 달라진 점:
   호출해야 [슬롯 쓰기 -> 폴링] 이 시작된다. (보통 ParameterRunWorker 의
   sig_finish_refresh 수신 시점) stop_polling() 은 스레드를 유지한 채
   idle 루프로 되돌린다. (연결 끊김 시 윈도우가 호출)
-- ref param 자동 갱신은 pop_all_data()(UI 스레드) 에서 마지막 샘플의
-  원시 문자열로 수행한다 (ver1 의 형변환 -> str() 왕복 제거).
+- ref param 자동 갱신은 pop_all_data()(UI 스레드) 에서 현재 구성 세대의 마지막 샘플의
+  원시 문자열로 수행한다 (ver1 의 형변환 -> str() 왕복 제거; 옛 슬롯 배치의 샘플은 제외 — N043).
 
 동작 흐름:
 1. start_polling() 되면 configure() 된 슬롯 쓰기 명령("p:01...")을 일괄 전송한다.
@@ -78,7 +78,8 @@ class CompoundPollThread(QThread):
         self._expected_count: int = 0
         self._sample_factory: SampleFactory | None = None
 
-        # 수집 큐 — queue_mutex 로 보호. (샘플 객체, 원시 문자열 목록) 쌍으로 적재
+        # 수집 큐 — queue_mutex 로 보호. (샘플 객체, 원시 문자열 목록, 구성 세대) 로 적재 —
+        # 세대는 pop_all_data 가 옛 슬롯 배치로 모인 샘플을 ref 갱신에 쓰지 않게 한다 (N043)
         self.queue_mutex = QMutex()
         self.data_queue = deque(maxlen=200)
 
@@ -110,13 +111,17 @@ class CompoundPollThread(QThread):
         with QMutexLocker(self._config_mutex):
             self._polling_enabled = False
 
+    def start(self) -> None:
+        # 실행 플래그는 여기서 세운다 — run() 진입에서 세우면 start() 직후의 stop() 이 되돌려져
+        # 루프가 끝나지 않고 wait() 가 영구히 막힌다 (N038)
+        self._is_running = True
+        super().start()
+
     def stop(self) -> None:
         self._is_running = False
 
     # ------------------------------------------------------------ 메인 루프
     def run(self):
-        self._is_running = True
-
         while self._is_running:
             with QMutexLocker(self._config_mutex):
                 polling_enabled = self._polling_enabled
@@ -130,29 +135,35 @@ class CompoundPollThread(QThread):
             # 폴링 게이트 비활성 — 아무 동작도 하지 않는다.
             # (재개 여부/시점 판단은 윈도우가 start_polling() 으로 지시)
             if not polling_enabled:
-                self.msleep(self.IDLE_DELAY_MS)
+                self._idle(self.IDLE_DELAY_MS)
                 continue
 
             # 미연결 — 폴링 불가 상태이므로 대기만 한다
             if not self.svc_port.connect_info:
-                self.msleep(self.IDLE_DELAY_MS)
+                self._idle(self.IDLE_DELAY_MS)
                 continue
 
             if not read_cmd:
                 self.sig_log.emit(True, "TX : Not Set", "", "[Compound Read Command] is not set")
-                self.msleep(self.IDLE_DELAY_MS)
+                self._idle(self.IDLE_DELAY_MS)
                 continue
 
             if need_write:
                 if not self._write_slots(write_cmds):
-                    self.msleep(self.WRITE_RETRY_DELAY_MS)
+                    self._idle(self.WRITE_RETRY_DELAY_MS)
                     continue
                 with QMutexLocker(self._config_mutex):
                     # 쓰기 도중 configure()/start_polling() 이 왔다면 완료 처리하지 않는다
                     if gen == self._config_gen:
                         self._need_write = False
 
-            self._poll_once(read_cmd, expected, factory)
+            self._poll_once(read_cmd, expected, factory, gen)
+
+    def _idle(self, delay_ms: int) -> None:
+        """폴링 없이 대기 — 다음 폴링이 새 기준점이 되도록 루프 간격 기준(_pre_loop_ms)을 지운다 (N040:
+        대기 뒤 첫 폴링마다 허위 'slow loop' 진단이 남았다)."""
+        self._pre_loop_ms = 0
+        self.msleep(delay_ms)
 
     def _write_slots(self, write_cmds: list[bytes]) -> bool:
         for cmd in write_cmds:
@@ -174,7 +185,7 @@ class CompoundPollThread(QThread):
         return True
 
     def _poll_once(self, read_cmd: bytes, expected: int,
-                   factory: SampleFactory | None) -> None:
+                   factory: SampleFactory | None, gen: int) -> None:
         start_time = time.perf_counter()
 
         response, err_type = self.svc_port.request(read_cmd)
@@ -189,7 +200,7 @@ class CompoundPollThread(QThread):
         # 통신 오류 — 시리얼 왕복 없이 즉시 실패할 수 있는 경로이므로 인위적 지연
         if err_type != SvcPortErrType.NONE or not response.startswith("p:0029"):
             self.sig_log.emit(True, read_cmd.decode('utf-8'), response or "", f"Read Compound Fail : {err_type}")
-            self.msleep(self.ERROR_DELAY_MS)
+            self._idle(self.ERROR_DELAY_MS)
             return
 
         # 여기서부터는 시리얼 왕복이 이미 끝났으므로 실패해도 지연 없이 계속 폴링
@@ -207,7 +218,7 @@ class CompoundPollThread(QThread):
                 sample = CompoundSample(now_ms, tuple(values))
 
             with QMutexLocker(self.queue_mutex):
-                self.data_queue.append((sample, values))
+                self.data_queue.append((sample, values, gen))
 
             self._loop_log_count += 1
             if self._loop_log_count % 100 == 0:
@@ -237,6 +248,7 @@ class CompoundRunWorker(QObject):
 
         self._log = AppLogManager().get_logger(log_source)
         self._pairs: list[tuple[Parameter, Parameter | None]] = []
+        self._pairs_gen: int = 0  # _pairs 가 속한 구성 세대 — 큐 샘플의 세대와 비교 (N043)
         self._thread = CompoundPollThread(self)
         self._thread.sig_log.connect(self._handle_log)
         self._is_cleaned = False
@@ -278,8 +290,14 @@ class CompoundRunWorker(QObject):
 
         expected_count = sum(1 for _, ref in pairs if ref is not None)
 
+        # 옛 슬롯 배치로 모인 샘플이 새 _pairs 에 매핑되지 않게 — 큐를 비우고 이 구성의 세대를 기억한다 (N043).
+        # 쓰기 중 바뀐 구성은 세대 비교로 걸러지므로(set_slots 가 세대를 올림) 경계의 샘플도 ref 에 반영되지 않는다
+        with QMutexLocker(self._thread.queue_mutex):
+            self._thread.data_queue.clear()
         self._pairs = list(pairs)
         self._thread.set_slots(write_cmds, read_cmd, expected_count, sample_factory)
+        with QMutexLocker(self._thread._config_mutex):
+            self._pairs_gen = self._thread._config_gen
 
     # ------------------------------------------------------------ 제어
     def start(self) -> None:
@@ -308,7 +326,7 @@ class CompoundRunWorker(QObject):
     def pop_all_data(self) -> list:
         """큐의 샘플을 전부 회수해 반환한다 (UI 스레드에서 호출).
 
-        마지막 샘플의 원시 문자열 값으로 ref param 들을 갱신한다 — 선로 문자열 → 도메인 값
+        현재 구성 세대의 마지막 샘플의 원시 문자열 값으로 ref param 들을 갱신한다 — 선로 문자열 → 도메인 값
         변환은 그 param 의 codec(SpecRegistry.apply_line_text) 이 맡는다.
         param 변경 시그널이 UI 스레드에서 발화되도록 여기서 수행."""
         if self._thread is None:
@@ -322,13 +340,17 @@ class CompoundRunWorker(QObject):
         if not items:
             return []
 
+        # ref 갱신은 현재 구성 세대 이상의 마지막 샘플로만 — 세대가 낮은 샘플은 옛 슬롯 배치다 (N043).
+        # (start_polling 도 세대를 올리므로 '같거나 크다' 로 비교한다)
         registry = SpecRegistry()
-        _, last_values = items[-1]
-        for i, (_, ref) in enumerate(self._pairs):
-            if ref is not None and i < len(last_values):
-                registry.apply_line_text(ref, last_values[i])
+        current = [values for _, values, gen in items if gen >= self._pairs_gen]
+        if current:
+            last_values = current[-1]
+            for i, (_, ref) in enumerate(self._pairs):
+                if ref is not None and i < len(last_values):
+                    registry.apply_line_text(ref, last_values[i])
 
-        return [sample for sample, _ in items]
+        return [sample for sample, _, _ in items]
 
     # ------------------------------------------------------------ 내부
     def _handle_log(self, is_err: bool, tx: str, rx: str, msg: str):
