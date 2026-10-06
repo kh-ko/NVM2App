@@ -58,6 +58,7 @@ def main() -> int:
     num.value = None
 
     win = ClusterMonitorWin(parent=None, win_name="Cluster Monitor")
+    win.start()   # WinManager.show_window 가 하는 2단계 초기화
     app.processEvents()
     try:
         # ---------------------------------------------------------------- 1. 생성

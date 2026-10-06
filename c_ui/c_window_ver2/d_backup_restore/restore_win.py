@@ -97,6 +97,11 @@ class RestoreWin(ParamWin):
         # Local 전환 쓰기 패킷용 (읽기 등록은 하지 않는다)
         self.acc_mode_param = self.param_manager.get_by_full_path("System.Access Mode")
 
+    def edit_locked_actions(self):
+        # ParamWin 의 목록("Apply"/"Save File"/"Load File")은 JSON param 파일용이다 — 이 창의 "Load File" 은 같은 이름으로
+        # 다시 등록한 백업 파일 로더이고, Restore 와 함께 복원 진행 중 여부로 이 창이 직접 켜고 끈다 (잠금 단일 지점 밖)
+        return ()
+
     # ------------------------------------------------------------ 파일 로드
     def on_clicked_load_backup_file(self):
         if self._is_restore_running:

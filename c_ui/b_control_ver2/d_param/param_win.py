@@ -1,182 +1,50 @@
+"""ParamWin — 폴더 카드 창 (ServiceWin 골격 위). 2단계 8위 ③ 에서 c_window_ver2/param_win.py 로 옮긴다.
+
+ServiceWin 이 툴바·상태바·워커·2단계 초기화(start)·잠금 단일 지점을 맡고, 이 클래스는 폴더 카드 본문과
+Save File / Load File / Apply / Enable Edit, enable 조건 배선만 가진다. ParamWorkerWinMixin 은 service_win 에
+있고 여기서 재수출한다 (MainWin 의 import 경로 유지 — ③ 에서 정리).
+"""
+
 import json
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QCloseEvent
-from PySide6.QtWidgets import (QFileDialog, QMainWindow, QMessageBox,
-                               QScrollArea, QVBoxLayout, QWidget, QApplication)
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QScrollArea, QWidget
 
 from b_core.b_datatype.general_enum import ParamAccType
-from b_core.b_datatype.parameter import Parameter
 from b_core.b_datatype.param_enum import EtherCATDataTypeEnum, PresCtrlSelEnum
 from b_core.c_manager.app_log_manager import AppLogManager
-from b_core.c_manager.parameter_manager import ParamManager
 from b_core.f_helper import eds_file_helper, ethercat_xml_file_helper
-from b_core.d_dal.service_port import ServicePort
-from b_core.e_worker_ver2.parameter_run_worker import ParameterRunWorker, StartResult
 
 from c_ui.b_control_ver2.a_theme.tokens import tokens
-from c_ui.b_control_ver2.b_base.toolbars import BaseToolBar
-from c_ui.b_control_ver2.b_base.statusbars import BaseStatusBar
 from c_ui.b_control_ver2.b_base.containers import BaseFlowLayout
 from c_ui.b_control_ver2.d_param.param_folder_widget import ParamFolderWidget
 from c_ui.b_control_ver2.d_param.param_values import ParamWriteOnlyEnumValueWidget, ParamWriteOnlyPosiValueWidget
+from c_ui.c_window_ver2.service_win import ParamWorkerWinMixin, ServiceWin  # noqa: F401  (ParamWorkerWinMixin 재수출)
 
-from c_ui.c_window_ver2.win_manager import WinManager
-from c_ui.c_window_ver2.log_view_win import LogViewWin
-from c_ui.c_window_ver2.x_message.param_result_message_box import (
-    ask_local_switch, show_param_refresh_warning, show_param_write_skipped, show_param_write_warning)
-from c_ui.c_window_ver2.x_message.wait_message_box import show_busy_wait_message_box
 
-"""ParameterRunWorker 를 소유한 윈도우 공통 동작 믹스인.
-
-MainWin / ParamWin 등 param_worker 를 가진 창마다 문자 단위로 복사되던
-쓰기 정책(Local 전환 확인 재시도) / refresh / 연결·SN 상태바 처리를 한곳으로
-모은다. 앞으로 만들 설정 창들도 이 믹스인을 상속하면 된다.
-
-사용 조건 — 호스트 클래스가 준비해야 하는 속성:
-- self.param_worker : ParameterRunWorker
-- self.statusbar    : BaseStatusBar (라벨 0 = 연결 정보, 라벨 1 = SN)
-- self.sn_param     : Parameter (System.Identification.Serial Number)
-
-연결 끊김 시 추가 동작(예: MainWin 의 compound 폴링 중지)이 필요한 창은
-handle_changed_connection_info 를 오버라이드해 super() 호출 전후로 수행한다.
-"""
-class ParamWorkerWinMixin:
-
-    _reboot_wait_box = None  # 재부팅 대기 중일 때만 인스턴스에 박스 참조가 얹힌다
-
-    def single_param_write(self, param, value):
-        self.multiple_param_write([(param, value)])
-
-    def multiple_param_write(self, pairs: list):
-        result = self.param_worker.write(pairs)
-
-        # Local 전환 후 재시도 여부는 윈도우가 결정한다 (x_message 는 표시 전용)
-        if result == StartResult.NEED_LOCAL_SWITCH:
-            if not ask_local_switch(self):
-                return
-            result = self.param_worker.write(pairs, switch_to_local=True)
-
-        show_param_write_warning(self, result)
-
-    def start_param_refresh(self):
-        result = self.param_worker.refresh()
-        show_param_refresh_warning(self, result)
-
-    def handle_skipped_write(self, params: list):
-        # 워커가 codec 문맥 미준비로 요청 없이 건너뛴 쓰기 — 시퀀스 종료 시 한 번 알림
-        # (호스트 창은 param_worker.sig_write_skipped 를 이 슬롯에 연결한다)
-        show_param_write_skipped(self, params)
-
-    def handle_changed_connection_info(self, info: str):
-        is_connected = bool(info)
-        self.statusbar.set_connected(is_connected)
-        self.statusbar.set_label_text(0, info if info else "Disconnected")
-
-        if is_connected:
-            self.start_param_refresh()
-        else:
-            # 연결이 끊겼으므로 모든 동작을 중지하고 idle 로 — REBOOT 대기만 예외
-            self.param_worker.handle_disconnected()
-
-    def handle_changed_sn_param(self):
-        self.statusbar.set_label_text(1, f"SN:{self.sn_param.value}" if self.sn_param.value is not None else "SN:-")
-
-    def handle_changed_param_worker_progress(self, progress: int):
-        self.statusbar.set_progress(progress)
-
-    def handle_started_reboot(self):
-        # 재부팅 유발 param 쓰기 후 워커가 SN probe 폴링을 시작했다 —
-        # 재연결까지 무한 진행 표시로 이 창 입력을 막는다 (닫기는 이 창 몫).
-        # 재부팅 중 다른 동작은 금지이므로 취소는 없고, 완전 잠김 방지용
-        # 비상구로 App 종료 버튼만 둔다
-        if self._reboot_wait_box is not None:
-            return
-
-        self._reboot_wait_box = show_busy_wait_message_box(
-            self, "Reboot",
-            "The device is rebooting.\nWaiting for reconnection...",
-            quit_text="Quit App")
-        self._reboot_wait_box.quit_button.clicked.connect(self.on_clicked_quit_app)
-
-    def handle_finished_reboot(self, is_success: bool):
-        # True = 재부팅 후 통신 복구 (재연결 refresh 는 connect_info_changed 경유)
-        if self._reboot_wait_box is not None:
-            box = self._reboot_wait_box
-            self._reboot_wait_box = None
-            box.accept()
-
-    def on_clicked_quit_app(self):
-        # 재부팅 대기 중 완전 잠김 방지용 비상구 — 앱 전체를 종료한다.
-        # [주의] busy 다이얼로그는 닫기 거부(reject 무시)로 만들어져 있어,
-        # 떠 있는 채로 quit() 하면 Qt6 가 '닫히지 않는 창'으로 보고 종료
-        # 요청을 중단한다 (실측) — 반드시 먼저 accept() 로 닫고 종료한다.
-        # (워커들의 cleanup 은 aboutToQuit 연결로 수행된다)
-        if self._reboot_wait_box is not None:
-            box = self._reboot_wait_box
-            self._reboot_wait_box = None
-            box.accept()
-
-        QApplication.quit()
-
-class ParamWin(ParamWorkerWinMixin, QMainWindow):
+class ParamWin(ServiceWin):
     def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None, monitor_tick: int = 100):
-        super().__init__(parent)
-        self.resize(750, 450)
-
-        if win_name is None:
-            self.win_name = paths[0]
-        else:
-            self.win_name = win_name
+        super().__init__(parent, win_name if win_name is not None else paths[0], monitor_tick=monitor_tick)
 
         self.is_editblock_win = is_editblock_win
+        self._edit_locked = is_editblock_win  # 편집 잠금 창은 잠긴 채 시작 — 반영은 set_body / start 의 _sync_lock_state
 
-        self.toolbar = BaseToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.toolbar)
-        self.toolbar.add_action("Refresh", self.on_clicked_refresh)
         self.action_save_file = self.toolbar.add_action("Save File", self.on_clicked_save_file)
         self.action_load_file = self.toolbar.add_action("Load File", self.on_clicked_load_file)
         self.action_apply = self.toolbar.add_action("Apply", self.on_clicked_apply)
-
         if self.is_editblock_win:
             self.toolbar.add_action("Enable Edit", self.on_clicked_enable_edit)
-            # 편집 잠금 중에는 Load File 도 함께 잠근다 — 잠긴 위젯에 값을 넣어
-            # dirty 로 만든 뒤 Apply 로 쓰는 우회 경로를 막기 위함
-            self.action_load_file.setEnabled(False)
 
         self.scroll_area = QScrollArea(self)
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
-        self.content_widget = QWidget()
+        body = QWidget()
         # 폴더 카드는 흐름 배치 — 창이 좁으면 세로 1열, 넓어지면 여러 열로 개행
-        self.content_layout = BaseFlowLayout(self.content_widget, margin=10, spacing=10)
-
-        self.scroll_area.setWidget(self.content_widget)
-
-        self.setCentralWidget(self.scroll_area)
-
-        self.statusbar = BaseStatusBar(parent=self, label_count=2)
-        self.statusbar.btn_log.clicked.connect(self.on_clicked_log_view)
-        self.setStatusBar(self.statusbar)
-
-        '''
-        기능 설정
-        '''
-        self.param_manager = ParamManager()
-
-        self.param_worker = ParameterRunWorker(self, log_source=self.win_name, monitor_tick=monitor_tick)
-        self.param_worker.sig_finish_refresh.connect(self.handle_finished_refresh)
-        self.param_worker.sig_reboot_started.connect(self.handle_started_reboot)
-        self.param_worker.sig_reboot_finished.connect(self.handle_finished_reboot)
-        self.param_worker.sig_progress_changed.connect(self.handle_changed_param_worker_progress)
-        self.param_worker.sig_is_working_changed.connect(self.handle_changed_working)
-        self.param_worker.sig_write_skipped.connect(self.handle_skipped_write)
-
-        self.sn_param = self.param_manager.get_by_full_path("System.Identification.Serial Number")
-        self.sn_param.sig_value_changed.connect(self.handle_changed_sn_param)
-        self.handle_changed_sn_param()
+        self.content_layout = BaseFlowLayout(body, margin=10, spacing=10)
+        self.scroll_area.setWidget(body)
+        self.set_body(self.scroll_area, body)  # 잠금 대상은 스크롤 안의 본문
 
         self.folder_widgets = []
 
@@ -243,19 +111,8 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
                 if ref_widget is not None:
                     param_widget.reg_enable_condition(ref_widget, condition.values)
 
-        # 연결 시그널/초기 상태 반영은 위젯·param 등록이 끝난 뒤에 한다 —
-        # 등록 전에 하면 (a) 연결 상태에서 빈 refresh(EMPTY)가 한 번 낭비되고,
-        # (b) 미연결 상태에서는 별도 refresh 호출의 NOT_CONNECTED 모달이
-        # 창이 show() 되기 전(__init__ 안)에 떠 버린다. 초기 refresh 는
-        # 아래 handle_changed_connection_info() 가 연결 상태일 때만 수행한다
-        self.svc_port = ServicePort()
-        self.svc_port.connect_info_changed.connect(self.handle_changed_connection_info)
-        self.handle_changed_connection_info(self.svc_port.connect_info)
-
-        # 본문 잠금은 여기서 워커 상태로 확정한다 — sig_is_working_changed 만 믿으면 refresh 가 읽을 것이
-        # 없어 EMPTY 로 끝나는 WO 전용 창(ADC Calibration)은 시그널이 한 번도 오지 않아 영구히 잠겼다 (N095).
-        # 편집 잠금 창(is_editblock_win)은 handle_changed_working 이 항상 잠근다
-        self.handle_changed_working(self.param_worker.is_working)
+        # 시그널 구독·초기 연결 동기화(연결 중이면 refresh)·잠금 확정은 ServiceWin.start() 가 한다 —
+        # WinManager.show_window 가 생성 직후·show 직전에 부른다 (서브클래스 __init__ 이 끝난 뒤)
 
     # 특수 param window일 경우 따로 설정할 param이 있다면 이 메서드를 override
     def additional_param_settings(self):
@@ -266,25 +123,8 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
     def before_apply_loaded_items(self, loaded_items):
         pass
 
-    def closeEvent(self, event: QCloseEvent):
-        # 재부팅 대기 중이면 대기 박스를 함께 닫는다 — WindowModal 박스는 부모가 닫혀도 살아남아
-        # 이어지는 QApplication.quit() 을 거부한다(실측). 대기 자체는 아래 cleanup 이 끊는다.
-        # (Quit App 버튼과 같은 경로 — 재부팅 대기 중에도 앱 닫기는 항상 가능해야 한다, 2026-09-29 결정)
-        if self._reboot_wait_box is not None:
-            box = self._reboot_wait_box
-            self._reboot_wait_box = None
-            box.accept()
-
-        # WA_DeleteOnClose 로 파괴되기 전에 워커 스레드를 명시적으로 정리한다.
-        # 워커의 destroyed->cleanup 안전망은 창의 자식으로 파괴될 때 동작하지
-        # 않아, 누락 시 QThread fatal 로 앱 전체가 abort 된다 (실측)
-        self.param_worker.cleanup()
-        event.accept()
-
-    # 쓰기 정책/refresh/연결·SN 상태바 처리는 ParamWorkerWinMixin 이 제공한다
-
-    def on_clicked_refresh(self):
-        self.start_param_refresh()
+    # closeEvent(재부팅 박스 닫기 + 워커 cleanup) / Refresh / Log View / 쓰기 정책 / 연결·SN 상태바는 ServiceWin 과
+    # ParamWorkerWinMixin 이 제공한다
 
     def on_clicked_save_file(self):
         # 백업 대상: RW + nor_backup param 만 (ver1 과 동일 기준).
@@ -420,11 +260,8 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         self.multiple_param_write(write_pairs)                    
 
     def on_clicked_enable_edit(self):
-        if self.param_worker.is_working == False:
-            self.content_widget.setEnabled(True)
-            self.action_load_file.setEnabled(True)  # 편집 해제와 함께 Load File 잠금도 푼다
-        else:
-            pass
+        if not self.is_working:
+            self.set_edit_locked(False)  # 본문·Apply·Save File·Load File 이 함께 풀린다 (edit_locked_actions)
 
     def on_clicked_write_only_component(self, param_component):
         # WO enum(모드 선택형)은 콤보에서 고른 현재 값을, 위치 입력형은 입력한 백분율(도메인 값 —
@@ -438,25 +275,20 @@ class ParamWin(ParamWorkerWinMixin, QMainWindow):
         else:
             self.single_param_write(param_component.param, param_component.param.btn_str_value)
 
-    def on_clicked_log_view(self):
-        # win_id 를 창 이름으로 분리 — MainWin 등 다른 창의 LogViewWin 과
-        # WinManager 키("LogViewWin")가 겹치면 sources 필터가 무시된다
-        WinManager().show_window(win_class=LogViewWin, win_id=f"LogViewWin_{self.win_name}",
-                                 parent=self, sources={self.win_name})
+    # ------------------------------------------------------------ 잠금 (ServiceWin._sync_lock_state 의 입력)
+    def locked_actions(self):
+        # Enable Edit 은 워커 동작 중에만 잠긴다 — 편집 잠금 중에는 눌러서 풀 수 있어야 한다
+        return ("Enable Edit",) if self.is_editblock_win else ()
 
-    def handle_changed_working(self, working: bool):
+    def edit_locked_actions(self):
+        # 워커 동작 중과 편집 잠금 중에 잠긴다 (2026-10-06 결정 — 전에는 Apply 를 눌러 BUSY 경고를 받았다).
+        # 편집 잠금 중 Load File 도 잠그는 이유: 잠긴 위젯에 값을 넣어 dirty 로 만든 뒤 Apply 로 쓰는 우회 경로 차단.
+        # 같은 이름으로 다른 액션을 다시 등록하는 창(RestoreWin 의 백업 파일 Load File)은 빈 튜플로 덮어쓴다
+        return ("Apply", "Save File", "Load File")
+
+    def on_working_changed(self, working: bool):
         if self.is_editblock_win:
-            # 워커 동작이 시작/종료될 때마다 편집 잠금 상태로 되돌린다 — Load File 도 동기
-            self.content_widget.setEnabled(False)
-            self.action_load_file.setEnabled(False)
-        else:
-            self.content_widget.setEnabled(not working)
-
-    def handle_finished_refresh(self):
-        pass
-
-    # 재부팅 대기 다이얼로그(handle_started_reboot / handle_finished_reboot /
-    # on_clicked_quit_app)는 ParamWorkerWinMixin 이 제공한다
+            self._edit_locked = True  # 워커 동작이 시작/종료될 때마다 편집 잠금 상태로 되돌린다
 
 class ParamPresCtrlWin(ParamWin):
     def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None):

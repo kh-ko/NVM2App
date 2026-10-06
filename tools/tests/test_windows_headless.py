@@ -155,6 +155,8 @@ def main() -> int:
     for name, cls, kwargs in CASES:
         try:
             win = cls(parent=None, **kwargs)
+            if hasattr(win, "start"):
+                win.start()   # WinManager.show_window 가 하는 2단계 초기화
             app.processEvents()
             if kwargs.get("paths"):
                 rep.check(len(win.folder_widgets) > 0, f"{name}: 폴더 카드 0개 — paths 가 스키마 폴더와 맞지 않는다")

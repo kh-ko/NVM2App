@@ -52,6 +52,12 @@ class WinManager:
         # QWidget의 destroyed 시그널을 이용 (WA_DeleteOnClose 속성이 있어야 함)
         new_win.destroyed.connect(lambda obj=None, n=name: self._on_window_destroyed(n))
 
+        # ServiceWin 계열의 2단계 초기화 — 생성자 밖에서 시그널 구독·초기 연결 동기화·잠금 확정 (show 직전).
+        # 다른 창(LogView, 로컬 설정, Connect 등)은 start 가 없다
+        start = getattr(new_win, "start", None)
+        if callable(start):
+            start()
+
         new_win.show()
         return new_win
 
