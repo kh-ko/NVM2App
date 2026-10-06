@@ -44,8 +44,8 @@ ver1 에서 달라진 점:
 - 창 상단에 System.Identification.Firmware 폴더 카드를 둔다 — 업데이트 전후의
   Firmware Version 을 같은 창에서 확인하고, 재연결 refresh 완료 시그널의
   근거(읽기 param)가 된다.
-- 본문은 항상 활성 상태다 — 표시 전용이라 워커 동작 여부와 무관하게 잠글 이유가 없다
-  (handle_changed_working 오버라이드가 담당한다).
+- 본문은 항상 활성 상태다 — 표시 전용이라 워커 동작 여부와 무관하게 잠글 이유가 없다 (locks_content=False).
+  Refresh 도 없다 (has_refresh=False). ParamWin 위에 있는 이유는 상단 폴더 카드 — 진행 패널을 그 아래에 더한다.
 """
 
 import itertools
@@ -151,21 +151,19 @@ class _ProgressRow(QWidget):
 
 class FactoryFirmwareUpdateWin(ParamWin):
 
-    # 오버라이드 핸들러가 super().__init__() 중에도 호출될 수 있으므로 클래스 기본값
-    _stage = _Stage.IDLE
-    _wait_box = None
-    content_widget = None
-
     def __init__(self, parent=None, win_name=None, backup_file_path: str | None = None):
         # 상단 폴더 카드 = Firmware ID/Version/Interface Version (RO) — 읽기 param 이
         # 등록되어 재연결 refresh 가 EMPTY 가 아니게 되고 sig_finish_refresh 가 온다.
         # 모니터링 주기는 1초 — 버전 문자열을 100ms 마다 읽을 이유가 없다
         super().__init__(parent=parent, win_name=win_name, paths=["System.Identification.Firmware"],
                          filter_param_paths=[], is_editblock_win=False, label_width=210,
-                         folder_max_width=None, monitor_tick=1000)
+                         folder_max_width=None, monitor_tick=1000,
+                         has_refresh=False, locks_content=False)
         self.setWindowTitle("Factory >> Firmware Update")
         self.resize(750, 450)
 
+        self._stage = _Stage.IDLE
+        self._wait_box = None
         self._log = AppLogManager().get_logger(self.win_name)
         self._job: FirmwareWriteJob | None = None
         self._saved_port_setting: SerialSetting | None = None  # 업데이트 전 ServicePort 설정 (재연결용)
@@ -183,7 +181,6 @@ class FactoryFirmwareUpdateWin(ParamWin):
         self._steps: list = []
         self._step_index = 0
 
-        self.toolbar.remove_action("Refresh")
         self.toolbar.add_action("Update", self.on_clicked_update)
         self.toolbar.add_action("Abort", self.on_clicked_abort)
         self.toolbar.set_action_enabled("Abort", False)
@@ -242,11 +239,6 @@ class FactoryFirmwareUpdateWin(ParamWin):
             box = self._wait_box
             self._wait_box = None
             box.accept()
-
-    def handle_changed_working(self, working: bool):
-        # 본문은 표시 전용 — 워커 동작 여부와 무관하게 항상 활성 (모듈 주석 참고)
-        if self.content_widget is not None:
-            self.content_widget.setEnabled(True)
 
     # ------------------------------------------------------------ 진행바 분할
     @staticmethod
@@ -400,7 +392,7 @@ class FactoryFirmwareUpdateWin(ParamWin):
             self._saved_port_setting = svc.setting
 
         # 워커가 같은 COM 포트를 직접 열므로 ServicePort 는 여기서 닫는다 —
-        # 끊김 시그널은 ParamWin 의 공통 처리(상태바/param_worker 중지)가 받는다
+        # 끊김 시그널은 ServiceWin 의 공통 처리(상태바/param_worker 중지)가 받는다
         svc.close()
 
         if adapter_type == AdapterType.RS232:

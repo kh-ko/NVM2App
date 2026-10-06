@@ -46,14 +46,12 @@ _PLACEHOLDER_TEXT = "Select a device in the status table."
 
 
 class ClusterMonitorWin(ParamWin):
+    """ParamWin 위에 남는 폴더 카드 창 — 고른 장치의 Setting/Control 폴더 카드와 Apply/WO 쓰기 정책을 그대로 쓴다.
+    본문(표 + 패널)은 set_body 로 놓는다 (ParamWin 의 폴더 카드 스크롤 영역을 대신한다)."""
 
     COLUMN_WIDTH = 100   # 열 기본 폭(px) — 17열이 1100px 창에 대략 들어가고, 긴 제목은 헤더가 2~3줄로 접는다
     LABEL_WIDTH = 210    # Setting / Control 폴더의 라벨 폭 (다른 ParamWin 과 동일)
     PANEL_FOLDERS = ("Setting", "Control")   # 하단 좌 / 우
-
-    # handle_changed_num_valves 는 super().__init__() 중에도 호출될 수 있으므로 (표 생성 전)
-    # 클래스 기본값으로 존재해야 한다
-    table = None
 
     def __init__(self, parent=None, win_name=None):
         super().__init__(parent=parent, win_name=win_name, paths=[], filter_param_paths=[],
@@ -90,10 +88,6 @@ class ClusterMonitorWin(ParamWin):
 
         # 장치 수가 이미 알려져 있으면(값 캐시) 바로 행을 만든다 — 아니면 첫 읽기의 값 변경이 만든다
         self.handle_changed_num_valves()
-
-        # 본문 잠금을 다시 확정 — ParamWin.__init__ 의 확정은 _build_central 이 content_widget 을 바꾸기 전의
-        # 원래 위젯에 적용됐다. 연결 직후 열면 기준 워커 refresh 동안(PENDING) 잠겨 있어야 한다
-        self.handle_changed_working(self.param_worker.is_working)
 
     def additional_param_settings(self):
         # 장치 상태 param 을 장치 번호별로 모아 둔다 (스키마 순서 = 열 순서). 읽기 등록은 장치 수에 따른다
@@ -139,12 +133,7 @@ class ClusterMonitorWin(ParamWin):
         layout.addWidget(self.table, 1)
         layout.addLayout(self._panel_row)
 
-        # ParamWin 의 폴더 카드 스크롤 영역은 이 창에서 쓰지 않으므로 교체.
-        # content_widget 재지정으로 handle_changed_working 의 잠금 대상도 표+패널이 된다
-        old_central = self.takeCentralWidget()
-        old_central.deleteLater()
-        self.setCentralWidget(central)
-        self.content_widget = central
+        self.set_body(central)  # 잠금 대상 = 표 + 패널 (워커 동작 중)
 
     @staticmethod
     def _column_title(param) -> str:
@@ -220,9 +209,6 @@ class ClusterMonitorWin(ParamWin):
 
     # ------------------------------------------------------------ 장치 수
     def handle_changed_num_valves(self):
-        if self.table is None:
-            return
-
         value = self.num_valves_param.value
         count = 0 if value is None else max(0, min(int(value), len(self._status_params)))
         if count == self._device_count:

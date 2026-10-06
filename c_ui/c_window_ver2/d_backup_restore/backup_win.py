@@ -11,7 +11,7 @@ from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.f_helper import backup_file_helper, firmware_util
 from b_core.g_protocol.spec_registry import SpecRegistry
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
-from c_ui.b_control_ver2.d_param.param_win import ParamWin
+from c_ui.c_window_ver2.service_win import ServiceWin
 from c_ui.c_window_ver2.x_message.firmware_update_message_box import (NoBackupChoice,
                                                                        ask_close_without_backup)
 
@@ -26,8 +26,11 @@ _RS232_IFACE_VALUES = {SysUserInterfaceEnum.RS232.value,
 _ETHERCAT_IFACE_VALUES = {SysUserInterfaceEnum.ETHERCAT.value}
 
 
-class BackupWin(ParamWin):
-    """파라미터 백업 창.
+class BackupWin(ServiceWin):
+    """파라미터 백업 창 — 본문은 백업 대상 체크박스 트리, 툴바는 Backup 하나 (Refresh 없음).
+
+    백업은 체크된 param 을 single_read_request 로 하나씩 읽는 연쇄라 워커 상태 머신 밖이다 — 진행 중 잠금은 is_busy() 로
+    ServiceWin 의 잠금 단일 지점에 얹는다 (트리·Backup 액션). 끊기면 handle_changed_connection_info 가 중단한다.
 
     is_fu_backup=True (펌웨어 업데이트 전 백업 모드):
     - 기본 체크 대상이 fu_backup param 으로 바뀐다
@@ -39,16 +42,11 @@ class BackupWin(ParamWin):
 
     sig_fu_backup_closed = Signal(bool, str)  # FU 모드 전용: (continue_update, saved_file_path)
 
-    # handle_changed_connection_info / closeEvent 오버라이드가 super().__init__() 중에도
-    # 호출될 수 있으므로 클래스 기본값으로 존재해야 한다
-    _is_backup_running = False
-    is_fu_backup = False
-    _fu_saved_file = None
-
     def __init__(self, parent=None, win_name = None, is_fu_backup = False):
-        super().__init__(parent=parent, win_name = win_name, paths = [], filter_param_paths = [], is_editblock_win=False, label_width=210, folder_max_width=None)
+        super().__init__(parent, win_name, has_refresh=False)
         self.is_fu_backup = is_fu_backup
         self._fu_saved_file = None  # FU 모드에서 저장된 백업 파일 경로
+        self._is_backup_running = False
         self.backup_params = []
         self.backup_contents = []
 
@@ -56,9 +54,16 @@ class BackupWin(ParamWin):
         # param_worker 와 같은 source(win_name)를 쓰므로 한 뷰에 모인다
         self._log = AppLogManager().get_logger(self.win_name)
 
-        self.toolbar.remove_action("Refresh")
         self.toolbar.add_action("Backup", self.on_clicked_backup)
         self.param_worker.sig_single_read_result.connect(self.handle_single_read_result)
+
+        # 트리 구성 필터에 쓰이는 User Interface / Firmware Version 값을 refresh 로 읽어온다
+        # (이 창에는 param 위젯이 없으므로 직접 등록)
+        self.user_iface_param = self.param_manager.get_by_full_path("System.Identification.Configuration.User Interface")
+        self.param_worker.add_read_param_ptr(self.user_iface_param)
+
+        self.firmware_version_param = self.param_manager.get_by_full_path("System.Identification.Firmware.Firmware Version")
+        self.param_worker.add_read_param_ptr(self.firmware_version_param)
 
         # 바디: 백업 가능 param(RW + nor_backup) 체크박스 트리 —
         # 기본 체크 상태로 시작하고 사용자가 자유롭게 추가/해제할 수 있다.
@@ -76,21 +81,15 @@ class BackupWin(ParamWin):
         if self.firmware_version_param is not None:
             self.firmware_version_param.sig_value_changed.connect(self.handle_changed_firmware_version)
 
-        # ParamWin 의 폴더 카드 스크롤 영역은 이 창에서 쓰지 않으므로 트리로 교체.
-        # content_widget 재지정으로 handle_changed_working 의 잠금 대상도 트리가 된다
-        old_central = self.takeCentralWidget()
-        old_central.deleteLater()
-        self.setCentralWidget(self.tree)
-        self.content_widget = self.tree
+        self.set_body(self.tree)  # 잠금 대상 = 트리 (워커 동작 중·백업 진행 중)
 
-    def additional_param_settings(self):
-        # 트리 구성 필터에 쓰이는 User Interface / Firmware Version 값을
-        # refresh 로 읽어온다 (이 창에는 param 위젯이 없으므로 직접 등록)
-        self.user_iface_param = self.param_manager.get_by_full_path("System.Identification.Configuration.User Interface")
-        self.param_worker.add_read_param_ptr(self.user_iface_param)
+    # ------------------------------------------------------------ 잠금 (ServiceWin._sync_lock_state 의 입력)
+    def is_busy(self):
+        # 백업의 single read 연쇄는 워커 상태 머신 밖이라 is_working 에 잡히지 않는다
+        return super().is_busy() or self._is_backup_running
 
-        self.firmware_version_param = self.param_manager.get_by_full_path("System.Identification.Firmware.Firmware Version")
-        self.param_worker.add_read_param_ptr(self.firmware_version_param)
+    def locked_actions(self):
+        return ("Backup",)
 
     # ------------------------------------------------------------ 체크박스 트리
     def _is_iface_included(self, path: str) -> bool:
@@ -265,8 +264,7 @@ class BackupWin(ParamWin):
             return
 
         self._is_backup_running = True
-        self.toolbar.set_action_enabled("Backup", False)
-        self.tree.setEnabled(False)  # 진행 중 체크 변경 방지
+        self._sync_lock_state()  # Backup 액션·트리 잠금 (진행 중 체크 변경 방지)
         self.statusbar.set_progress(0)
         self._log.info("[Backup Start !!!]")
         self.param_worker.single_read_request(self.backup_params[0])
@@ -327,8 +325,7 @@ class BackupWin(ParamWin):
 
     def _finish_backup(self):
         self._is_backup_running = False
-        self.toolbar.set_action_enabled("Backup", True)
-        self.tree.setEnabled(True)
+        self._sync_lock_state()
         self.statusbar.set_progress(0)
 
     def save_backup_to_file(self):

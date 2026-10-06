@@ -9,7 +9,7 @@ from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.f_helper import backup_file_helper
 from b_core.g_protocol.spec_registry import SpecRegistry
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
-from c_ui.b_control_ver2.d_param.param_win import ParamWin
+from c_ui.c_window_ver2.service_win import ServiceWin
 
 
 @dataclass
@@ -20,8 +20,12 @@ class RestoreItem:
     tree_item: QTreeWidgetItem | None = None # 체크박스 트리의 대응 아이템
 
 
-class RestoreWin(ParamWin):
-    """백업 파일(backup_win.py 가 저장한 형식)을 장비로 복원하는 창.
+class RestoreWin(ServiceWin):
+    """백업 파일(backup_win.py 가 저장한 형식)을 장비로 복원하는 창 — 본문은 파일 내용 체크박스 트리, 툴바는
+    Load File(백업 txt) / Restore (Refresh 없음).
+
+    복원은 raw_write_request 연쇄라 워커 상태 머신 밖이다 — 진행 중 잠금은 is_busy() 로 ServiceWin 의 잠금 단일 지점에
+    얹는다 (트리·Restore·Load File). 끊기면 handle_changed_connection_info 가 중단한다.
 
     파일의 각 행 뒷부분이 그대로 전송 가능한 쓰기 패킷이므로, 체크된 항목을
     파일 순서대로 raw_write_request 로 재생한다. 행 내용은 스키마와 대조하지
@@ -40,16 +44,13 @@ class RestoreWin(ParamWin):
       버전이 달라진 것이 정상이므로 (로그에만 남긴다)
     """
 
-    # handle_changed_connection_info 오버라이드가 super().__init__() 중에도
-    # 호출되므로 (미연결 상태로 창을 열 때) 클래스 기본값으로 존재해야 한다
-    _is_restore_running = False
-
     RETRY_MAX = 3  # 항목당 실패 재시도 횟수
 
     def __init__(self, parent=None, win_name = None, is_fu_restore = False, initial_file_path = None):
-        super().__init__(parent=parent, win_name = win_name, paths = [], filter_param_paths = [], is_editblock_win=False, label_width=210, folder_max_width=None)
+        super().__init__(parent, win_name, has_refresh=False)
         self.is_fu_restore = is_fu_restore
         self._initial_file_path = initial_file_path
+        self._is_restore_running = False
         self.loaded_items: list[RestoreItem] = []   # 파일 순서
         self.restore_jobs: list[RestoreItem] = []   # 실행 스냅샷 (Local 전환 포함)
         self.failed_items: list[str] = []
@@ -59,33 +60,12 @@ class RestoreWin(ParamWin):
         # 진행 로그는 이 창의 LogView(상태바 Log View 버튼)로 확인한다
         self._log = AppLogManager().get_logger(self.win_name)
 
-        self.toolbar.remove_action("Refresh")
-        # ParamWin 의 Load File(JSON param 파일용, 이 창에선 숨김)을 백업 파일
-        # 전용 로드로 교체한다 — 액션 이름 키 충돌 방지를 위해 제거 후 추가
-        self.toolbar.remove_action("Load File")
+        # Load File 은 백업 파일(txt) 전용 — ParamWin 의 JSON param 파일 Load File 과는 이름만 같다
         self.toolbar.add_action("Load File", self.on_clicked_load_backup_file)
         self.toolbar.add_action("Restore", self.on_clicked_restore)
 
         self.param_worker.sig_raw_write_result.connect(self.handle_raw_write_result)
 
-        # 바디: 로드된 백업 파일 내용 체크박스 트리 — 기본 전체 체크,
-        # 사용자가 복원 대상을 추가/해제할 수 있다
-        self._updating_checks = False  # 코드에 의한 일괄 체크 변경 중 itemChanged 재진입 가드
-        self.tree = BaseTreeWidget(self)
-        self.tree.itemChanged.connect(self.handle_changed_tree_item)
-
-        # ParamWin 의 폴더 카드 스크롤 영역은 이 창에서 쓰지 않으므로 트리로 교체.
-        # content_widget 재지정으로 handle_changed_working 의 잠금 대상도 트리가 된다
-        old_central = self.takeCentralWidget()
-        old_central.deleteLater()
-        self.setCentralWidget(self.tree)
-        self.content_widget = self.tree
-
-        # 자동 로드는 창이 표시된 뒤에 — 로드 결과 메시지 박스가 창 위에 뜨게 한다
-        if self._initial_file_path:
-            QTimer.singleShot(0, self.load_initial_file)
-
-    def additional_param_settings(self):
         # 헤더(파일 저장 시점 장비 정보)와 비교할 현재 값들을 refresh 로 읽어온다
         # (이 창에는 param 위젯이 없으므로 직접 등록)
         self.user_iface_param = self.param_manager.get_by_full_path("System.Identification.Configuration.User Interface")
@@ -97,10 +77,25 @@ class RestoreWin(ParamWin):
         # Local 전환 쓰기 패킷용 (읽기 등록은 하지 않는다)
         self.acc_mode_param = self.param_manager.get_by_full_path("System.Access Mode")
 
-    def edit_locked_actions(self):
-        # ParamWin 의 목록("Apply"/"Save File"/"Load File")은 JSON param 파일용이다 — 이 창의 "Load File" 은 같은 이름으로
-        # 다시 등록한 백업 파일 로더이고, Restore 와 함께 복원 진행 중 여부로 이 창이 직접 켜고 끈다 (잠금 단일 지점 밖)
-        return ()
+        # 바디: 로드된 백업 파일 내용 체크박스 트리 — 기본 전체 체크,
+        # 사용자가 복원 대상을 추가/해제할 수 있다
+        self._updating_checks = False  # 코드에 의한 일괄 체크 변경 중 itemChanged 재진입 가드
+        self.tree = BaseTreeWidget(self)
+        self.tree.itemChanged.connect(self.handle_changed_tree_item)
+        self.set_body(self.tree)  # 잠금 대상 = 트리 (워커 동작 중·복원 진행 중)
+
+    def on_start(self):
+        # 자동 로드는 창이 표시된 뒤에 — 로드 결과 메시지 박스가 창 위에 뜨게 한다
+        if self._initial_file_path:
+            QTimer.singleShot(0, self.load_initial_file)
+
+    # ------------------------------------------------------------ 잠금 (ServiceWin._sync_lock_state 의 입력)
+    def is_busy(self):
+        # 복원의 raw write 연쇄는 워커 상태 머신 밖이라 is_working 에 잡히지 않는다
+        return super().is_busy() or self._is_restore_running
+
+    def locked_actions(self):
+        return ("Restore", "Load File")
 
     # ------------------------------------------------------------ 파일 로드
     def on_clicked_load_backup_file(self):
@@ -324,9 +319,7 @@ class RestoreWin(ParamWin):
         self._retry_count = 0
 
         self._is_restore_running = True
-        self.toolbar.set_action_enabled("Restore", False)
-        self.toolbar.set_action_enabled("Load File", False)
-        self.tree.setEnabled(False)  # 진행 중 체크 변경 방지
+        self._sync_lock_state()  # Restore·Load File 액션·트리 잠금 (진행 중 체크 변경 방지)
         self.statusbar.set_progress(0)
         self._log.info(f"[Restore Start !!!]: {len(targets)} items")
         self._send_current_job()
@@ -396,9 +389,7 @@ class RestoreWin(ParamWin):
 
     def _finish_restore(self):
         self._is_restore_running = False
-        self.toolbar.set_action_enabled("Restore", True)
-        self.toolbar.set_action_enabled("Load File", True)
-        self.tree.setEnabled(True)
+        self._sync_lock_state()
         self.statusbar.set_progress(0)
 
     def _show_restore_summary(self):

@@ -34,7 +34,7 @@ from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.b_base.inputs import BaseCheckBox
 from c_ui.b_control_ver2.b_base.labels import BaseLabel
 from c_ui.b_control_ver2.c_values.read_write_values import ReadWriteEnumValueWidget, ReadWriteFloatValueWidget
-from c_ui.b_control_ver2.d_param.param_win import ParamWin
+from c_ui.c_window_ver2.service_win import ServiceWin
 
 # 샘플링 주기와 보관 샘플 수 — 최대 시간창(ChartXWindowEnum 의 10 min)을 채우는 크기 + CoarseTimer 오차 여유 10 % (F080).
 # 넘치면 오래된 샘플부터 밀려난다
@@ -51,20 +51,27 @@ _ROW_SENS1 = 2
 _ROW_SENS2 = 3
 
 
-class SensorAnalysisWin(ParamWin):
+class SensorAnalysisWin(ServiceWin):
+    """ServiceWin 직계 — 본문은 차트(+사이드 패널), 툴바는 Refresh 하나. 워커 모니터링 주기 10 ms (센서 1/2 압력 주기 읽기)."""
 
     SAMPLE_INTERVAL_MS = _SAMPLE_INTERVAL_MS  # 버퍼 크기(_CAPACITY)와 같은 뿌리
 
-    # handle_changed_connection_info 오버라이드가 super().__init__() 중에도
-    # 호출되므로 (타이머 생성 전) 클래스 기본값으로 존재해야 한다
-    sample_timer = None
-
     def __init__(self, parent=None, win_name = None):
-        super().__init__(parent=parent, win_name = win_name, paths = [], filter_param_paths = [], is_editblock_win=False, label_width=210, folder_max_width=None, monitor_tick = 10)
+        super().__init__(parent, win_name, monitor_tick=10)
         self.resize(900, 500)
 
         self.local_setting = LocalSettingManager()
         self.pres_converter = PresConverterManager()
+
+        # Actual Pressure 는 MainWin compound 폴링이 갱신하므로 읽기 등록하지 않는다
+        self.act_pres_param = self.param_manager.get_by_full_path("Pressure Control.Basic.Actual Pressure")
+
+        # 센서 1/2 압력은 이 창이 직접 주기 읽기 (refresh 후 유휴 모니터링)
+        self.sens1_pres_param = self.param_manager.get_by_full_path("Sensor.Sensor 1.Basic.Actual Pressure Value")
+        self.param_worker.add_read_param_ptr(self.sens1_pres_param)
+
+        self.sens2_pres_param = self.param_manager.get_by_full_path("Sensor.Sensor 2.Basic.Actual Pressure Value")
+        self.param_worker.add_read_param_ptr(self.sens2_pres_param)
 
         # [이중 버퍼] MainChartPanel 과 동일 — 뒤쪽 절반이 차면 최근 구간을 앞으로 복사
         self._buf = np.full((4, _CAPACITY * 2), np.nan)
@@ -82,29 +89,16 @@ class SensorAnalysisWin(ParamWin):
         self._build_chart_central()
         self._apply_y_range()
 
-        # 고정 주기 샘플링 — 연결 중에만 돈다 (handle_changed_connection_info)
+        # 고정 주기 샘플링 — 연결 중에만 돈다 (handle_changed_connection_info; 첫 동기화는 start() 가 한다)
         self.sample_timer = QTimer(self)
         self.sample_timer.setInterval(self.SAMPLE_INTERVAL_MS)
         self.sample_timer.timeout.connect(self.handle_sample_timer_timeout)
-        if self.svc_port.connect_info:
-            self.sample_timer.start()
 
         # 컨버터: 표시 단위가 바뀌면 버퍼(표시 단위 값)를 비우고, 자릿수·만압 문맥 변경은 범위만 재적용한다 (N114).
         # [주의] 싱글턴 시그널 연결은 바운드 메서드 규칙을 따른다 (람다 좀비 방지)
         self.pres_converter.sig_display_unit_changed.connect(self.handle_pres_display_unit_changed)
         self.pres_converter.sig_decimals_changed.connect(self.handle_pres_decimals_changed)
         self.pres_converter.sig_full_scale_changed.connect(self.handle_pres_full_scale_changed)
-
-    def additional_param_settings(self):
-        # Actual Pressure 는 MainWin compound 폴링이 갱신하므로 읽기 등록하지 않는다
-        self.act_pres_param = self.param_manager.get_by_full_path("Pressure Control.Basic.Actual Pressure")
-
-        # 센서 1/2 압력은 이 창이 직접 주기 읽기 (refresh 후 유휴 모니터링)
-        self.sens1_pres_param = self.param_manager.get_by_full_path("Sensor.Sensor 1.Basic.Actual Pressure Value")
-        self.param_worker.add_read_param_ptr(self.sens1_pres_param)
-
-        self.sens2_pres_param = self.param_manager.get_by_full_path("Sensor.Sensor 2.Basic.Actual Pressure Value")
-        self.param_worker.add_read_param_ptr(self.sens2_pres_param)
 
     # ------------------------------------------------------------ GUI 구성
     def _build_chart_central(self):
@@ -192,12 +186,7 @@ class SensorAnalysisWin(ParamWin):
         layout.addLayout(self._build_side_column())
         layout.addLayout(chart_area, 1)
 
-        # ParamWin 의 폴더 카드 스크롤 영역은 이 창에서 쓰지 않으므로 차트로 교체.
-        # content_widget 재지정으로 handle_changed_working 의 잠금 대상도 차트가 된다
-        old_central = self.takeCentralWidget()
-        old_central.deleteLater()
-        self.setCentralWidget(central)
-        self.content_widget = central
+        self.set_body(central)  # 잠금 대상 = 차트 + 사이드 패널 (워커 동작 중)
 
     def _build_side_column(self):
         """차트 왼쪽의 설정 열: [Legend 패널(체크박스) + Range 패널(모드/Min/Max)].
@@ -365,9 +354,6 @@ class SensorAnalysisWin(ParamWin):
         super().handle_changed_connection_info(info)
 
         # 연결 중에만 샘플링 — 끊긴 동안 마지막 값이 평평한 선으로 이어지는 것 방지
-        if self.sample_timer is None:
-            return
-
         if info:
             self.sample_timer.start()
         else:

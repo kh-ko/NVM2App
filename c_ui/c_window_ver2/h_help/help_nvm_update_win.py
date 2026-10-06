@@ -13,14 +13,11 @@ GUI 표시 정책: 사용자에게 보이는 것은 [Installed Version / Selecte
 과 진행바 하나뿐이다. 다운로드/압축 해제/스크립트 같은 세부 단계는 LogView
 (상태바 Log View 버튼)에만 기록된다 (펌웨어 업데이트 창과 같은 정책).
 
-ParamWin 을 상속하는 이유: 장비 param 은 다루지 않지만 상태바(연결 정보/SN/
-Log View)와 창 규약(win_name, closeEvent 정리)을 다른 창들과 통일하기 위함
-(사용자 결정). 그에 따른 되돌림은 펌웨어 창과 같은 수준이다:
-- paths=[] 라 Save/Load/Apply 는 ParamWin 이 스스로 숨기고, Refresh 만 제거한다.
-- 본문은 항상 활성 — 표시 전용이라 워커 동작 여부와 무관하게 잠글 이유가 없다
-  (handle_changed_working 오버라이드가 담당한다).
-- monitor_tick=1000 — 읽을 param 이 없는 모니터를 100ms 로 돌릴 이유가 없다.
-- 미연결 시 상태바 경고색은 정상 표시이므로 그대로 둔다.
+ServiceWin 직계: 장비 param 은 다루지 않지만 상태바(연결 정보/SN/Log View)와 창 규약(win_name,
+closeEvent 정리)을 다른 창들과 통일하기 위함 (사용자 결정). param 워커는 두지 않고(with_param_worker=False —
+이 창의 워커는 AppUpdateRunWorker 뿐) Refresh 도 없다; 본문은 표시 전용이라 잠글 것이 없다. 미연결 시 상태바 경고색은
+정상 표시이므로 그대로 둔다.
+릴리스 노트 조회는 on_start()(WinManager 가 show 직전에 부르는 start() 의 끝)에서 시작한다.
 
 ver1 에서 달라진 점:
 - FTP 조회/다운로드/압축 해제가 UI 스레드에서 사라졌다 — 워커 시그널 + 대기 박스.
@@ -52,7 +49,7 @@ from c_ui.b_control_ver2.b_base.containers import (BaseListWidget, BaseSplitter,
                                                    ScrolledPanelWidget)
 from c_ui.b_control_ver2.b_base.labels import BaseLabel, CheckLabel
 from c_ui.b_control_ver2.b_base.statusbars import BaseProgressBar
-from c_ui.b_control_ver2.d_param.param_win import ParamWin
+from c_ui.c_window_ver2.service_win import ServiceWin
 
 from c_ui.c_window_ver2.win_manager import WinManager
 from c_ui.c_window_ver2.x_message.app_update_message_box import (ask_abort_download,
@@ -107,19 +104,14 @@ class _ProgressRow(QWidget):
         self.set_value(0)
 
 
-class HelpNvmUpdateWin(ParamWin):
-
-    # 오버라이드 핸들러가 super().__init__() 중에도 호출될 수 있으므로 클래스 기본값
-    _stage = _Stage.IDLE
-    _wait_box = None
-    content_widget = None
+class HelpNvmUpdateWin(ServiceWin):
 
     def __init__(self, parent=None, win_name: str = "Application Update"):
-        super().__init__(parent=parent, win_name=win_name, paths=[], filter_param_paths=[],
-                         is_editblock_win=False, label_width=210, folder_max_width=None,
-                         monitor_tick=1000)
+        super().__init__(parent, win_name, has_refresh=False, with_param_worker=False)
         self.setWindowTitle("Help >> Update")
 
+        self._stage = _Stage.IDLE
+        self._wait_box = None
         self._log = AppLogManager().get_logger(self.win_name)
         self._notes: list[ReleaseNote] = []
         self._selected_version: str | None = None
@@ -129,7 +121,6 @@ class HelpNvmUpdateWin(ParamWin):
         self._script_path = ""         # write_install_script 결과 — aboutToQuit 에서 기동
         self._package_root = ""        # 그 스크립트에 환경변수로 넘길 패키지 폴더
 
-        self.toolbar.remove_action("Refresh")
         self.toolbar.add_action("Update", self.on_clicked_update)
         self.toolbar.add_action("Abort", self.on_clicked_abort)
 
@@ -140,18 +131,13 @@ class HelpNvmUpdateWin(ParamWin):
 
         self._build_body()
         self._set_stage(_Stage.IDLE)
-        self._start_listing()
+
+    def on_start(self):
+        self._start_listing()  # 창이 뜨기 직전 — 대기 박스가 창 위에 뜬다
 
     # ------------------------------------------------------------ GUI 구성
     def _build_body(self):
-        """ParamWin 의 폴더 카드 스크롤 영역은 쓰지 않으므로 중앙 위젯을 교체한다
-        (BackupWin 과 같은 방식). content_widget 도 재지정한다."""
-        old_central = self.takeCentralWidget()
-        old_central.deleteLater()
-
         central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        self.content_widget = central_widget
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
@@ -181,6 +167,7 @@ class HelpNvmUpdateWin(ParamWin):
         self.splitter.addWidget(self.notes_panel)
 
         self.splitter.setSizes([250, 500])
+        self.set_body(central_widget)
 
     def _set_stage(self, stage: _Stage):
         self._stage = stage
@@ -204,11 +191,6 @@ class HelpNvmUpdateWin(ParamWin):
         note = next((n for n in self._notes if n.version == version), None)
         self.notes_panel.lbl_title.setText(f"Release Notes : {version}")
         self.lbl_notes.setText(note.notes if note is not None and note.notes else "(no notes)")
-
-    def handle_changed_working(self, working: bool):
-        # 본문은 표시 전용 — param 워커 동작 여부와 무관하게 항상 활성 (모듈 주석 참고)
-        if self.content_widget is not None:
-            self.content_widget.setEnabled(True)
 
     # ------------------------------------------------------------ 릴리스 노트 조회
     def _start_listing(self):
@@ -384,7 +366,7 @@ class HelpNvmUpdateWin(ParamWin):
         QApplication.quit()
 
         # Qt6 의 quit() 은 모든 창에 close 를 보내고 하나라도 거부하면 종료를 조용히 중단한다
-        # (param_win.on_clicked_quit_app 주석의 실측). 등록부 밖의 창(재부팅 대기 박스 등)이
+        # (service_win.ParamWorkerWinMixin.on_clicked_quit_app 주석의 실측). 등록부 밖의 창(재부팅 대기 박스 등)이
         # 거부하면 여기로 돌아온다 — 종료가 받아들여졌으면 quit() 안에서 모든 창이 이미 닫혀(숨겨져) 있고
         # aboutToQuit 도 이미 발화했다
         if any(w.isVisible() for w in QApplication.topLevelWidgets()):
@@ -417,4 +399,4 @@ class HelpNvmUpdateWin(ParamWin):
         # (릴리스 노트 조회 중이면 접속 타임아웃 안팎 블로킹될 수 있다)
         self.update_worker.cleanup()
         self._close_wait_box()
-        super().closeEvent(event)  # param_worker.cleanup()
+        super().closeEvent(event)

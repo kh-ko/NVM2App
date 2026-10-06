@@ -13,7 +13,8 @@ QT_QPA_PLATFORM=offscreen 으로 QApplication 을 띄우고, CASES 의 창을 Ma
   3. MainWin 임포트
 
 CASES 는 MainWin 의 show_window 호출 인자를 글자 그대로 옮긴 것이다 (N133) — MainWin 을 고치면 여기도 고친다.
-제외: ConnectionConnectWin(열자마자 COM 포트를 실제로 스캔), HelpNvmUpdateWin(열자마자 FTP 릴리스 노트를 조회).
+제외: ConnectionConnectWin(열자마자 COM 포트를 실제로 스캔), HelpNvmUpdateWin(start() 에서 FTP 릴리스 노트를 조회 —
+test_service_win_headless 가 조회를 스텁해 다룬다).
 """
 
 from __future__ import annotations
@@ -118,7 +119,7 @@ CASES = [
       for i in (1, 2, 3, 4)],
     ("Legacy Parameters", ParamWin, _pw("Legacy Parameters", ["Legacy Parameters"], label_width=310)),
     ("ADC Calibration", ParamWin, _pw("ADC Calibration", ["ADC Calibration"])),
-    # --- 그 밖의 창 (ParamWin 파생·독립 창)
+    # --- 그 밖의 창 (ServiceWin 직계: Backup/Restore/Sensor Analysis/About · ParamWin 파생: Firmware Update/Cluster Monitor · 독립 창)
     ("BackupWin", BackupWin, dict(win_name="Backup", is_fu_backup=False)),
     ("BackupWin (FU)", BackupWin, dict(win_name="Firmware Backup", is_fu_backup=True)),
     ("RestoreWin", RestoreWin, dict(win_name="Restore")),

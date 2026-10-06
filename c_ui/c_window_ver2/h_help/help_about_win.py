@@ -12,9 +12,9 @@
 - 서드파티 버전은 실행 시점 조회 (Qt 는 qVersion, Python 은 platform, 그 외는
   importlib.metadata). 배포본에 dist-info 가 빠져 조회되지 않으면 버전 없이 표시한다.
 
-ParamWin 을 상속하는 이유는 HelpNvmUpdateWin 과 같다 — 장비 param 은 없지만 상태바/창
-규약을 다른 창들과 통일한다 (사용자 결정). paths=[], Refresh 제거, 본문 항상 활성,
-monitor_tick=1000. 워커/네트워크는 없으므로 closeEvent 는 ParamWin 기본으로 충분하다.
+ServiceWin 직계 — 장비 param 은 없지만 상태바(연결 정보/SN/Log View)와 창 규약을 다른 창들과 통일한다
+(사용자 결정). 워커는 두지 않고(with_param_worker=False) Refresh 도 없다; 본문은 표시 전용이라 잠글 것이 없다.
+네트워크도 없으므로 closeEvent 는 ServiceWin 기본으로 충분하다.
 """
 
 import platform
@@ -30,7 +30,7 @@ from b_core.a_define.third_party_info import THIRD_PARTIES, ThirdParty
 from c_ui.b_control_ver2.b_base.containers import (BaseListWidget, BaseSplitter, PanelWidget,
                                                    ScrolledPanelWidget)
 from c_ui.b_control_ver2.b_base.labels import BaseLabel, LabelRole
-from c_ui.b_control_ver2.d_param.param_win import ParamWin
+from c_ui.c_window_ver2.service_win import ServiceWin
 
 _KEY_WIDTH = 110
 _DEV_BUILD_TEXT = "(development build)"
@@ -95,19 +95,12 @@ class _LinkRow(_InfoRow):
         self.lbl_value.setText(f'<a href="{href}">{url_text}</a>')
 
 
-class HelpAboutWin(ParamWin):
-
-    # 오버라이드 핸들러가 super().__init__() 중에도 호출될 수 있으므로 클래스 기본값
-    content_widget = None
+class HelpAboutWin(ServiceWin):
 
     def __init__(self, parent=None, win_name: str = "About"):
-        super().__init__(parent=parent, win_name=win_name, paths=[], filter_param_paths=[],
-                         is_editblock_win=False, label_width=210, folder_max_width=None,
-                         monitor_tick=1000)
+        super().__init__(parent, win_name, has_refresh=False, with_param_worker=False)
         self.setWindowTitle("Help >> About")
         self.resize(900, 550)
-
-        self.toolbar.remove_action("Refresh")
 
         self._build_body()
 
@@ -116,13 +109,7 @@ class HelpAboutWin(ParamWin):
 
     # ------------------------------------------------------------ GUI 구성
     def _build_body(self):
-        """ParamWin 의 폴더 카드 스크롤 영역은 쓰지 않으므로 중앙 위젯을 교체한다."""
-        old_central = self.takeCentralWidget()
-        old_central.deleteLater()
-
         central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        self.content_widget = central_widget
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
 
@@ -160,6 +147,7 @@ class HelpAboutWin(ParamWin):
         self.splitter.addWidget(self.license_panel)
 
         self.splitter.setSizes([380, 520])
+        self.set_body(central_widget)
 
     def _build_about_panel(self) -> PanelWidget:
         panel = PanelWidget(title="About", is_big_title=True)
@@ -175,11 +163,6 @@ class HelpAboutWin(ParamWin):
             panel.add_widget(_InfoRow("Contact", app_info.APP_CONTACT))
         panel.add_widget(_InfoRow("Copyright", app_info.APP_COPYRIGHT))
         return panel
-
-    def handle_changed_working(self, working: bool):
-        # 본문은 표시 전용 — param 워커 동작 여부와 무관하게 항상 활성 (모듈 주석 참고)
-        if self.content_widget is not None:
-            self.content_widget.setEnabled(True)
 
     # ------------------------------------------------------------ 라이선스 표시
     def on_changed_license_item(self, row: int):

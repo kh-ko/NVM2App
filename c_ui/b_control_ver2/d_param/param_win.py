@@ -3,6 +3,8 @@
 ServiceWin 이 툴바·상태바·워커·2단계 초기화(start)·잠금 단일 지점을 맡고, 이 클래스는 폴더 카드 본문과
 Save File / Load File / Apply / Enable Edit, enable 조건 배선만 가진다. ParamWorkerWinMixin 은 service_win 에
 있고 여기서 재수출한다 (MainWin 의 import 경로 유지 — ③ 에서 정리).
+폴더 카드 위에 다른 본문을 더하는 창(Firmware Update: 카드 아래 진행 패널, Cluster Monitor: 표 + 고른 장치의 폴더 카드)도
+이 클래스 위에 있다 — ServiceWin 의 선택 구성(has_refresh/locks_content)을 그대로 넘겨 받는다.
 """
 
 import json
@@ -23,8 +25,10 @@ from c_ui.c_window_ver2.service_win import ParamWorkerWinMixin, ServiceWin  # no
 
 
 class ParamWin(ServiceWin):
-    def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None, monitor_tick: int = 100):
-        super().__init__(parent, win_name if win_name is not None else paths[0], monitor_tick=monitor_tick)
+    def __init__(self, parent=None, win_name = None, paths : list[str] = None, filter_param_paths : list[str] = None, is_editblock_win=False, label_width=210, folder_max_width=None, monitor_tick: int = 100,
+                 has_refresh: bool = True, locks_content: bool = True):
+        super().__init__(parent, win_name if win_name is not None else paths[0],
+                         has_refresh=has_refresh, locks_content=locks_content, monitor_tick=monitor_tick)
 
         self.is_editblock_win = is_editblock_win
         self._edit_locked = is_editblock_win  # 편집 잠금 창은 잠긴 채 시작 — 반영은 set_body / start 의 _sync_lock_state
@@ -282,8 +286,7 @@ class ParamWin(ServiceWin):
 
     def edit_locked_actions(self):
         # 워커 동작 중과 편집 잠금 중에 잠긴다 (2026-10-06 결정 — 전에는 Apply 를 눌러 BUSY 경고를 받았다).
-        # 편집 잠금 중 Load File 도 잠그는 이유: 잠긴 위젯에 값을 넣어 dirty 로 만든 뒤 Apply 로 쓰는 우회 경로 차단.
-        # 같은 이름으로 다른 액션을 다시 등록하는 창(RestoreWin 의 백업 파일 Load File)은 빈 튜플로 덮어쓴다
+        # 편집 잠금 중 Load File 도 잠그는 이유: 잠긴 위젯에 값을 넣어 dirty 로 만든 뒤 Apply 로 쓰는 우회 경로 차단
         return ("Apply", "Save File", "Load File")
 
     def on_working_changed(self, working: bool):
