@@ -14,7 +14,7 @@ _PREVIEW_COUNT = 10  # 본문에 보여줄 오류 줄 수 — 나머지는 'Show
 
 
 def show_schema_load_error(parent, files: list, errors: list) -> None:
-    """param 스키마(params.json / nv2_spec.json) 누락·손상·불일치로 기동할 수 없음을 알린다.
+    """param 스키마(params.json / nv2_spec.json / nv1_spec.json) 누락·손상·불일치로 기동할 수 없음을 알린다.
 
     본문에는 파일 경로와 앞쪽 오류 몇 줄만 두고, 전체 오류 목록은 상세 영역에 넣는다.
     로그 파일에도 같은 문구가 남아 있다."""

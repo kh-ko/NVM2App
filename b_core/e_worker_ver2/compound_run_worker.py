@@ -239,12 +239,13 @@ class CompoundRunWorker(QObject):
         self._pairs: list[tuple[Parameter, Parameter | None]] = []
         self._thread = CompoundPollThread(self)
         self._thread.sig_log.connect(self._handle_log)
+        self._is_cleaned = False
 
         app = QCoreApplication.instance()
         if app is not None:
-            app.aboutToQuit.connect(self._destroyed)
+            app.aboutToQuit.connect(self.cleanup)
 
-        self.destroyed.connect(self._destroyed)
+        self.destroyed.connect(self.cleanup)
 
     # ------------------------------------------------------------ 구성
     def configure(self, pairs: list[tuple[Parameter, Parameter | None]],
@@ -336,11 +337,17 @@ class CompoundRunWorker(QObject):
         else:
             self._log.info(f"Tx: {tx} Rx: {rx} {msg}")
 
-    def _destroyed(self):
+    def cleanup(self):
+        """스레드 종료 + aboutToQuit 연결 해제. 멱등 — aboutToQuit / destroyed 양쪽에서 불린다
+        (F095: 워커 공통 종료 API 이름, ParameterRunWorker 와 동일)."""
+        if self._is_cleaned:
+            return
+        self._is_cleaned = True
+
         app = QCoreApplication.instance()
         if app is not None:
             try:
-                app.aboutToQuit.disconnect(self._destroyed)
+                app.aboutToQuit.disconnect(self.cleanup)
             except (TypeError, RuntimeError):
                 pass
 

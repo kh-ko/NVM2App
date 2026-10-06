@@ -7,16 +7,20 @@
 MainWin 은 등록부에 없다 (앱 수명 창).
 """
 
+import threading
+
 from PySide6.QtCore import Qt
 
 
 class WinManager:
     _instance = None
+    _creation_lock = threading.Lock()  # 다른 싱글턴(매니저/컨버터/ServicePort)과 같은 방식 (F095)
 
     def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(WinManager, cls).__new__(cls)
-            cls._instance.windows = {}
+        with cls._creation_lock:
+            if cls._instance is None:
+                cls._instance = super(WinManager, cls).__new__(cls)
+                cls._instance.windows = {}
         return cls._instance
 
     def show_window(self, win_class, win_id=None, parent=None, is_modal=False, *args, **kwargs):

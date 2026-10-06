@@ -36,8 +36,10 @@ from c_ui.b_control_ver2.b_base.labels import BaseLabel
 from c_ui.b_control_ver2.c_values.read_write_values import ReadWriteEnumValueWidget, ReadWriteFloatValueWidget
 from c_ui.b_control_ver2.d_param.param_win import ParamWin
 
-# 보관 샘플 수 — 200ms 샘플링으로 최대 시간창(10min = 3000샘플)을 여유 있게 채우는 크기
-_CAPACITY = 4000
+# 샘플링 주기와 보관 샘플 수 — 최대 시간창(ChartXWindowEnum 의 10 min)을 채우는 크기 + CoarseTimer 오차 여유 10 % (F080).
+# 넘치면 오래된 샘플부터 밀려난다
+_SAMPLE_INTERVAL_MS = 100
+_CAPACITY = max(e.value for e in p_enum.ChartXWindowEnum) * 1000 // _SAMPLE_INTERVAL_MS * 11 // 10   # 6,600
 
 # 좌측 설정 열(패널 카드) 폭 — MainChartPanel 과 동일
 _SIDE_WIDTH = 150
@@ -51,7 +53,7 @@ _ROW_SENS2 = 3
 
 class SensorAnalysisWin(ParamWin):
 
-    SAMPLE_INTERVAL_MS = 100
+    SAMPLE_INTERVAL_MS = _SAMPLE_INTERVAL_MS  # 버퍼 크기(_CAPACITY)와 같은 뿌리
 
     # handle_changed_connection_info 오버라이드가 super().__init__() 중에도
     # 호출되므로 (타이머 생성 전) 클래스 기본값으로 존재해야 한다

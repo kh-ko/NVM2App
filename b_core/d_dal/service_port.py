@@ -1,3 +1,5 @@
+import threading
+
 import serial
 from PySide6.QtCore import QCoreApplication, QObject, Signal, Qt, QThread, QMutex, QRecursiveMutex, QMutexLocker
 
@@ -7,14 +9,14 @@ from b_core.d_dal.serial_setting import SerialSetting
 
 class ServicePort(QObject):
     _instance = None
-    _creation_mutex = QMutex()
+    _creation_lock = threading.Lock()  # 다른 싱글턴(매니저/컨버터/WinManager)과 같은 방식 (F095)
 
     connect_info_changed = Signal(str)
     _sig_flush_requested = Signal()  # 내부용 — 대기 목록 비우기 요청 (항상 메인 스레드로 큐 배달)
 
     def __new__(cls, *args, **kwargs):
-        # 멀티스레드 환경에서 동시에 생성되는 것을 방지 (Thread-Safe Singleton)
-        with QMutexLocker(cls._creation_mutex):
+        # 멀티스레드 환경에서 동시에 생성되는 것을 방지
+        with cls._creation_lock:
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
                 cls._instance._initialized = False

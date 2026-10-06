@@ -44,20 +44,13 @@ _FU_BACKUP_WIN_ID = "ParamWin_FirmwareBackup"
 _FU_UPDATE_WIN_ID = "ParamWin_FirmwareUpdate"
 
 class CompoundData(NamedTuple):
+    """차트 패널이 읽는 샘플 — 컴파운드 응답 13개 값 중 차트가 쓰는 4개(act/target posi, act/target pres)만 형 변환하고 워커의 폴링 시각을 붙인다 (F072).
+    나머지 ref param 의 갱신은 CompoundRunWorker.pop_all_data 가 원시 문자열로 따로 한다."""
     timestamp: int
-    access_mode: int
-    control_mode: int
     act_posi: float
     target_posi: float
     act_pres: float
     target_pres: float
-    speed: float
-    pres_contoller_selector: int
-    warning_bitmap: int
-    error_bitmap: int
-    error_number: int
-    error_code: int
-    test_mode_used: int
 
 _COMPOUND_BANK = "Compound Commands.NVM For Sevice.Compound Commands 1"
 
@@ -78,22 +71,13 @@ _COMPOUND_REF_PATHS = [
 ]
 
 def _make_compound_data(timestamp_ms: int, values: list[str]) -> CompoundData:
-    """워커 스레드에서 호출된다 — 형 변환을 UI 스레드 밖에서 수행."""
+    """워커 스레드에서 호출된다 — 형 변환을 UI 스레드 밖에서 수행. 인덱스는 _COMPOUND_REF_PATHS 의 슬롯 순서."""
     return CompoundData(
         timestamp_ms,
-        int(values[0]),    # access_mode
-        int(values[1]),    # control_mode
         float(values[2]),  # act_posi
         float(values[3]),  # target_posi
         float(values[4]),  # act_pres
         float(values[5]),  # target_pres
-        float(values[6]),  # speed
-        int(values[7]),    # pres_contoller_selector
-        int(values[8]),    # warning_bitmap
-        int(values[9]),    # error_bitmap
-        int(values[10]),   # error_number
-        int(values[11]),   # error_code
-        int(values[12]),   # Test Mode Used
     )
 
 class MainWin(ParamWorkerWinMixin, QMainWindow):
@@ -526,7 +510,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
             return
 
         filter_param_paths = []
-        if self.user_iface_param.value is p_enum.SysUserInterfaceEnum.CLUSTER_SLAVE.value:
+        if self.user_iface_param.value == p_enum.SysUserInterfaceEnum.CLUSTER_SLAVE.value:
             filter_param_paths.append("Cluster.Settings.Number of Valves")
         else:
             filter_param_paths.append("Cluster.Settings.Cluster Address")

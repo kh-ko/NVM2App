@@ -166,32 +166,32 @@ class MainPressurePanel(PanelWidget):
         self.target_pres_widget.commit()
 
     def _on_point_01_clicked(self):
-        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint01)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
+        value = self.converter.from_display_str(self.point_01_btn.text())  # Torr — 화면에 보이는 값(현재 자릿수)이 기준: 사용자가 인지하는 값 (2026-10-06 결정, N105 되돌림)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_02_clicked(self):
-        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint02)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
+        value = self.converter.from_display_str(self.point_02_btn.text())  # Torr — 화면에 보이는 값(현재 자릿수)이 기준: 사용자가 인지하는 값 (2026-10-06 결정, N105 되돌림)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_03_clicked(self):
-        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint03)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
+        value = self.converter.from_display_str(self.point_03_btn.text())  # Torr — 화면에 보이는 값(현재 자릿수)이 기준: 사용자가 인지하는 값 (2026-10-06 결정, N105 되돌림)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_04_clicked(self):
-        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint04)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
+        value = self.converter.from_display_str(self.point_04_btn.text())  # Torr — 화면에 보이는 값(현재 자릿수)이 기준: 사용자가 인지하는 값 (2026-10-06 결정, N105 되돌림)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_05_clicked(self):
-        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint05)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
+        value = self.converter.from_display_str(self.point_05_btn.text())  # Torr — 화면에 보이는 값(현재 자릿수)이 기준: 사용자가 인지하는 값 (2026-10-06 결정, N105 되돌림)
         if value is not None:
             self.sig_setpoint.emit(value)
 
     def _on_point_06_clicked(self):
-        value = self.converter.sfs_to_torr(self.local_setting_manager.pres_setpoint06)  # Torr — 버튼 문구(자릿수 반올림)를 재파싱하지 않는다 (N105)
+        value = self.converter.from_display_str(self.point_06_btn.text())  # Torr — 화면에 보이는 값(현재 자릿수)이 기준: 사용자가 인지하는 값 (2026-10-06 결정, N105 되돌림)
         if value is not None:
             self.sig_setpoint.emit(value)
 

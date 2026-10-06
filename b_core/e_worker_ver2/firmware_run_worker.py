@@ -373,8 +373,12 @@ class _FirmwareThreadBase(QThread):
     def abort(self):
         self._abort = True
 
+    @property
+    def is_aborted(self) -> bool:  # 앱 업데이트 스레드 베이스와 같은 이름 (F095)
+        return self._abort
+
     def _check_abort(self):
-        if self._abort:
+        if self.is_aborted:
             raise RuntimeError(ABORT_MESSAGE)
 
 

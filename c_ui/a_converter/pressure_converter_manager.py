@@ -150,19 +150,18 @@ class PresConverterManager(QObject):
 
     # ------------------------------------------------------------ 설정점 sfs (만압 대비 비율 — Torr 도메인에서 정의)
     def sfs_to_torr(self, sfs: float | None) -> float | None:
-        """sfs → 설정점 Torr (= 설정 만압 Torr × sfs). 만압 미준비면 None. 설정점 버튼이 보내는 값."""
+        """sfs → 설정점 Torr (= 설정 만압 Torr × sfs). 만압 미준비·0(퇴화 구성)이면 None —
+        설정점을 정의할 수 없으므로 미준비와 같이 다룬다 (F099, 2026-10-06 결정)."""
         max_torr = self.get_dp_max_torr()
-        if max_torr is None or sfs is None:
+        if not max_torr or sfs is None:
             return None
         return max_torr * sfs
 
     def torr_to_sfs(self, torr: float | None) -> float | None:
-        """설정점 Torr → sfs. 만압 미준비면 None, 만압이 0 이면 0.0."""
+        """설정점 Torr → sfs. 만압 미준비·0(퇴화 구성)이면 None (F099)."""
         max_torr = self.get_dp_max_torr()
-        if max_torr is None or torr is None:
+        if not max_torr or torr is None:
             return None
-        if max_torr == 0:
-            return 0.0
         return torr / max_torr
 
     def convert_sfs_to_dp_pres(self, value: float) -> float | None:

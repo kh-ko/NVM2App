@@ -69,12 +69,13 @@ class ComportScanRunWorker(QObject):
         self.port_found_slot = port_found_slot
         self.port_checked_slot = port_checked_slot
         self.scan_stopped_slot = scan_stopped_slot
+        self._is_cleaned = False
 
         app = QCoreApplication.instance()
         if app is not None:
-            app.aboutToQuit.connect(self._destroyed)
+            app.aboutToQuit.connect(self.cleanup)
 
-        self.destroyed.connect(self._destroyed)
+        self.destroyed.connect(self.cleanup)
 
     def start(self, setting: SerialSetting):
         """setting 의 통신 설정으로 스캔 시작 (port_name 은 무시 — 포트마다 바꿔 쓴다).
@@ -126,11 +127,17 @@ class ComportScanRunWorker(QObject):
             self._thread.deleteLater()
             self._thread = None            
 
-    def _destroyed(self):
+    def cleanup(self):
+        """스레드 종료 + aboutToQuit 연결 해제. 멱등 — aboutToQuit / destroyed 양쪽에서 불린다
+        (F095: 워커 공통 종료 API 이름, ParameterRunWorker 와 동일)."""
+        if self._is_cleaned:
+            return
+        self._is_cleaned = True
+
         app = QCoreApplication.instance()
         if app is not None:
             try:
-                app.aboutToQuit.disconnect(self._destroyed)
+                app.aboutToQuit.disconnect(self.cleanup)
             except (TypeError, RuntimeError):
                 pass
 
@@ -139,6 +146,5 @@ class ComportScanRunWorker(QObject):
             if self._thread.isRunning():
                 self._thread.stop()
                 self._thread.wait()
-                
-            self._thread = None           
+            self._thread = None
     

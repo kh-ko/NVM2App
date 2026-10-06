@@ -116,6 +116,8 @@ class MainPositionPanel(PanelWidget):
             self.sig_setpoint.emit(value)
         self.target_posi_widget.commit()
 
+    # 설정점 버튼은 화면에 보이는 값(현재 자릿수로 반올림된 버튼 문구)을 보낸다 — 사용자가 인지하는 값이 기준
+    # (2026-10-06 결정, N102 미반영). 압력 패널도 동일.
     def _on_point_01_clicked(self):
         value = self.converter.parse_dp_str(self.point_01_btn.text())
         if value is not None:
