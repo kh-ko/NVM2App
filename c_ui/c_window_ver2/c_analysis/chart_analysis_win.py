@@ -88,10 +88,15 @@ class _TimeAxisItem(pg.AxisItem):
                 strings.append("")
                 continue
 
-            text = time.strftime("%H:%M:%S", time.localtime(epoch))
             if spacing < 1.0:  # 초 미만 줌 — 소수점 초 표시
+                # 표시 자릿수로 먼저 반올림한 뒤 초/소수부로 나눈다 (_fmt_wall_ms 와 같은 방식) — 소수부만 따로
+                # 반올림하면 .96 이 ".0" 으로 올라갈 때 초 자리가 따라 오르지 않아 1초 늦고 역행했다 (F078)
                 decimals = 3 if spacing < 0.1 else 1
-                text += f"{epoch % 1:.{decimals}f}"[1:]  # "0.523" -> ".523"
+                unit = 10 ** decimals
+                sec, frac = divmod(int(round(epoch * unit)), unit)
+                text = time.strftime("%H:%M:%S", time.localtime(sec)) + f".{frac:0{decimals}d}"
+            else:
+                text = time.strftime("%H:%M:%S", time.localtime(epoch))
 
             strings.append(text)
 
