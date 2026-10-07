@@ -68,9 +68,9 @@ from b_core.f_helper import firmware_ftp_helper
 from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.b_base.labels import CheckLabel
 from c_ui.b_control_ver2.b_base.statusbars import BaseProgressBar
-from c_ui.b_control_ver2.d_param.param_win import ParamWin
 
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin
+from c_ui.c_window_ver2.param_win import ParamWin
 from c_ui.c_window_ver2.win_manager import WinManager
 from c_ui.c_window_ver2.x_message.firmware_update_message_box import (
     ask_abort_update, ask_adapter_type, ask_com_port, ask_factory_reset,

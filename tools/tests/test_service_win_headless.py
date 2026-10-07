@@ -38,7 +38,7 @@ from PySide6.QtWidgets import QTreeWidget  # noqa: E402
 import resources_rc  # noqa: E402,F401
 from b_core.d_dal.service_port import ServicePort  # noqa: E402
 from b_core.f_helper import backup_file_helper  # noqa: E402
-from c_ui.b_control_ver2.d_param.param_win import ParamWin  # noqa: E402
+from c_ui.c_window_ver2.param_win import ParamWin  # noqa: E402
 from c_ui.c_window_ver2.service_win import ServiceWin  # noqa: E402
 from c_ui.c_window_ver2.c_analysis.sensor_analysis_win import SensorAnalysisWin  # noqa: E402
 from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin  # noqa: E402

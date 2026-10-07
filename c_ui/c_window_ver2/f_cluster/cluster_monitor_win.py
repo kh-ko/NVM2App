@@ -37,7 +37,7 @@ from c_ui.b_control_ver2.b_base.containers import PanelWidget
 from c_ui.b_control_ver2.b_base.labels import BaseLabel
 from c_ui.b_control_ver2.b_base.tables import BaseTableWidget
 from c_ui.b_control_ver2.d_param.param_folder_widget import ParamFolderWidget
-from c_ui.b_control_ver2.d_param.param_win import ParamWin
+from c_ui.c_window_ver2.param_win import ParamWin
 
 NUM_VALVES_PATH = "Cluster.Settings.Number of Valves"
 _STATUS_FOLDER = re.compile(r"Cluster\.Device (\d+)\.Status")

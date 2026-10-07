@@ -45,8 +45,9 @@ from b_core.c_manager.local_setting_manager import LocalSettingManager  # noqa: 
 from b_core.d_dal.service_port import ServicePort  # noqa: E402
 from c_ui.a_converter.position_converter_manager import PosiConverterManager  # noqa: E402
 from c_ui.a_converter.pressure_converter_manager import PresConverterManager  # noqa: E402
-from c_ui.b_control_ver2.d_param.param_win import (ParamIfaceDentWin, ParamIfaceEtherCatWin,  # noqa: E402
-                                                    ParamPresCtrlWin, ParamWin)
+from c_ui.c_window_ver2.param_win import ParamPresCtrlWin, ParamWin  # noqa: E402
+from c_ui.c_window_ver2.e_iface.iface_devicenet_win import ParamIfaceDentWin  # noqa: E402
+from c_ui.c_window_ver2.e_iface.iface_ethercat_win import ParamIfaceEtherCatWin  # noqa: E402
 from c_ui.c_window_ver2.c_analysis.sensor_analysis_win import SensorAnalysisWin  # noqa: E402
 from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin  # noqa: E402
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin  # noqa: E402

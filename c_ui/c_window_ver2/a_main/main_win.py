@@ -12,10 +12,13 @@ from b_core.e_worker_ver2.compound_run_worker import CompoundRunWorker
 from b_core.f_helper import firmware_util
 from b_core.e_worker_ver2.parameter_run_worker import ParameterRunWorker
 
-from c_ui.b_control_ver2.d_param.param_win import ParamWorkerWinMixin, ParamWin, ParamPresCtrlWin, ParamIfaceDentWin, ParamIfaceEtherCatWin
 from c_ui.b_control_ver2.b_base.statusbars import BaseStatusBar
 
 from c_ui.c_window_ver2.win_manager import WinManager
+from c_ui.c_window_ver2.service_win import ParamWorkerWinMixin
+from c_ui.c_window_ver2.param_win import ParamWin, ParamPresCtrlWin
+from c_ui.c_window_ver2.e_iface.iface_devicenet_win import ParamIfaceDentWin
+from c_ui.c_window_ver2.e_iface.iface_ethercat_win import ParamIfaceEtherCatWin
 from c_ui.c_window_ver2.a_main.main_toolbar import MainToolBar
 from c_ui.c_window_ver2.a_main.main_chart_panel import MainChartPanel
 from c_ui.c_window_ver2.a_main.main_status_panel import MainStatusPanel

@@ -1,4 +1,4 @@
-"""ServiceWin — ParameterRunWorker·툴바·상태바를 가진 창의 골격 (2단계 8위, 2026-10-06 ①② 적용).
+"""ServiceWin — ParameterRunWorker·툴바·상태바를 가진 창의 골격 (2단계 8위, 2026-10-06 ①②③ 적용).
 
 ParamWin(폴더 카드 창)이 이 골격 위에 있고, 폴더 카드가 없는 창 5개(Backup/Restore/Sensor Analysis/About/Application Update)는
 이 클래스를 직접 상속한다. Firmware Update(상단 Firmware 폴더 카드)와 Cluster Monitor(고른 장치의 Setting/Control 폴더 카드 +
@@ -17,11 +17,11 @@ Apply/WO 쓰기)는 폴더 카드 창이므로 ParamWin 위에 남는다 — FU 
 3. 선택 구성 — has_refresh(Refresh 액션), with_param_worker(장비 param 을 다루지 않는 창: About/Application Update 는 False —
    상태바 연결·SN 표시만 한다), locks_content(표시 전용 본문: Firmware Update 는 False). 되돌리는 코드 대신 생성 인자로 고른다.
 
-이관 계획(부분 적용 가능, 단계마다 tools/run_tests.py 7/7 이 게이트):
+이관 계획(부분 적용 가능, 단계마다 tools/run_tests.py 전부 통과가 게이트):
   ① (적용) WinManager.show_window 가 start() 를 부르고, ParamWin 이 ServiceWin 위로
   ② (적용) 폴더 카드 없는 창 5개를 ServiceWin 직계로, FU/Cluster Monitor 는 ParamWin 위에서 되돌리는 코드 제거
-  ③ ParamWin 을 c_window_ver2/param_win.py 로, 인터페이스 창 2종을 e_iface/ 로 이동, d_param 에는 위젯만 남김 (F061/F062)
-ParamWorkerWinMixin(쓰기 정책·재부팅 대기·연결 상태바)은 이 파일에 있고 MainWin 도 계속 쓴다 (param_win 이 재수출).
+  ③ (적용) ParamWin 을 c_window_ver2/param_win.py 로, 인터페이스 창 2종을 e_iface/ 로 이동, d_param 에는 위젯만 남김 (F061/F062)
+ParamWorkerWinMixin(쓰기 정책·재부팅 대기·연결 상태바)은 이 파일에 있고 MainWin 도 여기서 가져다 쓴다.
 
 ① 에서 의도적으로 달라진 동작 (2026-10-06 사용자 결정):
 - 창 제목 = win_name — ParamWin 계열은 그동안 제목이 비어 있었다. 자기 제목이 있는 창(FU/About/Update)은 super().__init__() 뒤에 덮어쓴다.
