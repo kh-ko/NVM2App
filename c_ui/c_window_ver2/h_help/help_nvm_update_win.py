@@ -118,6 +118,7 @@ class HelpNvmUpdateWin(ServiceWin):
         self._abort_requested = False  # Abort 확인(Yes) 뒤 — 그 후 도착하는 준비 완료도 설치하지 않는다 (F017)
         self._asking_abort = False     # 중단 확인 질문 중 — 이때 도착한 준비 완료는 _deferred_result 에 보관
         self._deferred_result: tuple | None = None  # (ok, package_root, msg) — 답이 나온 뒤 처리
+        self._prepare_version = ""     # 준비 중인 릴리스 이름 — 늦은 Abort 가 준비된 패키지를 지울 때 쓴다
         self._script_path = ""         # write_install_script 결과 — aboutToQuit 에서 기동
         self._package_root = ""        # 그 스크립트에 환경변수로 넘길 패키지 폴더
 
@@ -265,6 +266,7 @@ class HelpNvmUpdateWin(ServiceWin):
         self._abort_requested = False
         self._deferred_result = None
         self._set_stage(_Stage.PREPARING)
+        self._prepare_version = version
         if not self.update_worker.start_prepare(version):
             self._log.error("[Cancelled] update worker is busy")
             self._set_stage(_Stage.IDLE)
@@ -321,8 +323,9 @@ class HelpNvmUpdateWin(ServiceWin):
             return
 
         if ok and self._abort_requested:
-            # 워커의 마지막 중단 검사 뒤에 Yes 가 들어온 경우 — 패키지는 준비됐지만 설치하지 않는다
+            # 워커의 마지막 중단 검사 뒤에 Yes 가 들어온 경우 — 패키지는 준비됐지만 설치하지 않는다 (준비된 패키지도 지운다)
             self._log.warning("[Aborted] package was ready, but the update was aborted by user")
+            app_update_helper.discard_package(self._prepare_version)
             ok, package_root, msg = False, "", ABORT_MESSAGE
 
         if not ok:
@@ -334,7 +337,6 @@ class HelpNvmUpdateWin(ServiceWin):
                 QMessageBox.critical(self, "Application Update Failed", msg)
             return
 
-        self.row_progress.set_checked(True)
         self._set_stage(_Stage.INSTALLING)
 
         # 스크립트 파일은 종료 전에 만든다 — 실패를 대화상자로 보일 수 있는 마지막 지점
@@ -363,6 +365,7 @@ class HelpNvmUpdateWin(ServiceWin):
         app = QApplication.instance()
         app.aboutToQuit.connect(self._start_installer_on_quit)
         self._log.info("[Install] quitting application - the installer starts on quit")
+        self.row_progress.set_checked(True)   # 설치 확정 — 앞의 실패 분기들이 체크된 행을 남기지 않게 여기서 (N067)
         QApplication.quit()
 
         # Qt6 의 quit() 은 모든 창에 close 를 보내고 하나라도 거부하면 종료를 조용히 중단한다
@@ -372,6 +375,7 @@ class HelpNvmUpdateWin(ServiceWin):
         if any(w.isVisible() for w in QApplication.topLevelWidgets()):
             app.aboutToQuit.disconnect(self._start_installer_on_quit)
             self._log.error("[Install] application refused to quit - update not started")
+            self.row_progress.set_checked(False)
             self._set_stage(_Stage.IDLE)
             QMessageBox.warning(self, "Application Update",
                                 "The application could not be closed (a window is busy).\n"

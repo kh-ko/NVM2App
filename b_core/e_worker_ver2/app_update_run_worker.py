@@ -70,6 +70,13 @@ class PackagePrepareThread(_AppUpdateThreadBase):
 
     def run(self):
         version = self._version
+        # 서버가 준 이름을 경로 조각(zip 이름·압축 해제 폴더)으로 쓰기 전에 검증한다 — '..' 등은 시작조차 하지 않는다 (N061).
+        # 검증 전이라 discard_package 도 부르지 않는다
+        if not app_update_helper.is_valid_version_name(version):
+            self.sig_log.emit(True, f"[Failed] invalid release name: {version!r}")
+            self.sig_prepare_finished.emit(False, "", f"Invalid release name '{version}' - the update was not started.")
+            return
+
         try:
             setting = app_update_helper.load_setting()
             remote = app_update_helper.remote_package_path(setting, version)
@@ -91,6 +98,7 @@ class PackagePrepareThread(_AppUpdateThreadBase):
             self.sig_prepare_finished.emit(True, package_root, "")
 
         except Exception as e:
+            app_update_helper.discard_package(version)   # 반쯤 받은 zip·풀다 만 폴더를 남기지 않는다 (F037)
             if self.is_aborted:
                 self.sig_log.emit(True, f"[Aborted] {version}")
                 self.sig_prepare_finished.emit(False, "", ABORT_MESSAGE)
