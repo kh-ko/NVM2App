@@ -10,9 +10,7 @@
       ├ get_read_spec(param)             지금 문맥에서 쓸 읽기 spec. 없으면 None
       ├ get_write_spec(param)
       ├ has_spec(param)                  어느 규약에도 없는 param 검증용
-      ├ add_nv2_key / get_nv2_key / get_by_nv2_key
-      │                                  NV2 식별자 역조회 — 백업 파일(p:01 패킷)과
-      │                                  Compound 프로토콜이 NV2 id/idx 를 값으로 쓰기 때문
+      ├ add_nv2_key / get_nv2_key      param → NV2 (id, idx) — Compound 프로토콜이 NV2 id/idx 를 값으로 쓰기 때문
       ├ add_codec / get_codec            이름 → Codec (nv2_spec.json "codecs" 절, 로더가 등록)
       ├ get_param_codec(param)           param 의 현재 읽기 spec 이 쓰는 codec
       ├ decode_line(param, v)            숫자 선로값 → 도메인 값 (Compound 폴링 샘플용)
@@ -23,9 +21,8 @@
 만들 때만 조회하고, 응답 처리는 큐에 담긴 spec 을 그대로 쓴다 — 2,679개 전체를
 한 번 조회하는 데 0.1 ms 미만 (2026-09-11 실측).
 
-NV2 식별자 역조회 규칙: 같은 (id, idx) 를 공유하는 param 이 스키마에 8쌍 있어
-get_by_nv2_key 는 "마지막 등록이 이긴다" — 기존 RestoreWin 의 dict 동작과 동일
-(결정 C, 유지).
+(id, idx) → param 역조회는 두지 않는다 — 복원은 param 조회 없이 백업 파일의 패킷 원문을 전송하고, 같은 (id, idx) 를
+공유하는 param 이 스키마에 8쌍 있어 역조회가 유일하지도 않다 (get_by_nv2_key 는 2026-10-12 삭제, N015).
 """
 
 from __future__ import annotations
@@ -64,7 +61,6 @@ class SpecRegistry:
         self._read: dict["Parameter", SpecSelector] = {}
         self._write: dict["Parameter", SpecSelector] = {}
         self._nv2_key: dict["Parameter", tuple[str, int]] = {}
-        self._param_of_nv2: dict[tuple[str, int], "Parameter"] = {}
         self._codecs: dict[str, Codec] = {}
 
     # ------------------------------------------------------------ 등록 (로더)
@@ -76,7 +72,6 @@ class SpecRegistry:
 
     def add_nv2_key(self, param: "Parameter", id_code: str, index: int) -> None:
         self._nv2_key[param] = (id_code, index)
-        self._param_of_nv2[(id_code, index)] = param  # 중복 키는 마지막이 이긴다 (모듈 주석)
 
     def add_codec(self, name: str, codec: Codec) -> None:
         self._codecs[name] = codec
@@ -96,10 +91,6 @@ class SpecRegistry:
     def get_nv2_key(self, param: "Parameter") -> Optional[tuple[str, int]]:
         """param 의 NV2 (id, index). NV2 spec 이 없는 param 이면 None."""
         return self._nv2_key.get(param)
-
-    def get_by_nv2_key(self, id_code: str, index: int) -> Optional["Parameter"]:
-        """NV2 (id, index) 로 param 찾기. 같은 키를 공유하는 param 이 있으면 마지막 등록."""
-        return self._param_of_nv2.get((id_code, index))
 
     # ------------------------------------------------------------ codec
     def get_codec(self, name: str) -> Optional[Codec]:

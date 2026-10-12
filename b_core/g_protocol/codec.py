@@ -121,10 +121,6 @@ class Codec(ABC):
     name: str = "?"
     context_params: tuple = ()
 
-    @property
-    def is_ready(self) -> bool:
-        return True
-
     @abstractmethod
     def decode(self, text: str):
         """선로 문자열 → 도메인 값. 형식 불량 ValueError, 문맥 미준비 None."""
@@ -138,9 +134,6 @@ class Codec(ABC):
 
     def to_line(self, value) -> float | None:
         raise TypeError(f"{self.name}: numeric line value is not supported")
-
-    def describe(self) -> str:
-        return self.name
 
 
 # ================================================================== 형 변환만
@@ -231,10 +224,6 @@ class PosiCodec(Codec):
                 return None
             return float(self.min_param.value), float(self.max_param.value)
         return POSI_UNIT_RANGE.get(unit)
-
-    @property
-    def is_ready(self) -> bool:
-        return self.range() is not None
 
     def from_line(self, line_value: float) -> float | None:
         rng = self.range()
@@ -365,10 +354,6 @@ class PresCodec(Codec):
         intercept = sens_min - (slope * iface_min)
         gain, offset = pressure_unit_conversion(sens_unit, DOMAIN_PRES_UNIT)
         return (slope, intercept, gain, offset)
-
-    @property
-    def is_ready(self) -> bool:
-        return self.coeff() is not None
 
     # ------------------------------------------------------------ 변환
     def from_line(self, line_value: float) -> float | None:

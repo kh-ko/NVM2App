@@ -163,9 +163,12 @@ def main() -> int:
                           f"{path}: min/max {param.min_value}/{param.max_value}")
 
     # ---------------------------------------------------------------- 3. 샘플 응답
+    def _er(outcome):  # Outcome → (사유, 재시도)
+        return outcome.reason, outcome.need_retry
+
     def check_response(resp: str, label: str):
         spec = by_req[resp[:PREFIX_LEN]]
-        err, retry = spec.apply_response(resp)
+        err, retry = _er(spec.apply_response(resp))
         rep.check(err is ParamParseErrType.NONE and retry is False, f"{label}: apply_response → {err.name}, retry {retry}")
         for fd in spec.fields:
             text, expected = ver1_expected(subs_by_param[fd.param], resp)
@@ -197,22 +200,22 @@ def main() -> int:
     s0.apply_response(good)
     values_before = [fd.param.value for fd in s0.fields]
 
-    err, retry = s0.apply_response("")
+    err, retry = _er(s0.apply_response(""))
     rep.check((err, retry) == (ParamParseErrType.COMMUNICATION_ERR, True) and all(p.is_err for p in s0.params),
               f"빈 응답: {err.name}, {retry}")
-    err, retry = s0.apply_response("E:001")
+    err, retry = _er(s0.apply_response("E:001"))
     rep.check((err, retry) == (ParamParseErrType.ERR_89_NOT_SUPPORTED, False) and all(p.is_not_support for p in s0.params),
               f"E: 응답: {err.name}, {retry}")
-    err, retry = s0.apply_response(synth_response(1))
+    err, retry = _er(s0.apply_response(synth_response(1)))
     rep.check((err, retry) == (ParamParseErrType.WRONG_PREFIX, True), f"접두 불일치: {err.name}, {retry}")
-    err, retry = s0.apply_response(good[:-1])
+    err, retry = _er(s0.apply_response(good[:-1]))
     rep.check((err, retry) == (ParamParseErrType.WRONG_PARAM_LENGTH, True), f"길이 부족: {err.name}, {retry}")
     bad = good[:PREFIX_LEN] + "ABCDEF" + good[PREFIX_LEN + 6:]
-    err, retry = s0.apply_response(bad)
+    err, retry = _er(s0.apply_response(bad))
     rep.check((err, retry) == (ParamParseErrType.DATA_TYPE_ERROR, True), f"형식 불량: {err.name}, {retry}")
     rep.check([fd.param.value for fd in s0.fields] == values_before, "형식 불량 시 도메인 값 미반영")
     rep.check(s0.fields[0].param.str_value == "ABCDEF", "형식 불량 시 선로 원문은 반영")
-    err, retry = s0.apply_response(good)
+    err, retry = _er(s0.apply_response(good))
     rep.check(err is ParamParseErrType.NONE and not any(p.is_err or p.is_not_support for p in s0.params),
               "정상 응답 후 플래그 해제")
 

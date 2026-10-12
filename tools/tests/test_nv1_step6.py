@@ -4,15 +4,17 @@
 
 검사 항목
   1. 로더: load_errors 없음. Setting 8 + Control 4 param × 30대. Option 6개는 읽기 device_option + 쓰기 device_option
-     (같은 spec 객체 공유), NV2 4개는 id "20{dev+14:02X}xxxx" 로 역조회, Target/Restart 는 쓰기 spec 만(WO).
+     (같은 spec 객체 공유), NV2 4개는 get_nv2_key 가 id "20{dev+14:02X}xxxx" 를 돌려줌, Target/Restart 는 쓰기 spec 만(WO).
      기존 NV2 (id, idx) 와 충돌 없음.
   2. ver1 param_nv1.json 대조: 요청/응답 접두, Option 필드 자리(절대 offset − 8), NV2 id, enum/min/max.
   3. 읽기: Option 응답 "G:05i:04" + 8자 → 6 param 값 (예약 자리 2·5 무시).
-  4. 쓰기 요청: Option 조합 쓰기(지정 값 + 현재 값, 예약 '0'), 미확정 값 → None, 문자열 값 허용.
-     Target 30 → "030000" / -30 → "-30000" / -3 → "-03000" / 12.3456 → "012346" / 1000 → None(폭 초과) / None → None.
+  4. 쓰기 요청: Option 조합 쓰기(지정 값 + 현재 값, 예약 '0'), 미확정 값 → VALUE_MISSING, 문자열 값 허용
+     (enum 필드는 TextCodec 이라 문자열을 그대로 싣는다 — 형식 검사는 숫자 codec 필드에서만: Target "abc" → BAD_VALUE).
+     Target 30 → "030000" / -30 → "-30000" / -3 → "-03000" / 12.3456 → "012346" / 1000 → WIDTH_OVERFLOW / None → VALUE_MISSING.
      Restart 버튼 "01" → "G:07c:8201".
-  5. 쓰기 응답: RW 만 실린 Option 은 판정 없음(NONE). WO Target 은 빈 응답 / E: / 접두 불일치 / 정상.
-     E: 는 NV1_ERROR_RESPONSE 이고 플래그를 건드리지 않는다 (2026-09-28: WO 는 다시 읽히지 않아 Not Support 로 잠그면 복구 불가).
+  5. 쓰기 응답: RW 만 실린 Option 은 판정 없음(UNCHECKED, 사유 NONE). WO Target 은 빈 응답 / E: / 접두 불일치 / 정상.
+     E: 는 NV1_ERROR_RESPONSE(REJECTED) — is_err 는 켜고 Not Support 는 건드리지 않으며 재시도 없음
+     (2026-09-28: WO 는 다시 읽히지 않아 Not Support 로 잠그면 복구 불가 / 2026-10-12: is_err 는 잠그지 않으므로 정책표대로).
   6. 워커: Option 2개 + NV2 Freeze 쓰기 → 쓰기 2건(Option 은 spec 기준 1건) + read-back(device_option 읽기 1건 + Freeze).
   7. ADC Calibration.Calibration (WO enum, 2026-09-16): 쓰기 spec 만, 요청 "G:" + enum 값 2자리 ("11" → G:11), 응답 접두 "G:".
 """
@@ -43,6 +45,7 @@ from b_core.b_datatype.general_enum import ParamAccType, ParamDisplayType, Param
 from b_core.c_manager.parameter_manager import ParamManager  # noqa: E402
 from b_core.g_protocol.nv1_spec import Nv1ReadSpec, Nv1WriteSpec  # noqa: E402
 from b_core.g_protocol.nv2_spec import Nv2ReadSpec, Nv2WriteSpec  # noqa: E402
+from b_core.g_protocol.packet_spec import BuildFailure, Verdict  # noqa: E402
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 
 SRC_NV1 = os.path.join(ROOT, "tools", "fixtures", "param_nv1.json")
@@ -106,7 +109,7 @@ def main() -> int:
         for tail, suffix in NV2_SUFFIX.items():
             p = dev(n, tail)
             key = (f"20{n + 0x0E:02X}{suffix}", 0)
-            rep.check(reg.get_nv2_key(p) == key and reg.get_by_nv2_key(*key) is p
+            rep.check(reg.get_nv2_key(p) == key   # 역조회 get_by_nv2_key 는 2026-10-12 삭제 (N015)
                       and isinstance(reg.get_read_spec(p), Nv2ReadSpec) and isinstance(reg.get_write_spec(p), Nv2WriteSpec),
                       f"Device {n}: {tail} NV2 키 {reg.get_nv2_key(p)} (기대 {key})")
 
@@ -157,17 +160,20 @@ def main() -> int:
             rep.check(spec.build_request({dev(n, tail): "01"}) == item["wreq"] and spec.res_prefix == item["wres"],
                       f"Device {n} Restart: {spec.build_request({dev(n, tail): '01'})} (ver1 {item['wreq']})")
 
+    def _er(outcome):  # Outcome → (사유, 재시도)
+        return outcome.reason, outcome.need_retry
+
     # ---------------------------------------------------------------- 3. Option 읽기
     n = 5
     end, start, mode, stroke, power, network = (dev(n, t) for t in (
         "Setting.Homing End Position", "Setting.Homing Start Condition", "Setting.Homing Mode",
         "Setting.Position Control Stroke Limitation", "Setting.Power Failure Option", "Setting.Network Failure Option"))
-    err, retry = option_read[n].apply_response("G:05i:04" + "10210103")
+    err, retry = _er(option_read[n].apply_response("G:05i:04" + "10210103"))
     rep.check((err, retry) == (ParamParseErrType.NONE, False), f"Option 읽기: {err.name}")
     rep.check((end.value, power.value, stroke.value, network.value, start.value, mode.value) == (1, 0, 1, 0, 0, 3),
               f"Option 값: {(end.value, power.value, stroke.value, network.value, start.value, mode.value)}")
     rep.check(end.str_value == "1" and mode.str_value == "3", "Option 선로 원문")
-    err, retry = option_read[n].apply_response("G:05i:04" + "1021010")
+    err, retry = _er(option_read[n].apply_response("G:05i:04" + "1021010"))
     rep.check((err, retry) == (ParamParseErrType.WRONG_PARAM_LENGTH, True), f"Option 길이 부족: {err.name}")
 
     # ---------------------------------------------------------------- 4. 쓰기 요청
@@ -177,34 +183,36 @@ def main() -> int:
     req = option_write[n].build_request({})
     rep.check(req == "G:05s:04" + "10010003", f"Option 현재 값 그대로: {req}")
     start.value = None
-    rep.check(option_write[n].build_request({end: 0}) is None, "미확정 값이 있으면 요청 없음")
+    rep.check(option_write[n].build_request({end: 0}) is BuildFailure.VALUE_MISSING, "미확정 값이 있으면 VALUE_MISSING")
     rep.check(option_write[n].build_request({end: 0, start: 2}) == "G:05s:04" + "00010023", "미확정 필드를 값으로 주면 생성")
-    rep.check(option_write[n].build_request({end: "x"}) is None, "형식 불량 값 → None")
-    rep.check(option_write[n].build_request({end: 12, start: 0}) is None, "폭 초과(12 → 2자) → None")
+    rep.check(option_write[n].build_request({end: 12, start: 0}) is BuildFailure.WIDTH_OVERFLOW, "폭 초과(12 → 2자) → WIDTH_OVERFLOW")
 
     target = dev(0, "Control.Target Position")
     tspec = reg.get_write_spec(target)
     cases = [(30, "G:00R:030000"), (-30, "G:00R:-30000"), (-3, "G:00R:-03000"), (12.3456, "G:00R:012346"),
-             (100, "G:00R:100000"), ("50", "G:00R:050000"), (0, "G:00R:000000"), (1000, None), (None, None), ("abc", None)]
+             (100, "G:00R:100000"), ("50", "G:00R:050000"), (0, "G:00R:000000"),
+             (1000, BuildFailure.WIDTH_OVERFLOW), (None, BuildFailure.VALUE_MISSING), ("abc", BuildFailure.BAD_VALUE)]
     for value, expected in cases:
         got = tspec.build_request({target: value})
         rep.check(got == expected, f"Target {value!r} → {got!r} (기대 {expected!r})")
-    rep.check(tspec.build_request({}) is None, "Target 값 없이(WO 현재값 None) → None")
+    rep.check(tspec.build_request({}) is BuildFailure.VALUE_MISSING, "Target 값 없이(WO 현재값 None) → VALUE_MISSING")
 
     restart = dev(7, "Control.Restart Controller")
     rep.check(reg.get_write_spec(restart).build_request({restart: restart.btn_str_value}) == "G:07c:8201", "Restart 요청")
 
     # ---------------------------------------------------------------- 5. 쓰기 응답
-    rep.check(option_write[n].apply_response("") == (ParamParseErrType.NONE, False), "RW 조합 쓰기는 응답 판정 없음")
-    err, retry = tspec.apply_response("")
+    out = option_write[n].apply_response("")
+    rep.check((out.verdict, out.reason, out.need_retry) == (Verdict.UNCHECKED, ParamParseErrType.NONE, False),
+              f"RW 조합 쓰기는 응답 판정 없음: {out}")
+    err, retry = _er(tspec.apply_response(""))
     rep.check((err, retry) == (ParamParseErrType.COMMUNICATION_ERR, True) and target.is_err, f"Target 빈 응답: {err.name}")
-    target.is_err = False  # 직전 빈 응답 검사가 세운 is_err 를 지우고, E: 가 플래그를 건드리지 않음을 본다
-    err, retry = tspec.apply_response("E:001")
-    rep.check((err, retry) == (ParamParseErrType.NV1_ERROR_RESPONSE, False) and not target.is_not_support and not target.is_err,
-              f"Target E:: {err.name} (플래그 불변)")
-    err, retry = tspec.apply_response("G:01R:")
+    target.is_err = False  # 직전 빈 응답 검사가 세운 is_err 를 지우고, E: 가 is_err 만 켜는지 본다
+    err, retry = _er(tspec.apply_response("E:001"))
+    rep.check((err, retry) == (ParamParseErrType.NV1_ERROR_RESPONSE, False) and not target.is_not_support and target.is_err,
+              f"Target E:: {err.name} (REJECTED — is_err 켬, Not Support 아님, 재시도 없음)")
+    err, retry = _er(tspec.apply_response("G:01R:"))
     rep.check((err, retry) == (ParamParseErrType.WRONG_PREFIX, True), f"Target 접두 불일치: {err.name}")
-    err, retry = tspec.apply_response("G:00R:030000")
+    err, retry = _er(tspec.apply_response("G:00R:030000"))
     rep.check((err, retry) == (ParamParseErrType.NONE, False) and not target.is_err and not target.is_not_support,
               "Target 정상 응답 → 플래그 해제")
 
@@ -249,13 +257,14 @@ def main() -> int:
     rep.check(adc is not None and adc.acc == ParamAccType.WO and adc.ref_list is p_enum.AdcCalibrationEnum
               and reg.get_read_spec(adc) is None and isinstance(adc_spec, Nv1WriteSpec),
               "ADC Calibration: WO enum, 쓰기 spec 만")
-    for value, expected in (("11", "G:11"), (12, "G:12"), ("13", "G:13"), (1, "G:01"), (None, None), (123, None)):
+    for value, expected in (("11", "G:11"), (12, "G:12"), ("13", "G:13"), (1, "G:01"),
+                            (None, BuildFailure.VALUE_MISSING), (123, BuildFailure.WIDTH_OVERFLOW)):
         got = adc_spec.build_request({adc: value})
         rep.check(got == expected, f"ADC Calibration {value!r} → {got!r} (기대 {expected!r})")
-    rep.check(adc_spec.apply_response("G:11") == (ParamParseErrType.NONE, False) and not adc.is_err, "ADC 응답 G:11 → 정상")
-    err, retry = adc_spec.apply_response("E:001")
-    rep.check((err, retry) == (ParamParseErrType.NV1_ERROR_RESPONSE, False) and not adc.is_not_support and not adc.is_err,
-              f"ADC E: → {err.name} (플래그 불변)")
+    rep.check(_er(adc_spec.apply_response("G:11")) == (ParamParseErrType.NONE, False) and not adc.is_err, "ADC 응답 G:11 → 정상")
+    err, retry = _er(adc_spec.apply_response("E:001"))
+    rep.check((err, retry) == (ParamParseErrType.NV1_ERROR_RESPONSE, False) and not adc.is_not_support and adc.is_err,
+              f"ADC E: → {err.name} (REJECTED — is_err 켬, Not Support 아님)")
     adc.is_err = False
 
     return rep.summary()

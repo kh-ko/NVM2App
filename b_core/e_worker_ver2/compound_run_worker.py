@@ -272,7 +272,7 @@ class CompoundRunWorker(QObject):
             return
 
         # Compound 프로토콜은 NV2 전용이고 ref param 의 NV2 id 자체를 값으로 보낸다 —
-        # 식별자는 SpecRegistry 의 NV2 역조회로 얻는다 (Parameter 는 id 를 모른다)
+        # 식별자는 SpecRegistry 의 get_nv2_key 로 얻는다 (Parameter 는 id 를 모른다)
         get_nv2_key = SpecRegistry().get_nv2_key
 
         write_cmds: list[bytes] = []

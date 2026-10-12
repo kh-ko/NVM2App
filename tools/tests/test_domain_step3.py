@@ -48,6 +48,7 @@ from b_core.b_datatype.general_enum import ParamAccType  # noqa: E402
 from b_core.c_manager.parameter_manager import ParamManager  # noqa: E402
 from b_core.f_helper.float_util import is_float_equal, to_sig_str  # noqa: E402
 from b_core.g_protocol.codec import DOMAIN_PRES_UNIT, PosiCodec, PresCodec, ScaleCodec  # noqa: E402
+from b_core.g_protocol.packet_spec import BuildFailure  # noqa: E402
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 
 
@@ -183,7 +184,7 @@ def main() -> int:
                 pfs_same_as_old[0] += feq(old_posi.convert_pfs_to_dp(pfs), dp)
                 pfs_total[0] += 1
             # 설정점 버튼: 백분율(float) → 쓰기값은 codec 이 현재 단위의 선로값으로 (예: 0-100000 에서 100 → 100000)
-            if posi_codec.is_ready:
+            if posi_codec.range() is not None:   # 문맥 준비 (Codec.is_ready 는 2026-10-12 삭제 — F043/N130)
                 line = posi_codec.encode(new_posi.parse_dp_str("100"))
                 rng = posi_codec.range()
                 rep.check(seq(line, to_sig_str(rng[1])), f"설정점 100 % → 선로 {line} (Open={rng[1]})")
@@ -342,7 +343,8 @@ def main() -> int:
         w._stop_all()
         set_param(unit_p, None)
         rep.check(w.write([(target, "50")]) == StartResult.OK, "write(문맥 미준비) 시작은 OK")
-        rep.check(w._jobs[0].spec.build_request(w._jobs[0].values) is None, "문맥 미준비 encode → None (워커가 건너뜀)")
+        rep.check(w._jobs[0].spec.build_request(w._jobs[0].values) is BuildFailure.CONTEXT_NOT_READY,
+                  "문맥 미준비 → BuildFailure.CONTEXT_NOT_READY (워커가 건너뜀)")
         w._stop_all()
     finally:
         svc._connect_info = ""

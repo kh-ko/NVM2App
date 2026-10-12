@@ -308,6 +308,7 @@ class RestoreWin(ServiceWin):
         acc = self.acc_mode_param
         acc_write_spec = SpecRegistry().get_write_spec(acc) if acc is not None else None
         if acc_write_spec is not None:
+            # enum 값의 encode 는 실패하지 않으므로 BuildFailure 검사는 두지 않는다
             jobs.append(RestoreItem(f"{acc.path}.{acc.name}",
                                     acc_write_spec.build_request({acc: str(p_enum.AccModeEnum.LOCAL.value)})))
 

@@ -79,7 +79,7 @@ class ParamParseErrType(Enum):
     WRONG_ID_OR_INDEX   = auto()
     UNKNOWN_ERROR_CODE  = auto()
     DATA_TYPE_ERROR     = auto()
-    NV1_ERROR_RESPONSE  = auto()   # NV1 쓰기에 "E:nnn" 응답 — 장비가 패킷을 거부 (플래그 변경 없음, 로그용)
+    NV1_ERROR_RESPONSE  = auto()   # NV1 쓰기에 "E:nnn" 응답 — 장비가 패킷을 거부 (부류 REJECTED: is_err 켬, Not Support 불변, 재시도 없음)
 
     ERR_0C_WRONG_CMD_LEN                                   = auto() # "0C": "wrong command length"
     ERR_1C_WRONG_CMD_LEN                                   = auto() # "1C": "value too low", 

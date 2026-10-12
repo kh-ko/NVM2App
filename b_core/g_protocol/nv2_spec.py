@@ -3,12 +3,19 @@
 프레임 (ver1 부터 동일):
     요청  p:[서비스 2][ID 8][INDEX 2][VALUE n]        읽기 0B 는 VALUE 없음
     응답  p:[오류 2][서비스 2][ID 8][INDEX 2][VALUE n]  오류 "00" 이 정상
-요청/응답 접두 템플릿은 nv2_spec.json 이 주고, 응답의 자리(오류/서비스/ID/INDEX
-= 16자 헤더)는 NV2 고정 규격이라 여기 상수로 둔다.
+요청/응답 접두 템플릿은 nv2_spec.json 이 주고, 응답의 자리(오류/서비스/ID/INDEX = 16자 헤더)는 NV2 고정 규격이라 여기 상수로 둔다.
 
-기존 Parameter.check_error / set_read_response_packet / set_write_response_packet
-의 로직을 그대로 옮겼다 (1단계 = 동작 변화 없음). 값의 형 변환은 Parameter 의
-영역이 아니라 spec 에 붙은 codec 의 영역이다 (3단계: 선로 문자열 ↔ 도메인 값).
+이 파일은 판정만 한다 — _judge 가 사유(와 읽기의 값 구간 원문)를 돌려주고, 사유 → 부류, 플래그, 값 반영 순서는
+packet_spec.PacketSpec 이 한 곳에서 적용한다 (6위 본안, 2026-10-12). 장비 오류 코드 → 사유는 ERR_CODE_MAP 이 맡고, 그중
+"장비에 그 param 이 없다" 는 코드(6E/73/7B/7E/89)를 NOT_SUPPORT 로 보는 판정은 packet_spec.NOT_SUPPORT_REASONS 에 있다.
+
+판정 규칙 (구 Parameter.check_error 와 같다; INDEX 자리가 16진수가 아닌 잡음도 예외 없이 WRONG_ID_OR_INDEX — F041):
+    빈 응답 → COMMUNICATION_ERR / 4자 미만 → WRONG_FORMAT / "p:" 아님 → WRONG_PREFIX
+    오류 "00": 16자 미만 → WRONG_PARAM_LENGTH / 서비스 불일치 → WRONG_SVC_CODE / ID·INDEX 불일치 → WRONG_ID_OR_INDEX / 일치 → NONE
+    그 밖의 오류 코드 → ERR_CODE_MAP 의 사유, 표에 없으면 UNKNOWN_ERROR_CODE (오류 응답은 서비스/ID/INDEX 를 보지 않는다)
+    읽기는 헤더가 맞으면 값 구간(17자째부터)을 원문으로 넘긴다 — 없으면 STR 만 빈 문자열, 그 밖은 WRONG_PARAM_LENGTH
+    쓰기 응답은 WO param 만 판정한다 — RW 는 None(UNCHECKED, N009 결정; 이어지는 read-back 이 확인)
+값의 형 변환은 spec 에 붙은 codec 의 영역이다 (선로 문자열 ↔ 도메인 값).
 """
 
 from __future__ import annotations
@@ -17,7 +24,7 @@ from typing import TYPE_CHECKING
 
 from b_core.b_datatype.general_enum import ParamAccType, ParamDataType, ParamParseErrType
 from b_core.g_protocol.codec import Codec
-from b_core.g_protocol.packet_spec import PacketSpec
+from b_core.g_protocol.packet_spec import BuildFailure, Judgement, PacketSpec
 
 if TYPE_CHECKING:
     from b_core.b_datatype.parameter import Parameter
@@ -64,12 +71,9 @@ ERR_CODE_MAP = {
     "A1": ParamParseErrType.ERR_A1_ALREADY_DONE,
 }
 
-# 이 오류 코드들은 "장비에 그 param 이 없다" 는 뜻 — is_err 대신 is_not_support
-NOT_SUPPORT_CODES = frozenset({"6E", "73", "7B", "7E", "89"})
-
 
 class _Nv2Spec(PacketSpec):
-    """NV2 spec 공통 — param 1개 = 패킷 1개. 응답 헤더 검증을 공유한다."""
+    """NV2 spec 공통 — param 1개 = 패킷 1개. 응답 헤더 판정을 공유한다."""
 
     SVC_CODE = ""  # 하위 클래스가 지정 (0B / 01)
 
@@ -93,61 +97,30 @@ class _Nv2Spec(PacketSpec):
     def codec_of(self, param: "Parameter") -> Codec | None:
         return self.codec if param is self.param else None
 
-    def _check_response(self, resp: str | None, is_read: bool) -> tuple[ParamParseErrType, bool]:
-        """기존 Parameter.check_error 와 같은 판정이되, INDEX 자리가 16진수가 아닌 잡음도
-        예외 없이 WRONG_ID_OR_INDEX(재시도) 로 처리한다 — 구버전은 int() 예외로 워커가 멈췄다(F041)."""
-        param = self.param
-
-        # 쓰기 응답은 WO param 만 검증한다 (기존 동작 유지)
-        if not is_read and param.acc != ParamAccType.WO:
-            return ParamParseErrType.NONE, False
-
+    def _judge_header(self, resp: str | None) -> ParamParseErrType:
+        """헤더 판정 — NONE 이면 오류 "00" 이고 서비스/ID/INDEX 가 이 spec 과 일치한다."""
         if not resp:
-            param.is_err = True
-            return ParamParseErrType.COMMUNICATION_ERR, True
-
+            return ParamParseErrType.COMMUNICATION_ERR
         if len(resp) < 4:
-            param.is_err = True
-            return ParamParseErrType.WRONG_FORMAT, True
-
+            return ParamParseErrType.WRONG_FORMAT
         if resp[0:2] != PREFIX:
-            param.is_err = True
-            return ParamParseErrType.WRONG_PREFIX, True
+            return ParamParseErrType.WRONG_PREFIX
 
         err_code = resp[2:4]
-
         if err_code == "00":
             if len(resp) < HEADER_LEN:
-                param.is_err = True
-                return ParamParseErrType.WRONG_PARAM_LENGTH, True
-
+                return ParamParseErrType.WRONG_PARAM_LENGTH
             if resp[4:6] != self.SVC_CODE:
-                param.is_err = True
-                return ParamParseErrType.WRONG_SVC_CODE, True
-
+                return ParamParseErrType.WRONG_SVC_CODE
             try:
                 index_ok = int(resp[14:16], 16) == self.index
             except ValueError:
                 index_ok = False  # INDEX 자리가 16진수가 아님 — ID/INDEX 불일치와 같이 취급
-
             if resp[6:14] == self.id and index_ok:
-                param.is_err = False
-                param.is_not_support = False
-                return ParamParseErrType.NONE, False
+                return ParamParseErrType.NONE
+            return ParamParseErrType.WRONG_ID_OR_INDEX
 
-            param.is_err = True
-            return ParamParseErrType.WRONG_ID_OR_INDEX, True
-
-        mapped = ERR_CODE_MAP.get(err_code)
-        if mapped is None:
-            param.is_err = True  # 알 수 없는 오류 코드
-            return ParamParseErrType.UNKNOWN_ERROR_CODE, True
-
-        if err_code in NOT_SUPPORT_CODES:
-            param.is_not_support = True
-        else:
-            param.is_err = True
-        return mapped, False
+        return ERR_CODE_MAP.get(err_code, ParamParseErrType.UNKNOWN_ERROR_CODE)
 
 
 class Nv2ReadSpec(_Nv2Spec):
@@ -156,48 +129,42 @@ class Nv2ReadSpec(_Nv2Spec):
     def build_request(self, values=None) -> str:
         return self._req_template.format(id=self.id, idx=self.index)
 
-    def apply_response(self, resp: str | None) -> tuple[ParamParseErrType, bool]:
-        err, need_retry = self._check_response(resp, is_read=True)
-        if err != ParamParseErrType.NONE:
-            return err, need_retry
+    def _judge(self, resp: str | None) -> Judgement:
+        reason = self._judge_header(resp)
+        if reason is not ParamParseErrType.NONE:
+            return Judgement(reason)
 
-        # 값 반영: 선로 원문은 str_value 에, codec 이 푼 도메인 값은 value 에.
-        # [기존 동작 유지] str_value 는 변환 전에 대입되므로 형식 불량이어도 그 문자열이 남는다
+        # 값 구간 원문만 넘긴다 — 디코드·값·플래그는 기본 클래스가 한다 (형식 불량이면 거기서 DATA_TYPE_ERROR)
         if len(resp) > HEADER_LEN:
             text = resp[HEADER_LEN:]
         elif self.param.data_type is ParamDataType.STR and len(resp) == HEADER_LEN:
             text = ""  # 빈 문자열 값
         else:
-            return ParamParseErrType.WRONG_PARAM_LENGTH, True
-
-        self.param.str_value = text
-        try:
-            value = self.codec.decode(text)
-        except ValueError:
-            return ParamParseErrType.DATA_TYPE_ERROR, True
-
-        # 문맥 미준비(None)도 값으로 반영한다 — 화면은 Unknown. 재디코드는 하지 않고 다음 읽기가 갱신
-        self.param.value = value
-        return ParamParseErrType.NONE, False
+            return Judgement(ParamParseErrType.WRONG_PARAM_LENGTH)
+        return Judgement(ParamParseErrType.NONE, {self.param: text})
 
 
 class Nv2WriteSpec(_Nv2Spec):
     SVC_CODE = SVC_WRITE
 
-    def build_request(self, values) -> str | None:
-        """values[param] 은 도메인 값(숫자 또는 그 문자열). codec 문맥 미준비면 None —
-        워커는 그 작업을 건너뛰고 로그를 남긴다."""
+    def build_request(self, values) -> str | BuildFailure:
+        """values[param] 은 도메인 값(숫자 또는 그 문자열)."""
+        value = values[self.param]
+        if value is None:
+            return BuildFailure.VALUE_MISSING
         try:
-            text = self.codec.encode(values[self.param])
+            text = self.codec.encode(value)
         except (ValueError, TypeError):
-            return None
+            return BuildFailure.BAD_VALUE
         if text is None:
-            return None
+            return BuildFailure.CONTEXT_NOT_READY
         return self.build_request_line(text)
 
     def build_request_line(self, line_text: str) -> str:
         """이미 선로 문자열인 값으로 요청을 만든다 — 백업 파일(선로 원문 보존)용."""
         return self._req_template.format(id=self.id, idx=self.index, value=line_text)
 
-    def apply_response(self, resp: str | None) -> tuple[ParamParseErrType, bool]:
-        return self._check_response(resp, is_read=False)
+    def _judge(self, resp: str | None) -> Judgement | None:
+        if self.param.acc != ParamAccType.WO:
+            return None  # RW 쓰기 응답은 판정하지 않는다 (N009 결정)
+        return Judgement(self._judge_header(resp))

@@ -12,9 +12,11 @@ parameter.py 와 param.json 이며, tools/fixtures 에 고정 사본으로 둔�
       스키마 명시 0xFFFFFFFF (N004); RO 2건 nor/fu_backup true → false (N002))
   2. enable/visible 조건: 옛 ref id → 마이그레이션이 고른 path 가 새 ref_path 와 동일
   3. 요청 문자열/응답 접두: 읽기·쓰기 요청과 정상 응답 접두가 바이트 단위 동일
-  4. NV2 역조회: get_nv2_key == 옛 (id, idx), get_by_nv2_key == 옛 dict(마지막 등록 우선)
+  4. NV2 정조회: get_nv2_key == 옛 (id, idx) (역조회 get_by_nv2_key 는 2026-10-12 삭제 — N015)
   5. 응답 차등: param 마다 읽기 14건 + 쓰기 8건의 응답을 양쪽에 넣고
-     (반환값, is_err, is_not_support, value, str_value) 동일
+     (반환값(사유, 재시도), is_err, is_not_support, value, str_value) 동일 — 새 쪽은 Outcome 을 (reason, need_retry) 로 맞춘다
+     (의도된 편차 F042, 2026-10-12: 헤더가 맞고 값 구간이 틀린 읽기(empty·badtype)는 새 쪽이 is_err True —
+      STR 은 두 응답이 정상이라 제외; 그 밖의 플래그·값·재시도는 동일)
   6. 워커: spec 중복 제거 순서, 쓰기 묶음, 미연결 시 NOT_CONNECTED
 """
 
@@ -145,6 +147,9 @@ def read_cases(id_code: str, idx: int, data_type):
     ]
 
 
+F042_CASES = ("empty", "badtype")   # 헤더 통과 뒤 값 구간 실패 — 구 코드는 is_err 를 지운 채 뒀다
+
+
 def write_cases(id_code: str, idx: int):
     h = f"{id_code}{idx:02X}"
     return [
@@ -249,15 +254,9 @@ def main() -> int:
         rep.check(ws.expected_response_prefix == f"p:0001{o.id}{o.index:02X}", f"{tag}: write prefix")
         rep.check(rs.params == (n,) and ws.params == (n,), f"{tag}: spec.params")
 
-    # ---------------------------------------------------------------- 4. NV2 역조회
-    old_last = {(o.id, o.index): o for o in olds}
+    # ---------------------------------------------------------------- 4. NV2 정조회
     for o, n in zip(olds, news):
         rep.check(reg.get_nv2_key(n) == (o.id, o.index), f"{o.path}.{o.name}: get_nv2_key")
-    for (id_code, idx), o in old_last.items():
-        p = reg.get_by_nv2_key(id_code, idx)
-        rep.check(p is not None and p.full_path == f"{o.path}.{o.name}", f"get_by_nv2_key({id_code},{idx})")
-    dup = len(olds) - len(old_last)
-    rep.notes.append(f"(id, idx) 중복 {dup}건 → 역조회는 마지막 등록 우선 (기존 동작 유지)")
 
     # ---------------------------------------------------------------- 5. 응답 차등
     # codec param(posi/pres)의 value 는 도메인 값이라 문맥(Position Unit, Interface Scaling, Sensor 1/2)이 있어야
@@ -265,6 +264,8 @@ def main() -> int:
     cases = 0
     codec_cases = 0
     codec_valued = 0
+    f042_fixed = 0
+    f042_expected = 0
     for o, n in zip(olds, news):
         tag = f"{o.path}.{o.name}"
         rs, ws = reg.get_read_spec(n), reg.get_write_spec(n)
@@ -275,33 +276,42 @@ def main() -> int:
         # 케이스마다 문맥을 다시 넣고, 기대값은 apply 전에 구한다(apply 가 문맥 param 자신을 바꿀 수 있다)
         codec = reg.get_param_codec(n)
         is_text = isinstance(codec, TextCodec)
+        if o.data_type is not ParamDataType.STR:
+            f042_expected += len(F042_CASES)
         for name, resp in read_cases(o.id, o.index, o.data_type):
             reset(o); reset(n)
             r_old = o.set_read_response_packet(resp)
             if is_text:
-                r_new = rs.apply_response(resp)
+                out = rs.apply_response(resp)
+                r_new = (out.reason, out.need_retry)
                 s_old = (r_old, o.is_err, o.is_not_support, o.value, o.str_value)
                 s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
             else:
                 set_codec_context(reg)
                 expected_value = codec.from_line(o.value) if o.value is not None else None
-                r_new = rs.apply_response(resp)
+                out = rs.apply_response(resp)
+                r_new = (out.reason, out.need_retry)
                 s_old = (r_old, o.is_err, o.is_not_support, expected_value, o.str_value)
                 s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
                 codec_cases += 1
                 if expected_value is not None:
                     codec_valued += 1
+            if name in F042_CASES and r_old[0] is not ParamParseErrType.NONE:
+                s_old = (s_old[0], True) + s_old[2:]   # 의도된 편차(F042): 값 구간 실패(TRANSIENT)도 is_err
+                f042_fixed += 1
             rep.check(s_old == s_new, f"{tag}: read/{name} {s_old} != {s_new}")
             cases += 1
         for name, resp in write_cases(o.id, o.index):
             reset(o); reset(n)
             r_old = o.set_write_response_packet(resp)
-            r_new = ws.apply_response(resp)
+            out = ws.apply_response(resp)
+            r_new = (out.reason, out.need_retry)
             s_old = (r_old, o.is_err, o.is_not_support, o.value, o.str_value)
             s_new = (r_new, n.is_err, n.is_not_support, n.value, n.str_value)
             rep.check(s_old == s_new, f"{tag}: write/{name} {s_old} != {s_new}")
             cases += 1
     rep.check(codec_valued > 0, f"codec param 읽기에서 실제 값이 대조된 건수 {codec_valued} (문맥 미적용 의심)")
+    rep.check(f042_fixed == f042_expected, f"의도된 편차(F042) 대상 수: {f042_fixed} ({f042_expected} 이어야 함)")
     rep.notes.append(f"응답 차등 {cases:,} 케이스 (그중 codec param 읽기 {codec_cases:,} 건은 문맥 대표값 아래에서 "
                      f"value 를 codec.from_line(구 값) 과 대조, 값이 실제로 계산된 건 {codec_valued:,} — 문맥: Position Unit 0~100000, "
                      f"Interface 압력 USER_SPECIFIC 0~1000, Sensor 1 Torr 0~10 활성 / Sensor 2 비활성)")

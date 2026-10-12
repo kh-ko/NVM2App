@@ -44,7 +44,7 @@ ver1 에서 달라진 점:
 
 2026-09-11 도메인 중립화 (3단계):
 - write() 의 값은 도메인 값(백분율, Torr 등 — 숫자 또는 그 문자열)이고 선로 문자열은
-  spec 의 codec 이 만든다. 문맥 미준비로 encode 가 None 이면 그 작업은 건너뛴다 —
+  spec 의 codec 이 만든다. 요청을 만들 수 없으면(BuildFailure) 그 작업은 건너뛴다 —
   건너뛴 param 은 시퀀스 종료 시 sig_write_skipped 로 한 번에 알린다 (창이 대화상자로 표시,
   2026-09-14 사용자 결정: 기능 처리는 그대로 두고 GUI 안내만 보강).
 - 문맥이 바뀌어도 값은 재디코드하지 않는다 (결정 E).
@@ -59,6 +59,12 @@ ver1 에서 달라진 점:
   중단하고(구 refresh 와 동일) is_working 을 올려 창 본문을 잠그며, write() 는 BUSY 를 돌려준다.
   잠금은 지연 refresh 가 _finish_sequence 에 닿을 때(또는 끊김/cleanup) 풀린다 — 재연결 직후
   이전 값이 편집 가능한 채 남거나, 그 사이 시작된 쓰기가 지연 refresh 에 잘리는 일을 막는다.
+
+2026-10-12 결과 계약 (6위 본안):
+- spec.apply_response() 는 Outcome(verdict, reason) — 판정(spec 의 _judge)과 적용(플래그·값, PacketSpec 기본 클래스)이
+  분리됐다. 워커는 need_retry(= 부류 TRANSIENT) 만으로 재시도를 정하고 reason 은 로그에만 쓴다.
+- spec.build_request() 는 만들 수 없으면 BuildFailure(값 없음/문맥 미준비/형식 불량/폭 초과) — 그 작업은 건너뛰고 사유를
+  로그에 남긴다. 창에는 종전처럼 sig_write_skipped 로 한 번에 알린다 (사유는 LogView 에만, 2026-10-12 사용자 결정).
 """
 
 from enum import Enum, auto
@@ -74,7 +80,7 @@ from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.parameter_manager import ParamManager
 from b_core.d_dal.serial_setting import SerialSetting, probe_once
 from b_core.d_dal.service_port import ServicePort
-from b_core.g_protocol.packet_spec import PacketSpec
+from b_core.g_protocol.packet_spec import BuildFailure, PacketSpec
 from b_core.g_protocol.spec_registry import SpecRegistry
 
 
@@ -184,7 +190,7 @@ class ParameterRunWorker(QObject):
     sig_progress_changed = Signal(int)
     sig_is_working_changed = Signal(bool)
     sig_finish_refresh = Signal()
-    sig_write_skipped = Signal(list)  # 시퀀스 종료 시: codec 문맥 미준비로 요청 없이 건너뛴 쓰기 param 목록
+    sig_write_skipped = Signal(list)  # 시퀀스 종료 시: 요청을 만들 수 없어(BuildFailure) 건너뛴 쓰기 param 목록 — 사유는 로그에
 
     MONITOR_LOG_ROUNDS = 30   # 모니터링 정상 로그는 30 라운드당 1 라운드만 기록
     REBOOT_TICK_MS = 1000
@@ -236,7 +242,7 @@ class ParameterRunWorker(QObject):
         self._jobs: list[_Job] = []
         self._job_index = 0
         self._seq_is_refresh = False  # 현재 시퀀스가 refresh 인지 (완료 시그널 구분용)
-        self._skipped_write_params: list[Parameter] = []  # 이번 시퀀스에서 encode 실패로 건너뛴 쓰기
+        self._skipped_write_params: list[Parameter] = []  # 이번 시퀀스에서 요청을 만들 수 없어(BuildFailure) 건너뛴 쓰기
         self._is_working = False
         self._progress = 0
         self._is_cleaned = False
@@ -650,15 +656,15 @@ class ParameterRunWorker(QObject):
         self._send_current_job()
 
     def _send_current_job(self):
-        # 쓰기 요청은 codec 문맥이 없으면 만들 수 없다(None) — 그 작업은 건너뛰고 로그만 남긴다
+        # 쓰기 요청을 만들 수 없으면(BuildFailure — 값 없음/문맥 미준비/형식 불량/폭 초과) 그 작업은 건너뛰고 사유를 로그에 남긴다
         while self._job_index < len(self._jobs):
             job = self._jobs[self._job_index]
             packet = job.spec.build_request(job.values)
-            if packet is not None:
+            if not isinstance(packet, BuildFailure):
                 self.sig_request.emit(self._seq, packet, job.spec)
                 return
 
-            self._log.error(f"encode failed (codec context not ready) - write skipped: "
+            self._log.error(f"request not built ({packet.name}) - write skipped: "
                             f"{job.spec.describe()} values={job.values}")
             self._skipped_write_params += list(job.values) if job.values else []
             self._job_index += 1
@@ -683,7 +689,7 @@ class ParameterRunWorker(QObject):
         job = self._jobs[self._job_index]
 
         if job.op is _JobOp.READ:
-            param_err_type, need_retry = spec.apply_response(response)
+            outcome = spec.apply_response(response)
 
             if err_type != SvcPortErrType.NONE:
                 # 읽기 통신 오류 — 같은 작업 무한 재시도 (의도된 동작, 모듈 주석 참고)
@@ -691,9 +697,9 @@ class ParameterRunWorker(QObject):
                 self._send_current_job()
                 return
 
-            if param_err_type != ParamParseErrType.NONE:
-                self._log_transaction(packet, response, spec, param_err_type.name, is_error=True)
-                if need_retry:
+            if outcome.reason is not ParamParseErrType.NONE:
+                self._log_transaction(packet, response, spec, outcome.reason.name, is_error=True)
+                if outcome.need_retry:   # 부류 TRANSIENT — NOT_SUPPORT/REJECTED 는 다음 작업
                     self._send_current_job()
                     return
             else:
@@ -706,13 +712,13 @@ class ParameterRunWorker(QObject):
                     for param in spec.params:
                         param.notify_synced()
 
-        else:  # WRITE — 실패해도 로그만 남기고 계속 진행
-            param_err_type, _ = spec.apply_response(response)
+        else:  # WRITE — 실패해도 로그만 남기고 계속 진행 (UNCHECKED 는 reason NONE 이라 정상 로그)
+            outcome = spec.apply_response(response)
 
             if err_type != SvcPortErrType.NONE:
                 self._log_transaction(packet, response, spec, err_type.name, is_error=True)
-            elif param_err_type != ParamParseErrType.NONE:
-                self._log_transaction(packet, response, spec, param_err_type.name, is_error=True)
+            elif outcome.reason is not ParamParseErrType.NONE:
+                self._log_transaction(packet, response, spec, outcome.reason.name, is_error=True)
             else:
                 self._log_transaction(packet, response, spec)
 
@@ -809,16 +815,16 @@ class ParameterRunWorker(QObject):
         self.sig_request.emit(self._seq, spec.build_request(), spec)
 
     def _handle_monitor_result(self, packet, response, spec: PacketSpec, err_type):
-        param_err_type, need_retry = spec.apply_response(response)
+        outcome = spec.apply_response(response)
 
         if err_type != SvcPortErrType.NONE:
             self._log_transaction(packet, response, spec, err_type.name, is_error=True, is_monitor=True)
             self.monitor_timer.start(self.monitor_time_tick)  # 같은 spec 재시도
             return
 
-        if param_err_type != ParamParseErrType.NONE:
-            self._log_transaction(packet, response, spec, param_err_type.name, is_error=True, is_monitor=True)
-            if need_retry:
+        if outcome.reason is not ParamParseErrType.NONE:
+            self._log_transaction(packet, response, spec, outcome.reason.name, is_error=True, is_monitor=True)
+            if outcome.need_retry:   # 부류 TRANSIENT — 다음 틱에 같은 spec
                 self.monitor_timer.start(self.monitor_time_tick)
                 return
         else:

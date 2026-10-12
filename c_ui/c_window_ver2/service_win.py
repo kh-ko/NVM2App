@@ -94,7 +94,7 @@ class ParamWorkerWinMixin:
         show_param_refresh_warning(self, result)
 
     def handle_skipped_write(self, params: list):
-        # 워커가 codec 문맥 미준비로 요청 없이 건너뛴 쓰기 — 시퀀스 종료 시 한 번 알림
+        # 워커가 요청을 만들 수 없어(값 없음/문맥 미준비/형식 불량/폭 초과) 건너뛴 쓰기 — 시퀀스 종료 시 한 번 알림, 사유는 LogView
         # (호스트 창은 param_worker.sig_write_skipped 를 이 슬롯에 연결한다)
         show_param_write_skipped(self, params)
 
