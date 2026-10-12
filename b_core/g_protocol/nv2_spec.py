@@ -72,6 +72,33 @@ ERR_CODE_MAP = {
 }
 
 
+def judge_header(resp: str | None, svc_code: str, id_code: str, index: int) -> ParamParseErrType:
+    """NV2 응답 헤더 판정 — NONE 이면 오류 "00" 이고 서비스/ID/INDEX 가 주어진 값과 일치한다.
+    _Nv2Spec 과 raw_packet_spec.Nv2RawWriteSpec(백업 파일의 쓰기 패킷)이 함께 쓴다."""
+    if not resp:
+        return ParamParseErrType.COMMUNICATION_ERR
+    if len(resp) < 4:
+        return ParamParseErrType.WRONG_FORMAT
+    if resp[0:2] != PREFIX:
+        return ParamParseErrType.WRONG_PREFIX
+
+    err_code = resp[2:4]
+    if err_code == "00":
+        if len(resp) < HEADER_LEN:
+            return ParamParseErrType.WRONG_PARAM_LENGTH
+        if resp[4:6] != svc_code:
+            return ParamParseErrType.WRONG_SVC_CODE
+        try:
+            index_ok = int(resp[14:16], 16) == index
+        except ValueError:
+            index_ok = False  # INDEX 자리가 16진수가 아님 — ID/INDEX 불일치와 같이 취급
+        if resp[6:14] == id_code and index_ok:
+            return ParamParseErrType.NONE
+        return ParamParseErrType.WRONG_ID_OR_INDEX
+
+    return ERR_CODE_MAP.get(err_code, ParamParseErrType.UNKNOWN_ERROR_CODE)
+
+
 class _Nv2Spec(PacketSpec):
     """NV2 spec 공통 — param 1개 = 패킷 1개. 응답 헤더 판정을 공유한다."""
 
@@ -98,29 +125,7 @@ class _Nv2Spec(PacketSpec):
         return self.codec if param is self.param else None
 
     def _judge_header(self, resp: str | None) -> ParamParseErrType:
-        """헤더 판정 — NONE 이면 오류 "00" 이고 서비스/ID/INDEX 가 이 spec 과 일치한다."""
-        if not resp:
-            return ParamParseErrType.COMMUNICATION_ERR
-        if len(resp) < 4:
-            return ParamParseErrType.WRONG_FORMAT
-        if resp[0:2] != PREFIX:
-            return ParamParseErrType.WRONG_PREFIX
-
-        err_code = resp[2:4]
-        if err_code == "00":
-            if len(resp) < HEADER_LEN:
-                return ParamParseErrType.WRONG_PARAM_LENGTH
-            if resp[4:6] != self.SVC_CODE:
-                return ParamParseErrType.WRONG_SVC_CODE
-            try:
-                index_ok = int(resp[14:16], 16) == self.index
-            except ValueError:
-                index_ok = False  # INDEX 자리가 16진수가 아님 — ID/INDEX 불일치와 같이 취급
-            if resp[6:14] == self.id and index_ok:
-                return ParamParseErrType.NONE
-            return ParamParseErrType.WRONG_ID_OR_INDEX
-
-        return ERR_CODE_MAP.get(err_code, ParamParseErrType.UNKNOWN_ERROR_CODE)
+        return judge_header(resp, self.SVC_CODE, self.id, self.index)
 
 
 class Nv2ReadSpec(_Nv2Spec):

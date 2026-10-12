@@ -4,12 +4,14 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QTreeWidgetItem
 
 from b_core.b_datatype import param_enum as p_enum
-from b_core.b_datatype.general_enum import SvcPortErrType
 from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.e_worker_ver2.parameter_run_worker import SequenceEnd, SequenceReport, StartResult
 from b_core.f_helper import backup_file_helper
+from b_core.g_protocol.packet_spec import Verdict
 from b_core.g_protocol.spec_registry import SpecRegistry
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
 from c_ui.c_window_ver2.service_win import ServiceWin
+from c_ui.c_window_ver2.x_message.param_result_message_box import show_param_write_warning
 
 
 @dataclass
@@ -22,21 +24,19 @@ class RestoreItem:
 
 class RestoreWin(ServiceWin):
     """백업 파일(backup_win.py 가 저장한 형식)을 장비로 복원하는 창 — 본문은 파일 내용 체크박스 트리, 툴바는
-    Load File(백업 txt) / Restore (Refresh 없음).
+    Load File(백업 txt) / Restore / Abort (Refresh 없음).
 
-    복원은 raw_write_request 연쇄라 워커 상태 머신 밖이다 — 진행 중 잠금은 is_busy() 로 ServiceWin 의 잠금 단일 지점에
-    얹는다 (트리·Restore·Load File). 끊기면 handle_changed_connection_info 가 중단한다.
+    복원 = 워커의 RAW 시퀀스(param_worker.raw_write): 체크된 항목의 패킷을 파일 순서대로 보내고, 끝나면 sig_sequence_report
+    로 항목별 결과가 온다 (data-protocol-2, 2026-10-12). 시퀀스 중에는 워커 is_working 으로 트리·Restore·Load File 이 잠기고
+    Abort 만 살아 있다.
 
-    파일의 각 행 뒷부분이 그대로 전송 가능한 쓰기 패킷이므로, 체크된 항목을
-    파일 순서대로 raw_write_request 로 재생한다. 행 내용은 스키마와 대조하지
-    않는다 — 장비가 거부하는 항목은 쓰기 실패로 로그에 남는다.
-    - 복원 시작 시 Access Mode 를 Local 로 전환한다 (raw 쓰기는 기존 Apply
-      의 Local 전환 정책을 우회하므로 여기서 직접 수행. REMOTE 복원은 기존
-      쓰기 정책과 동일하게 하지 않는다)
-    - 항목 실패는 RETRY_MAX 회 재시도 후 로그에 남기고 계속 진행, 완료 시
-      실패 목록을 요약 표시한다
-    - 검증은 쓰기 응답 접두어 확인만 (backup_file_helper.expected_write_response_prefix)
-      — read-back 은 하지 않는다
+    파일의 각 행 뒷부분이 그대로 전송 가능한 쓰기 패킷이다. 행 내용은 스키마와 대조하지 않는다.
+    - 복원 시작 시 Access Mode 를 Local 로 전환한다 (raw 쓰기는 기존 Apply 의 Local 전환 정책을 우회하므로 여기서 직접 수행.
+      REMOTE 복원은 기존 쓰기 정책과 동일하게 하지 않는다). 전환 실패는 항목 집계와 따로 요약에 표시한다 (F090).
+    - 판정은 raw_packet_spec 의 spec — 장비 거부(오류 코드)는 재시도 없이 실패, 잡음(접두 불일치·빈 응답)은 RETRY_MAX 까지
+      재시도 뒤 실패. 실패해도 다음 항목으로 진행하고 끝에 실패 목록을 요약 표시한다. read-back 은 하지 않는다.
+    - Abort·끊김으로 중단되면 장비는 부분 복원 상태이므로 요약에 "k/n 항목까지 쓰고 중단" 을 표시한다 (2026-10-12 결정).
+    - 완료·Abort 뒤에는 param_worker.reconnect() 로 열린 창 전부가 다시 읽는다 (N077).
 
     is_fu_restore=True (펌웨어 업데이트 후 복원 모드):
     - initial_file_path 가 있으면 창이 뜬 직후 그 파일을 자동 로드한다
@@ -44,18 +44,15 @@ class RestoreWin(ServiceWin):
       버전이 달라진 것이 정상이므로 (로그에만 남긴다)
     """
 
-    RETRY_MAX = 3  # 항목당 실패 재시도 횟수
+    RETRY_MAX = 3        # 항목당 잡음 재시도 횟수
+    LOCAL_TAG = "local"  # Local 전환 패킷의 꼬리표 — 항목 꼬리표(파일 순서 번호)와 구분
 
     def __init__(self, parent=None, win_name = None, is_fu_restore = False, initial_file_path = None):
         super().__init__(parent, win_name, has_refresh=False)
         self.is_fu_restore = is_fu_restore
         self._initial_file_path = initial_file_path
-        self._is_restore_running = False
-        self.loaded_items: list[RestoreItem] = []   # 파일 순서
-        self.restore_jobs: list[RestoreItem] = []   # 실행 스냅샷 (Local 전환 포함)
-        self.failed_items: list[str] = []
-        self._job_index = 0
-        self._retry_count = 0
+        self.loaded_items: list[RestoreItem] = []     # 파일 순서
+        self._restore_items: list[RestoreItem] = []   # 이번 복원의 대상 스냅샷 (꼬리표 = 이 목록의 번호)
 
         # 진행 로그는 이 창의 LogView(상태바 Log View 버튼)로 확인한다
         self._log = AppLogManager().get_logger(self.win_name)
@@ -63,8 +60,10 @@ class RestoreWin(ServiceWin):
         # Load File 은 백업 파일(txt) 전용 — ParamWin 의 JSON param 파일 Load File 과는 이름만 같다
         self.toolbar.add_action("Load File", self.on_clicked_load_backup_file)
         self.toolbar.add_action("Restore", self.on_clicked_restore)
+        self.toolbar.add_action("Abort", self.on_clicked_abort)
+        self.toolbar.set_action_enabled("Abort", False)   # 복원 시퀀스가 도는 동안만 활성
 
-        self.param_worker.sig_raw_write_result.connect(self.handle_raw_write_result)
+        self.param_worker.sig_sequence_report.connect(self.handle_sequence_report)
 
         # 헤더(파일 저장 시점 장비 정보)와 비교할 현재 값들을 refresh 로 읽어온다
         # (이 창에는 param 위젯이 없으므로 직접 등록)
@@ -82,26 +81,18 @@ class RestoreWin(ServiceWin):
         self._updating_checks = False  # 코드에 의한 일괄 체크 변경 중 itemChanged 재진입 가드
         self.tree = BaseTreeWidget(self)
         self.tree.itemChanged.connect(self.handle_changed_tree_item)
-        self.set_body(self.tree)  # 잠금 대상 = 트리 (워커 동작 중·복원 진행 중)
+        self.set_body(self.tree)  # 잠금 대상 = 트리 (워커 동작 중 — 복원 시퀀스 포함)
 
     def on_start(self):
         # 자동 로드는 창이 표시된 뒤에 — 로드 결과 메시지 박스가 창 위에 뜨게 한다
         if self._initial_file_path:
             QTimer.singleShot(0, self.load_initial_file)
 
-    # ------------------------------------------------------------ 잠금 (ServiceWin._sync_lock_state 의 입력)
-    def is_busy(self):
-        # 복원의 raw write 연쇄는 워커 상태 머신 밖이라 is_working 에 잡히지 않는다
-        return super().is_busy() or self._is_restore_running
-
     def locked_actions(self):
         return ("Restore", "Load File")
 
     # ------------------------------------------------------------ 파일 로드
     def on_clicked_load_backup_file(self):
-        if self._is_restore_running:
-            return
-
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Load Backup File",
@@ -119,9 +110,6 @@ class RestoreWin(ServiceWin):
 
     def load_backup_file(self, file_path: str):
         """백업 파일을 읽어 복원 트리를 구성한다 (Load File 버튼과 자동 로드의 공통 경로)."""
-        if self._is_restore_running:
-            return
-
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 lines = f.read().splitlines()
@@ -283,16 +271,8 @@ class RestoreWin(ServiceWin):
         return [entry for entry in self.loaded_items
                 if entry.tree_item.checkState(0) == Qt.CheckState.Checked]
 
-    # ------------------------------------------------------------ 복원 실행
+    # ------------------------------------------------------------ 복원 실행 (워커 RAW 시퀀스)
     def on_clicked_restore(self):
-        if self._is_restore_running:
-            return
-
-        if not self.svc_port.connect_info:
-            QMessageBox.warning(self, "Connection Error",
-                                "Communication is not connected. Please check the connection status.")
-            return
-
         if not self.loaded_items:
             QMessageBox.information(self, "Information", "Load a backup file first.")
             return
@@ -304,106 +284,69 @@ class RestoreWin(ServiceWin):
 
         # Local 전환 쓰기를 맨 앞에 (전환 후 REMOTE 복원하지 않는 것은 기존
         # 쓰기 정책과 동일한 의도된 동작)
-        jobs: list[RestoreItem] = []
+        jobs: list[tuple[str, str]] = []
         acc = self.acc_mode_param
         acc_write_spec = SpecRegistry().get_write_spec(acc) if acc is not None else None
         if acc_write_spec is not None:
             # enum 값의 encode 는 실패하지 않으므로 BuildFailure 검사는 두지 않는다
-            jobs.append(RestoreItem(f"{acc.path}.{acc.name}",
-                                    acc_write_spec.build_request({acc: str(p_enum.AccModeEnum.LOCAL.value)})))
+            jobs.append((self.LOCAL_TAG, acc_write_spec.build_request({acc: str(p_enum.AccModeEnum.LOCAL.value)})))
 
-        jobs += targets
+        jobs += [(str(index), item.packet) for index, item in enumerate(targets)]
 
-        self.restore_jobs = jobs
-        self.failed_items = []
-        self._job_index = 0
-        self._retry_count = 0
+        result = self.param_worker.raw_write(jobs, max_retry=self.RETRY_MAX)
+        if result != StartResult.OK:
+            show_param_write_warning(self, result)   # NOT_CONNECTED / BUSY — 진행률·잠금은 워커 시그널이 맡는다
+            return
 
-        self._is_restore_running = True
-        self._sync_lock_state()  # Restore·Load File 액션·트리 잠금 (진행 중 체크 변경 방지)
-        self.statusbar.set_progress(0)
+        self._restore_items = targets
+        self.toolbar.set_action_enabled("Abort", True)
         self._log.info(f"[Restore Start !!!]: {len(targets)} items")
-        self._send_current_job()
 
-    def _send_current_job(self):
-        self.param_worker.raw_write_request(str(self._job_index), self.restore_jobs[self._job_index].packet)
+    def on_clicked_abort(self):
+        self.param_worker.abort_sequence()   # 결과는 handle_sequence_report(end=ABORTED) 로
 
-    def handle_changed_connection_info(self, info: str):
-        super().handle_changed_connection_info(info)
+    def handle_sequence_report(self, report: SequenceReport):
+        self.toolbar.set_action_enabled("Abort", False)
 
-        # 연결이 끊기면 진행 중 복원을 중단한다 — raw 쓰기는 워커 상태 머신
-        # 밖이라 handle_disconnected() 로는 멈추지 않는다.
-        # (in-flight 응답은 _is_restore_running 가드로 폐기됨)
-        if not info and self._is_restore_running:
-            self._log.error("[Restore Aborted]: connection lost")
-            self._finish_restore()
+        local_failed = False
+        failed: list[str] = []
+        done = 0
+        for result in report.results:
+            is_local = result.tag == self.LOCAL_TAG
+            name = "System.Access Mode (Local switch)" if is_local else self._restore_items[int(result.tag)].name
+            if result.outcome.verdict is Verdict.OK:
+                self._log.info(f"[Success]: Parameter = {name}")
+            else:
+                self._log.error(f"[Write Failed]: Parameter = {name}, {result.outcome.reason.name}")
+            if is_local:
+                local_failed = result.outcome.verdict is not Verdict.OK
+            else:
+                done += 1
+                if result.outcome.verdict is not Verdict.OK:
+                    failed.append(name)
 
-    def handle_raw_write_result(self, tag: str, req_msg: str, resp_msg: str, err_type: SvcPortErrType):
-        if not self._is_restore_running:
-            return
-
-        try:
-            job_index = int(tag)
-        except ValueError:
-            return
-
-        if job_index != self._job_index:
-            return  # 중단/재시작 이후 도착한 늦은 응답 폐기
-
-        job = self.restore_jobs[job_index]
-
-        # 성공 판정: 통신 정상 + (판정 규칙이 있는 프로토콜이면) 응답 접두어 확인
-        expected = backup_file_helper.expected_write_response_prefix(job.packet)
-        if err_type != SvcPortErrType.NONE:
-            is_success, err_msg = False, f"err_type = {err_type.name}"
-        elif expected is not None and not resp_msg.startswith(expected):
-            is_success, err_msg = False, f"packet = {resp_msg}"
-        else:
-            is_success, err_msg = True, ""
-
-        if not is_success:
-            if self._retry_count < self.RETRY_MAX:
-                self._retry_count += 1
-                self._log.error(f"[Write Error]: Parameter = {job.name}, {err_msg} "
-                                f"— retry {self._retry_count}/{self.RETRY_MAX}")
-                self._send_current_job()
-                return
-
-            # 재시도 소진 — 실패 기록 후 다음 항목으로 진행 (합의된 정책)
-            self._log.error(f"[Write Failed]: Parameter = {job.name}, {err_msg}")
-            self.failed_items.append(job.name)
-        else:
-            self._log.info(f"[Success]: Parameter = {job.name}")
-
-        self._retry_count = 0
-        self._job_index += 1
-        self.statusbar.set_progress(int((self._job_index / len(self.restore_jobs)) * 100))
-
-        if self._job_index < len(self.restore_jobs):
-            self._send_current_job()
-        else:
+        if report.end is SequenceEnd.COMPLETED:
             self._log.info("[Restore Completed !!!]")
-            self._finish_restore()
-            self._show_restore_summary()
-            # 복원된 값·codec 문맥을 열린 창 전부가 다시 읽는다 — 재접속 경로 (N077). 끊김 중단 경로에는 없다
-            self.param_worker.reconnect()
+        else:
+            self._log.error(f"[Restore Aborted]: {report.end.name.lower()} after {done}/{len(self._restore_items)} items")
 
-    def _finish_restore(self):
-        self._is_restore_running = False
-        self._sync_lock_state()
-        self.statusbar.set_progress(0)
+        self._show_restore_summary(report.end, done, failed, local_failed)
 
-    def _show_restore_summary(self):
-        # 첫 작업(Local 전환)은 복원 항목 수에서 제외하고 집계한다
-        item_count = len(self.restore_jobs) - (1 if self.acc_mode_param is not None else 0)
+        # 복원된 값·codec 문맥을 열린 창 전부가 다시 읽는다 — 재접속 경로 (N077). 끊겼으면 포트가 닫혀 있어 False 로 끝난다
+        self.param_worker.reconnect()
 
-        if not self.failed_items:
-            QMessageBox.information(self, "Success",
-                                    f"Restore completed successfully. ({item_count} items)")
+    def _show_restore_summary(self, end: SequenceEnd, done: int, failed: list[str], local_failed: bool):
+        total = len(self._restore_items)
+        head = (f"Restore completed ({total} items)." if end is SequenceEnd.COMPLETED
+                else f"Restore {end.name.lower()} after {done} of {total} items — the device is partially restored.")
+        local_note = "\nThe switch to Local mode failed — see Log View." if local_failed else ""
+
+        if not failed and end is SequenceEnd.COMPLETED and not local_failed:
+            QMessageBox.information(self, "Success", head)
             return
 
-        shown = "\n- ".join(self.failed_items[:10])
-        more = "" if len(self.failed_items) <= 10 else f"\n... and {len(self.failed_items) - 10} more"
-        QMessageBox.warning(self, "Warning",
-                            f"Restore completed with {len(self.failed_items)} failed items "
-                            f"(out of {item_count}):\n- {shown}{more}\n\nSee Log View for details.")
+        if failed:
+            shown = "\n- ".join(failed[:10])
+            more = "" if len(failed) <= 10 else f"\n... and {len(failed) - 10} more"
+            head += f"\n{len(failed)} failed item(s):\n- {shown}{more}"
+        QMessageBox.warning(self, "Warning", f"{head}{local_note}\n\nSee Log View for details.")

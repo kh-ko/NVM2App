@@ -6,6 +6,7 @@
 
 각 행의 뒷부분은 그대로 전송 가능한 쓰기 패킷이다. 헤더 없는(구버전) 파일도
 허용한다 — 복원측은 헤더가 있을 때만 장비 정보 비교를 수행한다.
+패킷의 응답 판정은 g_protocol/raw_packet_spec (raw_write_spec_of) 이 맡는다 — 여기는 파일 형식만.
 """
 
 from datetime import datetime
@@ -51,11 +52,3 @@ def parse_item_line(line: str) -> Optional[tuple[str, str]]:
 
     return name, packet
 
-
-def expected_write_response_prefix(packet: str) -> Optional[str]:
-    """쓰기 요청 패킷의 성공 응답 접두어. 판정 규칙이 정의된 프로토콜만 —
-    'p:01' 요청은 'p:0001' + id(8) + index(2) 로 응답한다.
-    그 외 형식은 None (응답 내용 판정 안 함, 통신 오류만 확인)."""
-    if packet.startswith("p:01") and len(packet) >= 14:
-        return "p:0001" + packet[4:14]
-    return None

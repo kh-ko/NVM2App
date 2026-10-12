@@ -17,6 +17,8 @@
 - assert_no_zombie()     : 위 둘의 합성 — 창을 만들었다 파괴한 뒤 싱글턴 시그널을 쏴서 파괴된 창의 슬롯이 남아 있지 않은지
                            (좀비 연결, F111) 확인한다. 문제가 있으면 그 내용을 돌려준다.
 - silence_message_boxes(): QMessageBox 정적 대화상자와 QMessageBox/QDialog 의 exec() 를 무음으로 — 헤드리스 창 테스트용.
+- ScriptedTransport      : {요청: [응답…]} 스크립트로 장비를 흉내 내는 워커 transport 대역 (F110) — 워커 생성 인자 transport 에
+                           넣거나, 창 테스트는 win.param_worker._param_thread._transport 에 꽂는다. gate 로 응답을 붙들 수 있다.
 
 사용 (각 테스트 머리):
     TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -35,6 +37,7 @@ from __future__ import annotations
 
 import atexit
 import contextlib
+import threading
 import io
 import os
 import shutil
@@ -259,3 +262,38 @@ def silence_message_boxes() -> None:
     QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.No)
     QMessageBox.exec = lambda self: 0
     QDialog.exec = lambda self: 0
+
+
+class ScriptedTransport:
+    """ParameterThread 의 transport 대역 — 요청마다 스크립트의 응답을 순서대로 돌려주고(마지막 것 반복) 요청을 기록한다 (F110).
+
+    script: {요청 문자열: [응답, ...]}. 응답이 SvcPortErrType 이면 통신 오류로 ("", err) 를 돌려준다.
+    gate: {요청 문자열: threading.Event} — 이벤트가 set 될 때까지 응답을 미룬다 (워커를 요청 도중에 붙들어 두는 용도).
+    스크립트에 없는 요청은 '응답 없음'(READ_TIMEOUT) 으로 처리한다. 창 테스트는 win.param_worker._param_thread._transport 에 꽂는다."""
+
+    def __init__(self, script: dict):
+        self._script = {k: list(v) if isinstance(v, (list, tuple)) else [v] for k, v in script.items()}
+        self._lock = threading.Lock()
+        self.requests: list[str] = []
+        self.gate: dict[str, threading.Event] = {}
+
+    def request_string(self, packet: str):
+        from b_core.b_datatype.general_enum import SvcPortErrType
+
+        with self._lock:
+            self.requests.append(packet)   # 도착 즉시 기록 — gate 에 붙들린 요청도 '보냈다' 로 센다
+        gate = self.gate.get(packet)
+        if gate is not None:
+            gate.wait(10)
+        with self._lock:
+            responses = self._script.get(packet)
+            if not responses:
+                return "", SvcPortErrType.READ_TIMEOUT_ERROR
+            response = responses.pop(0) if len(responses) > 1 else responses[0]
+        if isinstance(response, SvcPortErrType):
+            return "", response
+        return response, SvcPortErrType.NONE
+
+    def count(self, packet: str) -> int:
+        with self._lock:
+            return self.requests.count(packet)

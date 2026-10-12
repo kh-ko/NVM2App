@@ -8,7 +8,7 @@ Parameter 는 값의 정의(타입/범위/값/시그널)만 갖고, "그 값이 
       ├ build_request(values)         요청 문자열, 만들 수 없으면 BuildFailure(사유)    — 하위 클래스가 구현
       ├ _judge(resp)                  응답 판정: Judgement(사유, 필드별 선로 원문) / None — 하위 클래스가 구현 (프로토콜 지식)
       ├ apply_response(resp)          _judge 결과를 param 에 적용하고 Outcome(부류, 사유)  — 기본 클래스가 구현 (앱 정책)
-      ├ expected_response_prefix      정상 응답이 시작해야 하는 문자열 (raw 응답 검증용)
+      ├ expected_response_prefix      정상 응답이 시작해야 하는 문자열 (재부팅 probe 판정·RawPacketSpec 용)
       └ codec_of(param)               그 param 의 선로 ↔ 도메인 codec
 
 판정(_judge)과 적용(apply_response)의 분리:
@@ -17,8 +17,9 @@ Parameter 는 값의 정의(타입/범위/값/시그널)만 갖고, "그 값이 
 - 기본 클래스는 사유를 부류(Verdict)로 매핑하고(REASON 표), 정상이면 [원문 전부 대입 → 전부 디코드 → 값 반영] 을 한 순서로 하며
   (한 필드라도 형식 불량이면 값을 바꾸지 않고 DATA_TYPE_ERROR), 부류별 정책(POLICY 표)으로 플래그를 세운다.
   부류와 정책표는 이 파일에만 있다 — 새 프로토콜/spec 은 _judge 와 build_request 만 쓴다.
-- 워커는 Outcome.verdict 만 본다: TRANSIENT 는 같은 요청을 재시도(시퀀스는 즉시·무제한(F028 결정), 모니터링은 다음 틱에 같은
-  spec), 그 밖의 부류는 다음 작업. 쓰기는 부류와 무관하게 진행하고 재접속 param 이면 재부팅 대기로 들어간다(N045 결정).
+- 워커는 Outcome.verdict 만 본다: TRANSIENT 는 같은 요청을 재시도(refresh·쓰기 read-back 시퀀스는 즉시·무제한(F028 결정),
+  백업·복원(CAPTURE/RAW) 시퀀스는 _Job.max_retry 까지 뒤 실패 기록, 모니터링은 다음 틱에 같은 spec), 그 밖의 부류는 다음 작업.
+  쓰기는 부류와 무관하게 진행하고 재접속 param 이면 재부팅 대기로 들어간다(N045 결정).
 - 예외 방어는 두지 않는다 — _judge 가 예외를 던지면 결함이므로 그대로 드러난다(F032 결정).
 
 의도된 동작 변화 (2026-10-12 사용자 결정):
@@ -153,7 +154,8 @@ class PacketSpec(ABC):
     @property
     @abstractmethod
     def expected_response_prefix(self) -> str:
-        """정상 응답이 시작해야 하는 문자열. 워커 밖에서 raw 응답을 검증하는 창(백업/복원)이 프로토콜을 모른 채 쓸 수 있게 노출한다."""
+        """정상 응답이 시작해야 하는 문자열 — 워커의 재부팅 probe 가 SN 읽기 응답을 param 에 적용하지 않고 판정하는 기준(F026)이고,
+        RawPacketSpec 이 접두 판정에 쓴다. 창은 응답을 직접 판정하지 않는다 (복원 패킷의 판정은 raw_packet_spec, data-protocol-2)."""
 
     def describe(self) -> str:
         """로그용 한 줄 설명."""

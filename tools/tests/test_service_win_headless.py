@@ -6,12 +6,14 @@
   1. 계약(합성 서브클래스 3종): 생성만으로는 start 훅이 불리지 않음, start() 멱등·on_start 1회, has_refresh / with_param_worker /
      locks_content, 워커 동작(is_working) → 본문·locked_actions 잠김, set_body 교체 뒤 잠금 재확정, 편집 잠금(edit_locked_actions ·
      Enable Edit 은 동작 중만 잠김 · 동작이 끝나면 다시 잠김), 파괴 뒤 좀비 연결 없음.
-  2. 창 7개(2단계 ②): Backup/Restore 의 자기 작업(is_busy)과 워커 동작의 OR 잠금 · 끊김 중단 · 완료 해제, Restore(FU 모드)의 start() 뒤
-     자동 로드, Sensor Analysis 의 샘플 타이머가 start() 의 연결 동기화로 시작하고 끊김에 정지, Cluster Monitor 의 set_body 잠금 · Apply
+  2. 창 7개(2단계 ②·data-protocol-2): Backup/Restore 는 워커 시퀀스(capture/raw_write)로 돌며 is_working 으로 잠기고 Abort 만 살아 있다 —
+     ScriptedTransport 로 끝까지 돌려 재시도 상한·누락 질문·부분 파일·늦은 응답 재시도(F086)·거부 즉시 실패·Abort·끊김 보고를 본다.
+     Restore(FU 모드)의 start() 뒤 자동 로드, Sensor Analysis 의 샘플 타이머가 start() 의 연결 동기화로 시작하고 끊김에 정지, Cluster Monitor 의 set_body 잠금 · Apply
      표시, Firmware Update 의 폴더 카드 1 · 표시 전용 본문(locks_content=False) · Refresh 없음, About/Update 의 param 워커 없음 · 상태바,
      Update 의 릴리스 노트 조회가 on_start 에서 시작(FTP 는 스텁), 클래스 기본값·'항상 활성' 오버라이드 잔존 없음,
      파괴 뒤 connect_info_changed 좀비 없음.
-통신은 없다 — 워커 동작은 param_worker.is_working 대입(setter 가 시그널을 낸다)으로, 연결은 _harness.fake_connected 로 흉내 낸다.
+통신은 없다 — 워커 동작은 param_worker.is_working 대입(setter 가 시그널을 낸다)으로, 연결은 _harness.fake_connected 로, 장비 응답은
+_harness.ScriptedTransport 를 워커 스레드의 transport 자리에 꽂아 흉내 낸다.
 """
 
 from __future__ import annotations
@@ -19,6 +21,8 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import threading
+import time
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -33,14 +37,18 @@ sys.path.insert(0, ROOT)
 app = _harness.make_app()
 _harness.silence_message_boxes()
 
-from PySide6.QtWidgets import QTreeWidget  # noqa: E402
+from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QTreeWidget  # noqa: E402
 
 import resources_rc  # noqa: E402,F401
 from b_core.d_dal.service_port import ServicePort  # noqa: E402
+from b_core.e_worker_ver2.parameter_run_worker import SequenceEnd  # noqa: E402
 from b_core.f_helper import backup_file_helper  # noqa: E402
+from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 from c_ui.c_window_ver2.param_win import ParamWin  # noqa: E402
 from c_ui.c_window_ver2.service_win import ServiceWin  # noqa: E402
 from c_ui.c_window_ver2.c_analysis.sensor_analysis_win import SensorAnalysisWin  # noqa: E402
+from c_ui.c_window_ver2.d_backup_restore import backup_win as backup_win_mod  # noqa: E402
 from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin  # noqa: E402
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin  # noqa: E402
 from c_ui.c_window_ver2.f_cluster.cluster_monitor_win import ClusterMonitorWin  # noqa: E402
@@ -114,6 +122,35 @@ def set_worker_busy(win, busy):
     app.processEvents()
 
 
+def pump(cond, timeout_s: float, label: str) -> bool:
+    deadline = time.time() + timeout_s
+    while not cond():
+        app.processEvents()
+        time.sleep(0.005)
+        if time.time() > deadline:
+            print(f"  timeout: {label}", flush=True)
+            return False
+    return True
+
+
+def plug_transport(win, script: dict):
+    """워커 스레드의 transport 를 스크립트 대역으로 바꾼다 (창은 ServicePort 를 쓰도록 만들어졌으므로 테스트가 끼워 넣는다)."""
+    transport = _harness.ScriptedTransport(script)
+    win.param_worker._param_thread._transport = transport
+    return transport
+
+
+def check_only(win, params):
+    """백업 트리의 체크를 params 만 남긴다 (기본은 전체 체크)."""
+    win._updating_checks = True
+    try:
+        for param, item in win._item_by_param.items():
+            item.setCheckState(0, Qt.CheckState.Checked if param in params else Qt.CheckState.Unchecked)
+        win.tree.recompute_all_folder_check_states()
+    finally:
+        win._updating_checks = False
+
+
 class _FakeWaitBox:
     def __init__(self, events):
         self._events = events
@@ -159,7 +196,7 @@ def main() -> int:
     _harness.destroy_window(e, app)
 
     v = ViewWin(); v.show(); v.start(); app.processEvents()
-    rep.check(v.param_worker is None and not v.is_working and not v.is_busy() and v.content_widget.isEnabled(),
+    rep.check(v.param_worker is None and not v.is_working and v.content_widget.isEnabled(),
               "계약: with_param_worker=False — 워커 없음, 본문 활성")
     svc.connect_info_changed.emit("COM9 9600")
     app.processEvents()
@@ -180,10 +217,12 @@ def main() -> int:
                  if n in c.__dict__]
     rep.check(not leftovers, f"클래스 기본값·'항상 활성' 오버라이드 잔존 없음: {leftovers}")
 
-    # --- BackupWin
+    # --- BackupWin — 워커 CAPTURE 시퀀스 (data-protocol-2)
+    reg = SpecRegistry()
     win = BackupWin(parent=None, win_name="Backup", is_fu_backup=False)
-    win.start(); app.processEvents()
-    rep.check(win.windowTitle() == "Backup" and set(actions(win)) == {"Backup"}, f"Backup: 제목/툴바 {win.windowTitle()!r} {list(actions(win))}")
+    win.start(); app.processEvents()   # 미연결로 시작 — 초기 refresh 없음 (이 창의 읽기 2개는 스크립트에 없다)
+    rep.check(win.windowTitle() == "Backup" and set(actions(win)) == {"Backup", "Abort"} and not actions(win)["Abort"],
+              f"Backup: 제목/툴바 {win.windowTitle()!r} {list(actions(win))}, Abort 는 유휴 시 비활성")
     rep.check(win.content_widget is win.tree and win.centralWidget() is win.tree, "Backup: 본문 = 트리")
     rep.check(len(win.param_worker.read_param_list) == 2 and win.tree.topLevelItemCount() > 0,
               f"Backup: 읽기 등록 2 ({len(win.param_worker.read_param_list)}), 트리 {win.tree.topLevelItemCount()} 폴더")
@@ -191,26 +230,62 @@ def main() -> int:
     rep.check(not win.tree.isEnabled() and not actions(win)["Backup"], "Backup: 워커 동작 중 — 트리·Backup 잠김")
     set_worker_busy(win, False)
     rep.check(win.tree.isEnabled() and actions(win)["Backup"], "Backup: 워커 유휴 — 풀림")
-    with _harness.fake_connected(svc):
-        win.on_clicked_backup()      # single read 요청은 스레드가 없어 아무 데도 가지 않는다 — 잠금만 본다
-        rep.check(win._is_backup_running and not win.tree.isEnabled() and not actions(win)["Backup"],
-                  "Backup: 백업 진행 중(워커 유휴) — is_busy 로 트리·Backup 잠김")
-        set_worker_busy(win, True)
-        set_worker_busy(win, False)
-        rep.check(not win.tree.isEnabled() and not actions(win)["Backup"], "Backup: 진행 중 워커가 돌았다 멈춰도 잠금 유지 (두 입력의 OR)")
-        win._finish_backup()
-        rep.check(win.tree.isEnabled() and actions(win)["Backup"], "Backup: 완료 — 풀림")
-        win.on_clicked_backup()
-        svc.connect_info_changed.emit("")   # 끊김 → 중단
-        app.processEvents()
-        rep.check(not win._is_backup_running and win.tree.isEnabled() and actions(win)["Backup"], "Backup: 끊김으로 중단 → 풀림")
+
+    pa, pb, pc, pd = list(win._item_by_param)[:4]            # 스키마 순서의 백업 대상 4개
+    ra, rb, rc, rd = (reg.get_read_spec(p) for p in (pa, pb, pc, pd))
+    late = ra.expected_response_prefix[:6] + "FFFFFFFF" + ra.expected_response_prefix[14:] + "1"   # 다른 id 의 늦은 응답
+    t = plug_transport(win, {ra.build_request(): [late, ra.expected_response_prefix + "1"],        # F086: 늦은 응답 뒤 정상 → 재시도로 성공
+                             rb.build_request(): ["p:", "x", "y", "z", rb.expected_response_prefix + "2"],  # 잡음 4번 → 상한 3 소진 → 누락
+                             rc.build_request(): "p:89" + rc.expected_response_prefix[4:],          # 미지원 → 재시도 없이 누락
+                             rd.build_request(): rd.expected_response_prefix + "4"})
+    check_only(win, (pa, pb, pc, pd))
+    asked, saved = [], []
+    backup_win_mod.ask_save_partial_backup = lambda parent, names: asked.append(list(names)) or True
+    with tempfile.TemporaryDirectory() as tmp:
+        out_path = os.path.join(tmp, "backup_test.txt")
+        QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: saved.append(out_path) or (out_path, ""))
+        with _harness.fake_connected(svc):
+            win.on_clicked_backup()
+            rep.check(win.is_working and not win.tree.isEnabled() and not actions(win)["Backup"] and actions(win)["Abort"],
+                      "Backup: 시퀀스 중 — 트리·Backup 잠김, Abort 활성")
+            pump(lambda: not win.is_working, 8, "백업 시퀀스 종료")
+        rep.check(not win.is_working and win.tree.isEnabled() and actions(win)["Backup"] and not actions(win)["Abort"],
+                  "Backup: 종료 — 풀림, Abort 비활성")
+        rep.check(t.count(ra.build_request()) == 2 and t.count(rb.build_request()) == 4 and t.count(rc.build_request()) == 1,
+                  f"Backup: 늦은 응답 재시도 2회(F086) / 잡음 상한 3 → 4회 / 미지원 1회 (실제 {t.count(ra.build_request())}, "
+                  f"{t.count(rb.build_request())}, {t.count(rc.build_request())})")
+        rep.check(asked == [[f"{pb.path}.{pb.name}", f"{pc.path}.{pc.name}"]], f"Backup: 누락 2건을 묻는다(F087): {asked}")
+        rep.check(saved == [out_path] and os.path.isfile(out_path), "Backup: 질문에 Yes → 파일 저장")
+        lines = open(out_path, encoding="utf-8").read().splitlines() if os.path.isfile(out_path) else []
+        ws_a, ws_d = reg.get_write_spec(pa), reg.get_write_spec(pd)
+        rep.check(len(lines) == 3 and lines[1] == f"{pa.path}.{pa.name}, {ws_a.build_request_line('1')}"
+                  and lines[2] == f"{pd.path}.{pd.name}, {ws_d.build_request_line('4')}",
+                  f"Backup: 파일 = 헤더 + 성공 2행(선로 원문, 스키마 순서): {lines}")
+        rep.check(pa.str_value == "1" and pd.value == 4 and pb.is_err and pc.is_not_support,
+                  "Backup: 성공 param 은 값 반영, 실패 param 은 is_err / 미지원은 Not Support")
+
+        # Abort: 두 번째 요청에서 붙들어 두고 취소 — 파일 없음, 보고 ABORTED
+        asked.clear(); saved.clear(); os.remove(out_path)
+        for p in (pa, pb, pc, pd):
+            p.is_err = False; p.is_not_support = False
+        t = plug_transport(win, {ra.build_request(): ra.expected_response_prefix + "1", rb.build_request(): rb.expected_response_prefix + "2"})
+        t.gate[rb.build_request()] = threading.Event()
+        check_only(win, (pa, pb))
+        with _harness.fake_connected(svc):
+            win.on_clicked_backup()
+            pump(lambda: t.count(rb.build_request()) == 1, 5, "두 번째 요청 도착")
+            win.on_clicked_abort()
+            rep.check(not win.is_working and win.tree.isEnabled() and not actions(win)["Abort"], "Backup: Abort → 즉시 풀림")
+            t.gate[rb.build_request()].set()
+            app.processEvents(); time.sleep(0.05); app.processEvents()
+        rep.check(asked == [] and saved == [] and not os.path.exists(out_path), "Backup: Abort 면 질문·저장 없음")
     _harness.destroy_window(win, app)
 
-    # --- RestoreWin
+    # --- RestoreWin — 워커 RAW 시퀀스
     win = RestoreWin(parent=None, win_name="Restore")
     win.start(); app.processEvents()
-    rep.check(set(actions(win)) == {"Load File", "Restore"} and win.edit_locked_actions() == (),
-              f"Restore: 툴바 {list(actions(win))}, 편집 잠금 목록 없음")
+    rep.check(set(actions(win)) == {"Load File", "Restore", "Abort"} and not actions(win)["Abort"] and win.edit_locked_actions() == (),
+              f"Restore: 툴바 {list(actions(win))}, Abort 유휴 시 비활성, 편집 잠금 목록 없음")
     rep.check(win.content_widget is win.tree and len(win.param_worker.read_param_list) == 2 and win.acc_mode_param is not None,
               "Restore: 본문 = 트리, 읽기 등록 2, Access Mode param")
     set_worker_busy(win, True)
@@ -218,12 +293,52 @@ def main() -> int:
               "Restore: 워커 동작 중 — 트리·Restore·Load File 잠김")
     set_worker_busy(win, False)
     rep.check(win.tree.isEnabled() and actions(win)["Restore"] and actions(win)["Load File"], "Restore: 워커 유휴 — 풀림")
-    win._is_restore_running = True
-    win._sync_lock_state()
-    rep.check(not win.tree.isEnabled() and not actions(win)["Restore"] and not actions(win)["Load File"],
-              "Restore: 복원 진행 중(워커 유휴) — is_busy 로 잠김")
-    win._finish_restore()
-    rep.check(win.tree.isEnabled() and actions(win)["Restore"] and actions(win)["Load File"], "Restore: 완료 — 풀림")
+
+    acc = win.acc_mode_param
+    local_packet = reg.get_write_spec(acc).build_request({acc: "0"})
+    packets = [reg.get_write_spec(p).build_request_line(str(i + 1)) for i, p in enumerate((pa, pb, pc))]
+    prefixes = ["p:0001" + pk[4:14] for pk in packets]
+    summaries = []
+    QMessageBox.warning = staticmethod(lambda parent, title, text: summaries.append(text) or QMessageBox.StandardButton.Ok)
+    QMessageBox.information = staticmethod(lambda parent, title, text: summaries.append(text) or QMessageBox.StandardButton.Ok)
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "restore_test.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(backup_file_helper.build_header("6.2.3", 0) + "\n")
+            for p, pk in zip((pa, pb, pc), packets):
+                f.write(f"{p.path}.{p.name}, {pk}\n")
+        win.is_fu_restore = True   # 헤더 비교 건너뜀 (장비 값 없음)
+        win.load_backup_file(path)
+        summaries.clear()
+        rep.check(len(win.loaded_items) == 3, f"Restore: 파일 로드 3항목 ({len(win.loaded_items)})")
+        t = plug_transport(win, {local_packet: "p:0001" + local_packet[4:14],
+                                 packets[0]: prefixes[0],
+                                 packets[1]: "p:78" + prefixes[1][4:],              # 장비 거부 → 재시도 없이 실패
+                                 packets[2]: ["", "", "", ""]})                    # 빈 응답 → 상한 3 소진 → 실패
+        with _harness.fake_connected(svc):
+            win.on_clicked_restore()
+            rep.check(win.is_working and not win.tree.isEnabled() and not actions(win)["Restore"] and actions(win)["Abort"],
+                      "Restore: 시퀀스 중 — 잠김, Abort 활성")
+            pump(lambda: not win.is_working, 8, "복원 시퀀스 종료")
+        rep.check(t.count(local_packet) == 1 and t.count(packets[1]) == 1 and t.count(packets[2]) == 4,
+                  f"Restore: Local 전환 1 / 거부 1회 / 빈 응답 4회 (실제 {t.count(local_packet)}, {t.count(packets[1])}, {t.count(packets[2])})")
+        rep.check(len(summaries) == 1 and "2 failed" in summaries[0] and f"{pb.path}.{pb.name}" in summaries[0]
+                  and f"{pc.path}.{pc.name}" in summaries[0] and "3 items" in summaries[0], f"Restore: 요약 = 3항목 중 실패 2: {summaries}")
+        rep.check(not actions(win)["Abort"] and win.tree.isEnabled(), "Restore: 종료 — Abort 비활성, 풀림")
+
+        # 끊김 중 보고 — 두 번째 항목에서 끊는다
+        summaries.clear()
+        t = plug_transport(win, {local_packet: "p:0001" + local_packet[4:14], packets[0]: prefixes[0], packets[1]: prefixes[1], packets[2]: prefixes[2]})
+        t.gate[packets[1]] = threading.Event()
+        with _harness.fake_connected(svc):
+            win.on_clicked_restore()
+            pump(lambda: t.count(packets[1]) == 1, 5, "두 번째 항목 요청 도착")
+            win.param_worker.handle_disconnected()
+            t.gate[packets[1]].set()
+            app.processEvents(); time.sleep(0.05); app.processEvents()
+        rep.check(len(summaries) == 1 and "disconnected after 1 of 3" in summaries[0] and "partially" in summaries[0],
+                  f"Restore: 끊김 → '1/3 까지 쓰고 중단' 요약: {summaries}")
+        rep.check(not win.is_working and not actions(win)["Abort"], "Restore: 끊김 뒤 풀림")
     _harness.destroy_window(win, app)
 
     with tempfile.TemporaryDirectory() as tmp:   # 자동 로드(on_start) — FU 복원 모드로 헤더 비교를 건너뛴다
@@ -279,7 +394,7 @@ def main() -> int:
     # --- HelpAboutWin (param 워커 없음)
     win = HelpAboutWin(parent=None, win_name="About")
     win.start(); app.processEvents()
-    rep.check(win.param_worker is None and not win.is_working and not win.is_busy(), "About: param 워커 없음")
+    rep.check(win.param_worker is None and not win.is_working, "About: param 워커 없음")
     rep.check(set(actions(win)) == set() and win.windowTitle() == "Help >> About", f"About: 툴바 비어 있음 {list(actions(win))}, 제목")
     rep.check(win.content_widget.isEnabled() and win.license_list.count() > 0 and win.license_list.currentRow() == 0,
               "About: 본문 활성, 라이선스 목록 첫 항목 선택")

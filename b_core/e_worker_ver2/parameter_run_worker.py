@@ -9,7 +9,7 @@ ver1 에서 달라진 점:
   connect_info_changed 는 "통신 가능한 연결"이 생겼을 때만 발화한다.
   -> 재부팅 완료 처리는 윈도우의 일반 재연결 refresh 경로가 겸한다
      (워커가 내부에서 refresh 를 호출하지 않는다).
-- 재부팅 대기 중 refresh()/write() 는 BUSY 를 반환한다 (대기를 중단시키지
+- 재부팅 대기 중 refresh()/write()/capture()/raw_write() 는 BUSY 를 반환한다 (대기를 중단시키지
   않기 위한 안전망). 재부팅 대기 중단은 cancel_reboot() 로만 가능하다.
 - 문자열 phase 상태 머신 제거 — 시퀀스 시작 시 작업 큐(list[_Job])를 만들어
   인덱스 하나로 순회한다. 진행률 = 처리 수 / 큐 길이.
@@ -65,6 +65,15 @@ ver1 에서 달라진 점:
   분리됐다. 워커는 need_retry(= 부류 TRANSIENT) 만으로 재시도를 정하고 reason 은 로그에만 쓴다.
 - spec.build_request() 는 만들 수 없으면 BuildFailure(값 없음/문맥 미준비/형식 불량/폭 초과) — 그 작업은 건너뛰고 사유를
   로그에 남긴다. 창에는 종전처럼 sig_write_skipped 로 한 번에 알린다 (사유는 LogView 에만, 2026-10-12 사용자 결정).
+
+2026-10-12 백업·복원을 시퀀스로 (data-protocol-2, F085/F086/F087):
+- capture(params, max_retry) 는 읽기 spec 으로 CAPTURE 시퀀스를, raw_write([(tag, 패킷)], max_retry) 는 완성된 패킷
+  (raw_packet_spec) 으로 RAW 시퀀스를 돈다. 둘 다 보통 시퀀스처럼 is_working 으로 창을 잠그고 모니터링을 멈추며, 끝나면
+  sig_sequence_report(SequenceReport) 로 작업별 Outcome 과 끝난 이유(완료 / abort_sequence() / 끊김)를 한 번 보고한다.
+- _Job.max_retry: TRANSIENT 재시도 상한. refresh·쓰기 read-back 은 None(무제한, F028), CAPTURE/RAW 는 호출측 값.
+  통신 오류는 빈 응답으로 spec 에 들어가 TRANSIENT 이므로 같은 상한에 든다. 상한을 넘기면 실패로 기록하고 다음 작업으로.
+- 상태 머신 밖에서 돌던 단건 읽기(single_read_request)·raw 쓰기(raw_write_request)와 그 시그널은 없앴다 — 창이 응답을
+  판정하지 않고, 재시도·누락·중단이 워커 한 곳에서 정해진다.
 """
 
 from enum import Enum, auto
@@ -80,16 +89,17 @@ from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.parameter_manager import ParamManager
 from b_core.d_dal.serial_setting import SerialSetting, probe_once
 from b_core.d_dal.service_port import ServicePort
-from b_core.g_protocol.packet_spec import BuildFailure, PacketSpec
+from b_core.g_protocol.packet_spec import BuildFailure, Outcome, PacketSpec, Verdict
+from b_core.g_protocol.raw_packet_spec import raw_write_spec_of
 from b_core.g_protocol.spec_registry import SpecRegistry
 
 
 class StartResult(Enum):
-    """refresh()/write() 시작 결과. OK 외의 사유 표시는 윈도우 몫."""
+    """refresh()/write()/capture()/raw_write() 시작 결과. OK 외의 사유 표시는 윈도우 몫."""
     OK = auto()
     NOT_CONNECTED = auto()
     EMPTY = auto()              # 처리할 param 없음
-    BUSY = auto()               # write: 시퀀스/재부팅/기준 refresh 대기 중, refresh: 재부팅 대기 중
+    BUSY = auto()               # write·capture·raw_write: 시퀀스/재부팅/기준 refresh 대기 중, refresh: 재부팅 대기 중
     LOCAL_BLOCKED = auto()      # Remote Lock 상태에서 local 전용 param 쓰기 시도
     NEED_LOCAL_SWITCH = auto()  # Remote 상태 — Local 전환 여부를 사용자에게 물어볼 것
     PENDING = auto()            # refresh: 기준(MainWin) refresh 완료 후 자동 시작 예약됨
@@ -99,17 +109,47 @@ class StartResult(Enum):
 class _JobOp(Enum):
     READ = auto()
     WRITE = auto()
+    RAW = auto()       # 완성된 패킷 1건 (RawPacketSpec) — 복원
 
 
 class _Job(NamedTuple):
     op: _JobOp
     spec: PacketSpec
-    values: dict | None = None  # WRITE: {param: 도메인 값 (숫자 또는 문자열)}
+    values: dict | None = None    # WRITE: {param: 도메인 값 (숫자 또는 문자열)}
+    max_retry: int | None = None  # TRANSIENT 재시도 상한. None = 무제한 (refresh·쓰기 read-back — F028 결정)
+    tag: str | None = None        # RAW: 창이 항목을 식별하는 꼬리표 — 보고에 그대로 실린다
+
+
+class SequenceKind(Enum):
+    REFRESH = auto()   # refresh(): 등록 param 전체 읽기 → 완료 시 sig_finish_refresh
+    WRITE = auto()     # write(): 쓰기 + read-back
+    CAPTURE = auto()   # capture(): 백업 — 읽기 spec 으로 읽고 보고
+    RAW = auto()       # raw_write(): 복원 — 완성된 패킷을 보내고 보고
+
+
+class SequenceEnd(Enum):
+    COMPLETED = auto()     # 작업을 전부 돌았다 (실패한 작업이 있어도 완료)
+    ABORTED = auto()       # abort_sequence() — 사용자 취소
+    DISCONNECTED = auto()  # 연결 끊김 — handle_disconnected()
+
+
+class JobResult(NamedTuple):
+    tag: str | None        # RAW 작업의 꼬리표 (CAPTURE 는 None)
+    params: tuple          # 그 작업이 실은 param (CAPTURE: 읽기 spec 의 params, RAW: ())
+    outcome: Outcome       # 마지막 시도의 결과 — verdict 가 OK 가 아니면 실패 (재시도 소진 / 거부 / 미지원)
+    lines: dict            # CAPTURE 성공: {param: 읽은 선로 원문} — 읽은 그 자리에서 떠 둔 사본 (공유 str_value 는 다른 읽기가 바꿀 수 있다)
+
+
+class SequenceReport(NamedTuple):
+    kind: SequenceKind
+    results: list          # JobResult, 끝난 작업 순서대로 — 중단되면 그때까지
+    total: int             # 시퀀스의 작업 수 (중단 시 "k/n" 표시용)
+    end: SequenceEnd
 
 
 class _WorkerState(Enum):
     IDLE = auto()          # 최초 refresh() 이전 / 중단됨
-    SEQUENCE = auto()      # 작업 큐 처리 중 (refresh/write)
+    SEQUENCE = auto()      # 작업 큐 처리 중 (refresh/write/capture/raw_write — 종류는 _seq_kind: SequenceKind)
     MONITOR = auto()       # 유휴 — read_param_list round-robin 읽기
     REBOOT = auto()        # 밸브 재부팅 대기 (임시 raw serial 연결로 SN probe 폴링)
     DISCONNECTED = auto()  # 연결 끊김으로 전 동작 중단 — 재연결 refresh 대기
@@ -121,11 +161,9 @@ class ParameterThread(QObject):
 
     transport: request_string(packet) -> (response, SvcPortErrType) 을 가진 객체. 앱에서는 ServicePort 싱글턴이고,
     테스트 하네스는 {요청: 응답} 스크립트 객체를 꽂아 장비 없이 상태 전이를 확인한다 (F110).
-    요청 3종(시퀀스/단건 읽기/raw 쓰기)이 모두 이 한 지점을 지난다. 재부팅 probe 는 임시 raw 포트라 별도."""
+    시퀀스 요청은 모두 이 한 지점을 지난다 (백업·복원도 시퀀스). 재부팅 probe 는 임시 raw 포트라 별도."""
 
     sig_result = Signal(int, str, str, object, SvcPortErrType)         # seq, packet, response, spec, err
-    sig_single_read_result = Signal(str, str, object, SvcPortErrType)  # packet, response, param, err
-    sig_raw_write_result = Signal(str, str, str, SvcPortErrType)       # tag, packet, response, err
     sig_reboot_probe_result = Signal(int, bool, str)                   # seq, success, detail
 
     ERROR_DELAY_MS = 100  # 통신 오류 시 인위적 지연 (즉시 실패 경로의 부하 방지)
@@ -141,22 +179,6 @@ class ParameterThread(QObject):
             QThread.msleep(self.ERROR_DELAY_MS)
 
         self.sig_result.emit(seq, packet, response, spec, err_type)
-
-    @Slot(str, object)
-    def process_single_read(self, packet: str, param):
-        response, err_type = self._transport.request_string(packet)
-        if err_type != SvcPortErrType.NONE:
-            QThread.msleep(self.ERROR_DELAY_MS)
-
-        self.sig_single_read_result.emit(packet, response, param, err_type)
-
-    @Slot(str, str)
-    def process_raw_write(self, tag: str, packet: str):
-        response, err_type = self._transport.request_string(packet)
-        if err_type != SvcPortErrType.NONE:
-            QThread.msleep(self.ERROR_DELAY_MS)
-
-        self.sig_raw_write_result.emit(tag, packet, response, err_type)
 
     @Slot(int, str, object, str)
     def process_reboot_probe(self, seq: int, packet: str, setting: SerialSetting, expected_prefix: str):
@@ -178,13 +200,10 @@ class ParameterThread(QObject):
 class ParameterRunWorker(QObject):
     # 내부 요청 (워커 스레드로)
     sig_request = Signal(int, str, object)
-    sig_single_read_request = Signal(str, object)
-    sig_raw_write_request = Signal(str, str)
     sig_reboot_probe_request = Signal(int, str, object, str)  # seq, packet, SerialSetting, 정상 응답 접두
 
     # 외부 공개
-    sig_single_read_result = Signal(str, str, object, SvcPortErrType)  # packet, response, param, err
-    sig_raw_write_result = Signal(str, str, str, SvcPortErrType)       # tag, packet, response, err
+    sig_sequence_report = Signal(object)  # SequenceReport — CAPTURE/RAW 시퀀스가 끝날 때 1회 (완료·중단·끊김 모두)
     sig_reboot_started = Signal()
     sig_reboot_finished = Signal(bool)  # True=재부팅 후 통신 복구, False=취소됨
     sig_progress_changed = Signal(int)
@@ -241,7 +260,9 @@ class ParameterRunWorker(QObject):
         self._seq = 0
         self._jobs: list[_Job] = []
         self._job_index = 0
-        self._seq_is_refresh = False  # 현재 시퀀스가 refresh 인지 (완료 시그널 구분용)
+        self._seq_kind = SequenceKind.REFRESH   # 현재 시퀀스의 종류 (완료 시그널·보고 구분용)
+        self._seq_results: list[JobResult] = []  # CAPTURE/RAW: 끝난 작업의 결과 (보고용)
+        self._job_retry = 0                      # 현재 작업의 TRANSIENT 재시도 횟수 (max_retry 와 비교)
         self._skipped_write_params: list[Parameter] = []  # 이번 시퀀스에서 요청을 만들 수 없어(BuildFailure) 건너뛴 쓰기
         self._is_working = False
         self._progress = 0
@@ -277,13 +298,9 @@ class ParameterRunWorker(QObject):
         self._param_thread.moveToThread(self._thread)
 
         self.sig_request.connect(self._param_thread.process_request)
-        self.sig_single_read_request.connect(self._param_thread.process_single_read)
-        self.sig_raw_write_request.connect(self._param_thread.process_raw_write)
         self.sig_reboot_probe_request.connect(self._param_thread.process_reboot_probe)
 
         self._param_thread.sig_result.connect(self._handle_result)
-        self._param_thread.sig_single_read_result.connect(self.sig_single_read_result)
-        self._param_thread.sig_raw_write_result.connect(self.sig_raw_write_result)
         self._param_thread.sig_reboot_probe_result.connect(self._handle_reboot_probe_result)
 
         self._thread.finished.connect(self._param_thread.deleteLater)
@@ -389,7 +406,7 @@ class ParameterRunWorker(QObject):
     # ------------------------------------------------------------ 시퀀스 시작
     @property
     def _is_refreshing(self) -> bool:
-        return self._state == _WorkerState.SEQUENCE and self._seq_is_refresh
+        return self._state == _WorkerState.SEQUENCE and self._seq_kind is SequenceKind.REFRESH
 
     def refresh(self) -> StartResult:
         """등록 param 전체 읽기 시퀀스 시작. 완료 후 모니터링으로 전환된다.
@@ -433,7 +450,7 @@ class ParameterRunWorker(QObject):
         if not ServicePort().connect_info:
             return StartResult.NOT_CONNECTED
 
-        self._start_sequence(jobs, is_refresh=True)
+        self._start_sequence(jobs, SequenceKind.REFRESH)
         return StartResult.OK
 
     def write(self, pairs: list[tuple[Parameter, float | int | str]], switch_to_local: bool = False) -> StartResult:
@@ -484,7 +501,7 @@ class ParameterRunWorker(QObject):
         jobs += [_Job(_JobOp.READ, spec) for spec in self._read_specs_of(readback + self.read_param_list)]
 
         self._stop_all()
-        self._start_sequence(jobs, is_refresh=False)
+        self._start_sequence(jobs, SequenceKind.WRITE)
         return StartResult.OK
 
     def handle_disconnected(self) -> None:
@@ -500,8 +517,10 @@ class ParameterRunWorker(QObject):
         if self._state == _WorkerState.REBOOT:
             return
 
+        report = None
         if self._state == _WorkerState.SEQUENCE:
             self._log.info(f"disconnected - sequence aborted ({self._job_index}/{len(self._jobs)} jobs done)")
+            report = self._take_report(SequenceEnd.DISCONNECTED)
         elif self._state == _WorkerState.PENDING:
             self._log.info("disconnected - pending refresh cancelled")
 
@@ -514,20 +533,75 @@ class ParameterRunWorker(QObject):
         if self is ParameterRunWorker._primary:
             ParameterRunWorker._pending_refresh.clear()
 
-    # ------------------------------------------------------------ 단발 요청
-    def single_read_request(self, param: Parameter):
-        """param 1개 읽기 요청 — 결과는 sig_single_read_result(packet, response, param, err) 로.
-        응답 해석은 호출측 몫 (SpecRegistry().get_read_spec(param).expected_response_prefix 참고)."""
-        spec = self._registry.get_read_spec(param)
-        if spec is None:
-            self._log.error(f"no read spec: {param.path}.{param.name} — single read skipped")
-            param.is_not_support = True
-            return
-        self.sig_single_read_request.emit(spec.build_request(), param)
+        if report is not None:
+            self.sig_sequence_report.emit(report)  # 상태 전환을 모두 마친 뒤 — 창의 슬롯이 대화상자를 띄워도 워커는 이미 정리됐다
 
-    def raw_write_request(self, tag: str, packet: str):
-        """완성된 패킷을 그대로 전송. 결과는 sig_raw_write_result(tag, ...) 로."""
-        self.sig_raw_write_request.emit(tag, packet)
+    # ------------------------------------------------------------ 백업·복원 시퀀스 (보고형)
+    def capture(self, params: list[Parameter], max_retry: int = 3) -> StartResult:
+        """param 들의 읽기 spec 으로 읽기 시퀀스(CAPTURE)를 시작한다 — 백업.
+
+        성공한 param 은 값·str_value(선로 원문)·플래그가 보통 읽기와 똑같이 갱신되므로, 창은 str_value 로 파일 행을 만든다.
+        같은 spec 을 쓰는 param 은 한 작업이고, spec 없는 param 은 Not Support 로 두고 작업을 만들지 않는다 — 창은
+        '체크한 param − 성공한 param' 으로 누락을 센다. TRANSIENT 는 max_retry 까지 같은 작업을 재시도하고, 소진하면 실패로
+        기록하고 다음으로 간다. 시퀀스 중에는 is_working 이 켜져 창이 잠기고 모니터링은 멈춘다. 끝나면 sig_sequence_report.
+        반환: SEQUENCE/PENDING/REBOOT 중 BUSY, 미연결 NOT_CONNECTED, 작업 없음 EMPTY, 시작 OK."""
+        if self._state in (_WorkerState.SEQUENCE, _WorkerState.REBOOT, _WorkerState.PENDING):
+            return StartResult.BUSY
+
+        if not ServicePort().connect_info:
+            return StartResult.NOT_CONNECTED
+
+        jobs = [_Job(_JobOp.READ, spec, max_retry=max_retry) for spec in self._read_specs_of(params)]
+        if not jobs:
+            return StartResult.EMPTY
+
+        self._stop_all()
+        self._start_sequence(jobs, SequenceKind.CAPTURE)
+        return StartResult.OK
+
+    def raw_write(self, jobs: list[tuple[str, str]], max_retry: int = 3) -> StartResult:
+        """(tag, 완성된 패킷) 목록을 순서대로 보내는 RAW 시퀀스를 시작한다 — 복원 (Local 전환 패킷도 목록의 한 항목).
+
+        판정은 raw_write_spec_of(packet) 의 spec: NV2 쓰기 패킷은 장비 오류 코드를 REJECTED/NOT_SUPPORT 로 판정해 재시도하지
+        않고 실패로 기록하며, 잡음(접두 불일치·빈 응답)만 max_retry 까지 재시도한다. 실패해도 다음 항목으로 진행한다.
+        반환은 capture() 와 같다."""
+        if self._state in (_WorkerState.SEQUENCE, _WorkerState.REBOOT, _WorkerState.PENDING):
+            return StartResult.BUSY
+
+        if not ServicePort().connect_info:
+            return StartResult.NOT_CONNECTED
+
+        raw_jobs = [_Job(_JobOp.RAW, raw_write_spec_of(packet), max_retry=max_retry, tag=tag) for tag, packet in jobs]
+        if not raw_jobs:
+            return StartResult.EMPTY
+
+        self._stop_all()
+        self._start_sequence(raw_jobs, SequenceKind.RAW)
+        return StartResult.OK
+
+    def abort_sequence(self) -> bool:
+        """사용자 취소 — CAPTURE/RAW 시퀀스를 끊고 그때까지의 결과를 SequenceEnd.ABORTED 로 보고한다.
+        보내 둔 요청의 응답은 seq 로 폐기된다. REFRESH/WRITE 시퀀스에는 쓰지 않는다 (False)."""
+        if self._state != _WorkerState.SEQUENCE or self._seq_kind not in (SequenceKind.CAPTURE, SequenceKind.RAW):
+            return False
+
+        report = self._take_report(SequenceEnd.ABORTED)
+        self._log.info(f"{self._seq_kind.name.lower()} aborted by user ({len(report.results)}/{report.total} jobs done)")
+        self._stop_all()
+        self._enter_idle()
+        self.sig_sequence_report.emit(report)
+        return True
+
+    def _take_report(self, end: SequenceEnd) -> SequenceReport | None:
+        """CAPTURE/RAW 시퀀스면 지금까지의 결과로 보고서를 만들고 결과를 비운다 — 그 밖의 시퀀스는 None.
+        보고는 _finish_sequence(COMPLETED) / abort_sequence(ABORTED) / handle_disconnected(DISCONNECTED) 세 곳에서만 낸다.
+        _stop_all() 자체는 보고하지 않는다 (refresh/write/재부팅/cleanup 경로 — CAPTURE/RAW 가 돌 때는 창이 잠겨 들어오지
+        않고, cleanup 은 창이 닫히는 중이라 보고할 곳이 없다)."""
+        if self._seq_kind not in (SequenceKind.CAPTURE, SequenceKind.RAW):
+            return None
+        report = SequenceReport(self._seq_kind, self._seq_results, len(self._jobs), end)
+        self._seq_results = []
+        return report
 
     # ------------------------------------------------------------ 재부팅
     def cancel_reboot(self):
@@ -644,11 +718,13 @@ class ParameterRunWorker(QObject):
         ServicePort().open(setting)
 
     # ------------------------------------------------------------ 작업 큐 처리
-    def _start_sequence(self, jobs: list[_Job], is_refresh: bool):
+    def _start_sequence(self, jobs: list[_Job], kind: SequenceKind):
         self._seq += 1
         self._jobs = jobs
         self._job_index = 0
-        self._seq_is_refresh = is_refresh
+        self._job_retry = 0
+        self._seq_kind = kind
+        self._seq_results = []
         self._skipped_write_params = []
         self._state = _WorkerState.SEQUENCE
         self.is_working = True
@@ -687,46 +763,38 @@ class ParameterRunWorker(QObject):
 
     def _handle_sequence_result(self, packet, response, spec: PacketSpec, err_type):
         job = self._jobs[self._job_index]
+        outcome = spec.apply_response(response)   # 통신 오류는 빈 응답으로 들어가 TRANSIENT(COMMUNICATION_ERR)
 
-        if job.op is _JobOp.READ:
-            outcome = spec.apply_response(response)
+        is_error = err_type != SvcPortErrType.NONE or outcome.reason is not ParamParseErrType.NONE
+        err_msg = err_type.name if err_type != SvcPortErrType.NONE else outcome.reason.name
+        self._log_transaction(packet, response, spec, err_msg if is_error else "", is_error=is_error)
+        # UNCHECKED(RW 쓰기)는 reason NONE 이라 정상 로그
 
-            if err_type != SvcPortErrType.NONE:
-                # 읽기 통신 오류 — 같은 작업 무한 재시도 (의도된 동작, 모듈 주석 참고)
-                self._log_transaction(packet, response, spec, err_type.name, is_error=True)
-                self._send_current_job()
-                return
-
-            if outcome.reason is not ParamParseErrType.NONE:
-                self._log_transaction(packet, response, spec, outcome.reason.name, is_error=True)
-                if outcome.need_retry:   # 부류 TRANSIENT — NOT_SUPPORT/REJECTED 는 다음 작업
-                    self._send_current_job()
-                    return
-            else:
-                self._log_transaction(packet, response, spec)
-
-                # refresh 읽기 성공 = 장비 값으로 동기화 확정 → 값이 안 변해도 통지하여
-                # UI 의 dirty 를 클리어하게 한다. write 후 read-back 은 제외 —
-                # 값이 그대로면 쓰기가 반영되지 않은 것이므로 dirty 가 유지되어야 한다.
-                if self._seq_is_refresh:
-                    for param in spec.params:
-                        param.notify_synced()
-
-        else:  # WRITE — 실패해도 로그만 남기고 계속 진행 (UNCHECKED 는 reason NONE 이라 정상 로그)
-            outcome = spec.apply_response(response)
-
-            if err_type != SvcPortErrType.NONE:
-                self._log_transaction(packet, response, spec, err_type.name, is_error=True)
-            elif outcome.reason is not ParamParseErrType.NONE:
-                self._log_transaction(packet, response, spec, outcome.reason.name, is_error=True)
-            else:
-                self._log_transaction(packet, response, spec)
-
+        if job.op is _JobOp.WRITE:
+            # 쓰기 — 실패해도 로그만 남기고 계속 진행. 재접속 param 이면 결과와 무관하게 재부팅 대기 (N045 결정)
             if any(param.is_need_reconnect for param in spec.params):
                 self._start_reboot()
                 return
+        else:  # READ / RAW
+            if outcome.need_retry and (job.max_retry is None or self._job_retry < job.max_retry):
+                # 부류 TRANSIENT — 같은 작업 재시도 (refresh 는 무제한, CAPTURE/RAW 는 상한까지)
+                self._job_retry += 1
+                self._send_current_job()
+                return
+
+            if self._seq_kind in (SequenceKind.CAPTURE, SequenceKind.RAW):
+                # 성공이든 실패(소진/거부/미지원)든 기록. 선로 원문은 지금 떠 둔다 — apply_response 직후라 다른 읽기가 끼어들 틈이 없다
+                lines = {p: p.str_value for p in spec.params} if outcome.verdict is Verdict.OK else {}
+                self._seq_results.append(JobResult(job.tag, spec.params, outcome, lines))
+            elif self._seq_kind is SequenceKind.REFRESH and outcome.reason is ParamParseErrType.NONE:
+                # refresh 읽기 성공 = 장비 값으로 동기화 확정 → 값이 안 변해도 통지하여
+                # UI 의 dirty 를 클리어하게 한다. write 후 read-back 은 제외 —
+                # 값이 그대로면 쓰기가 반영되지 않은 것이므로 dirty 가 유지되어야 한다.
+                for param in spec.params:
+                    param.notify_synced()
 
         # 다음 작업으로
+        self._job_retry = 0
         self._job_index += 1
         self.progress = int((self._job_index / len(self._jobs)) * 100)
 
@@ -736,22 +804,14 @@ class ParameterRunWorker(QObject):
             self._finish_sequence()
 
     def _finish_sequence(self):
-        was_refresh = self._seq_is_refresh
+        was_refresh = self._seq_kind is SequenceKind.REFRESH
+        report = self._take_report(SequenceEnd.COMPLETED)   # CAPTURE/RAW 만 — 비우기 전에
 
         self.is_working = False
         self.progress = 0
         self._jobs = []
         self._job_index = 0
-
-        # 유휴 -> read_param_list 모니터링 시작
-        if self.read_param_list:
-            self._state = _WorkerState.MONITOR
-            self._monitor_specs = []
-            self._monitor_index = 0
-            self._monitor_round = 0
-            self.monitor_timer.start(self.monitor_time_tick)
-        else:
-            self._state = _WorkerState.IDLE
+        self._enter_idle()
 
         # refresh 시퀀스 완료만 알린다 (write 완료에는 발화하지 않음) —
         # 윈도우가 이 시그널을 받아 CompoundRunWorker.start_polling() 등을 수행
@@ -768,6 +828,20 @@ class ParameterRunWorker(QObject):
         if self._skipped_write_params:
             skipped, self._skipped_write_params = self._skipped_write_params, []
             self.sig_write_skipped.emit(skipped)
+
+        if report is not None:
+            self.sig_sequence_report.emit(report)
+
+    def _enter_idle(self):
+        """시퀀스가 끝난 뒤의 유휴 상태 — read_param_list 가 있으면 모니터링, 없으면 IDLE."""
+        if self.read_param_list:
+            self._state = _WorkerState.MONITOR
+            self._monitor_specs = []
+            self._monitor_index = 0
+            self._monitor_round = 0
+            self.monitor_timer.start(self.monitor_time_tick)
+        else:
+            self._state = _WorkerState.IDLE
 
     # ------------------------------------------------------------ 기준 워커 조정
     @classmethod
@@ -841,6 +915,8 @@ class ParameterRunWorker(QObject):
         self.reboot_timer.stop()
         self._jobs = []
         self._job_index = 0
+        self._job_retry = 0
+        self._seq_results = []
         self._skipped_write_params = []
         self._state = _WorkerState.IDLE
         self.is_working = False

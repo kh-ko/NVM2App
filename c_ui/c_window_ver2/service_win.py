@@ -9,11 +9,10 @@ Apply/WO 쓰기)는 폴더 카드 창이므로 ParamWin 위에 남는다 — FU 
 1. 2단계 초기화 — __init__ 은 위젯만 만든다. 시그널 구독·초기 연결 동기화·잠금 확정은 start() 가 하고, WinManager.show_window 가
    생성 직후·show() 직전에 1회 부른다 (테스트는 직접 부른다). 그래서 서브클래스의 __init__ 이 끝난 뒤에만 핸들러가 불리며,
    "오버라이드 핸들러가 super().__init__() 중에도 불린다" 는 이유로 두던 클래스 기본값이 필요 없어진다 (N095/N072 뿌리).
-2. 잠금 단일 지점 — 본문·툴바 액션의 활성 여부는 _sync_lock_state() 한 곳이 정한다: 입력은 is_busy()(워커 is_working 에,
-   창이 워커 상태 머신 밖에서 돌리는 자기 작업 — 백업의 single read 연쇄, 복원의 raw write 연쇄 — 를 덧붙인 것), 편집 잠금
-   (_edit_locked), 창의 정책(locks_content). 창은 이 함수를 오버라이드하지 않고 locked_actions() / edit_locked_actions() 로
-   잠글 액션 이름만 돌려주며, 자기 작업의 시작·끝에서는 플래그를 바꾼 뒤 _sync_lock_state() 를 부른다. 본문을 트리·표·차트로
-   바꾸는 창은 set_body() 로 바꾸며, 그 안에서 잠금이 재확정된다.
+2. 잠금 단일 지점 — 본문·툴바 액션의 활성 여부는 _sync_lock_state() 한 곳이 정한다: 입력은 워커 is_working(refresh/write/
+   PENDING, 그리고 백업·복원 시퀀스 — data-protocol-2 이후 창의 긴 작업도 전부 워커 시퀀스다), 편집 잠금(_edit_locked),
+   창의 정책(locks_content). 창은 이 함수를 오버라이드하지 않고 locked_actions() / edit_locked_actions() 로 잠글 액션 이름만
+   돌려준다. 본문을 트리·표·차트로 바꾸는 창은 set_body() 로 바꾸며, 그 안에서 잠금이 재확정된다.
 3. 선택 구성 — has_refresh(Refresh 액션), with_param_worker(장비 param 을 다루지 않는 창: About/Application Update 는 False —
    상태바 연결·SN 표시만 한다), locks_content(표시 전용 본문: Firmware Update 는 False). 되돌리는 코드 대신 생성 인자로 고른다.
 
@@ -33,8 +32,8 @@ ParamWorkerWinMixin(쓰기 정책·재부팅 대기·연결 상태바)은 이 �
 
 ② 에서 의도적으로 달라진 동작 (2026-10-06):
 - Backup 창의 Backup, Restore 창의 Restore·Load File 은 워커 동작 중에도 비활성 (전에는 자기 작업 중에만 — 워커 refresh 중
-  눌리면 가드 없는 single_read_request/raw_write_request 가 refresh 시퀀스 사이에 끼어들었다). 자기 작업 중의 잠금도 같은
-  단일 지점을 거친다(is_busy) — 액션·트리의 활성 여부를 창이 따로 쓰지 않는다.
+  눌리면 가드 없는 단건 읽기/raw 쓰기가 refresh 시퀀스 사이에 끼어들었다). 2026-10-12 data-protocol-2 로 백업·복원 자체가 워커
+  시퀀스(capture/raw_write)가 되어 is_working 하나로 잠긴다 — ② 의 is_busy 훅은 역할이 없어져 제거했다.
 - About / Application Update 는 ParameterRunWorker 를 갖지 않는다 (등록 param 이 없어 refresh 가 늘 EMPTY 였다).
 - Application Update 의 릴리스 노트 조회는 생성자가 아니라 on_start()(show 직전) 에서 시작한다.
 """
@@ -164,9 +163,7 @@ class ServiceWin(ParamWorkerWinMixin, QMainWindow):
 
     서브클래스가 쓰는 훅
       set_body(central, lock_target=None)  본문을 놓는다 (한 번 이상 호출). lock_target 이 잠금 대상, 없으면 central.
-      is_busy()                            잠금의 입력 — 기본은 워커 is_working. 워커 밖에서 자기 작업을 돌리는 창(Backup/Restore)은
-                                           그 플래그를 덧붙이고, 작업 시작·끝에서 _sync_lock_state() 를 부른다.
-      locked_actions()                     is_busy() 중 비활성화할 툴바 액션 이름들 (예: Backup 창의 "Backup").
+      locked_actions()                     워커 동작 중 비활성화할 툴바 액션 이름들 (예: Backup 창의 "Backup").
       edit_locked_actions()                편집 잠금 중에도 비활성화할 액션 이름들 (ParamWin: Apply/Save File/Load File).
       on_start()                           start() 의 마지막 — 초기 연결 동기화가 끝난 뒤 창별 시작 동작(타이머, 자동 로드 등).
       on_working_changed(working)          워커 동작 변화에 창별로 덧붙일 일 (잠금 자체는 건드리지 않는다).
@@ -247,24 +244,19 @@ class ServiceWin(ParamWorkerWinMixin, QMainWindow):
     def is_working(self) -> bool:
         return self.param_worker is not None and self.param_worker.is_working
 
-    def is_busy(self) -> bool:
-        """잠금의 입력. 워커 동작(refresh/write/PENDING — 재부팅 대기는 is_working 밖이고 모달 대기 박스가 입력을 막는다)에,
-        워커 상태 머신 밖에서 창이 직접 돌리는 자기 작업(Backup 의 single read 연쇄, Restore 의 raw write 연쇄)을 덧붙이는 창은
-        이 메서드를 확장한다."""
-        return self.is_working
-
     def locked_actions(self) -> tuple[str, ...]:
-        """is_busy() 중 비활성화할 툴바 액션 이름들."""
+        """워커 동작(refresh/write/PENDING/백업·복원 시퀀스 — 재부팅 대기는 is_working 밖이고 모달 대기 박스가 입력을 막는다)
+        중 비활성화할 툴바 액션 이름들."""
         return ()
 
     def edit_locked_actions(self) -> tuple[str, ...]:
-        """편집 잠금(_edit_locked) 중에도 비활성화할 툴바 액션 이름들 — is_busy() 중에도 당연히 잠긴다."""
+        """편집 잠금(_edit_locked) 중에도 비활성화할 툴바 액션 이름들 — 워커 동작 중에도 당연히 잠긴다."""
         return ()
 
     def _sync_lock_state(self) -> None:
-        """본문·툴바 액션의 활성 여부를 정하는 유일한 곳. 오버라이드하지 않는다 — 입력(is_busy, locks_content, 잠금 목록)으로
-        조정한다. 자기 작업의 플래그를 바꾼 창은 이 메서드를 불러 반영한다."""
-        busy = self.is_busy()
+        """본문·툴바 액션의 활성 여부를 정하는 유일한 곳. 오버라이드하지 않는다 — 입력(is_working, locks_content, 잠금 목록)으로
+        조정한다."""
+        busy = self.is_working
         if self.locks_content and self.content_widget is not None:
             self.content_widget.setEnabled(not busy and not self._edit_locked)
         for name in self.locked_actions():

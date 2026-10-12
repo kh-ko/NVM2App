@@ -4,16 +4,20 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QTreeWidgetItem
 
-from b_core.b_datatype.general_enum import ParamAccType, SvcPortErrType
+from b_core.b_datatype.general_enum import ParamAccType
 from b_core.b_datatype.parameter import Parameter
 from b_core.b_datatype.param_enum import SysUserInterfaceEnum
 from b_core.c_manager.app_log_manager import AppLogManager
+from b_core.e_worker_ver2.parameter_run_worker import SequenceEnd, SequenceReport, StartResult
 from b_core.f_helper import backup_file_helper, firmware_util
+from b_core.g_protocol.packet_spec import Verdict
 from b_core.g_protocol.spec_registry import SpecRegistry
 from c_ui.b_control_ver2.b_base.trees import BaseTreeWidget
 from c_ui.c_window_ver2.service_win import ServiceWin
+from c_ui.c_window_ver2.x_message.backup_restore_message_box import ask_save_partial_backup
 from c_ui.c_window_ver2.x_message.firmware_update_message_box import (NoBackupChoice,
                                                                        ask_close_without_backup)
+from c_ui.c_window_ver2.x_message.param_result_message_box import show_param_write_warning
 
 # 사용자 인터페이스 값에 따라 트리에 포함할 Interface 폴더 판정용
 _DEVICENET_IFACE_VALUES = {SysUserInterfaceEnum.DEVICENET.value,
@@ -27,10 +31,13 @@ _ETHERCAT_IFACE_VALUES = {SysUserInterfaceEnum.ETHERCAT.value}
 
 
 class BackupWin(ServiceWin):
-    """파라미터 백업 창 — 본문은 백업 대상 체크박스 트리, 툴바는 Backup 하나 (Refresh 없음).
+    """파라미터 백업 창 — 본문은 백업 대상 체크박스 트리, 툴바는 Backup / Abort (Refresh 없음).
 
-    백업은 체크된 param 을 single_read_request 로 하나씩 읽는 연쇄라 워커 상태 머신 밖이다 — 진행 중 잠금은 is_busy() 로
-    ServiceWin 의 잠금 단일 지점에 얹는다 (트리·Backup 액션). 끊기면 handle_changed_connection_info 가 중단한다.
+    백업 = 워커의 CAPTURE 시퀀스(param_worker.capture): 체크된 param 을 읽기 spec 으로 읽고, 잡음은 RETRY_MAX 까지 재시도,
+    끝나면 sig_sequence_report 로 작업별 결과가 온다 (data-protocol-2, 2026-10-12). 시퀀스 중에는 워커 is_working 으로 트리와
+    Backup 이 잠기고 Abort 만 살아 있다. 성공한 param 의 str_value(선로 원문)로 파일 행을 만들며, 누락(재시도 소진·거부·미지원·
+    spec 없음)이 있으면 목록을 보이고 그것 없이 저장할지 묻는다 (F085/F086/F087). 끊김·Abort 로 중단되면 로그만 남기고 파일은
+    만들지 않는다.
 
     is_fu_backup=True (펌웨어 업데이트 전 백업 모드):
     - 기본 체크 대상이 fu_backup param 으로 바뀐다
@@ -42,20 +49,22 @@ class BackupWin(ServiceWin):
 
     sig_fu_backup_closed = Signal(bool, str)  # FU 모드 전용: (continue_update, saved_file_path)
 
+    RETRY_MAX = 3  # 항목당 잡음 재시도 횟수 (복원과 같음, 2026-10-12 결정)
+
     def __init__(self, parent=None, win_name = None, is_fu_backup = False):
         super().__init__(parent, win_name, has_refresh=False)
         self.is_fu_backup = is_fu_backup
         self._fu_saved_file = None  # FU 모드에서 저장된 백업 파일 경로
-        self._is_backup_running = False
-        self.backup_params = []
-        self.backup_contents = []
+        self._backup_params: list[Parameter] = []  # 이번 백업의 대상 스냅샷 (파일 순서 = 스키마 순서, 누락 계산용)
 
         # 진행 로그는 이 창의 LogView(상태바 Log View 버튼)로 확인한다 —
         # param_worker 와 같은 source(win_name)를 쓰므로 한 뷰에 모인다
         self._log = AppLogManager().get_logger(self.win_name)
 
         self.toolbar.add_action("Backup", self.on_clicked_backup)
-        self.param_worker.sig_single_read_result.connect(self.handle_single_read_result)
+        self.toolbar.add_action("Abort", self.on_clicked_abort)
+        self.toolbar.set_action_enabled("Abort", False)   # 백업 시퀀스가 도는 동안만 활성
+        self.param_worker.sig_sequence_report.connect(self.handle_sequence_report)
 
         # 트리 구성 필터에 쓰이는 User Interface / Firmware Version 값을 refresh 로 읽어온다
         # (이 창에는 param 위젯이 없으므로 직접 등록)
@@ -81,12 +90,7 @@ class BackupWin(ServiceWin):
         if self.firmware_version_param is not None:
             self.firmware_version_param.sig_value_changed.connect(self.handle_changed_firmware_version)
 
-        self.set_body(self.tree)  # 잠금 대상 = 트리 (워커 동작 중·백업 진행 중)
-
-    # ------------------------------------------------------------ 잠금 (ServiceWin._sync_lock_state 의 입력)
-    def is_busy(self):
-        # 백업의 single read 연쇄는 워커 상태 머신 밖이라 is_working 에 잡히지 않는다
-        return super().is_busy() or self._is_backup_running
+        self.set_body(self.tree)  # 잠금 대상 = 트리 (워커 동작 중 — 백업 시퀀스 포함)
 
     def locked_actions(self):
         return ("Backup",)
@@ -246,89 +250,59 @@ class BackupWin(ServiceWin):
         return [param for param, item in self._item_by_param.items()
                 if item.checkState(0) == Qt.CheckState.Checked]
 
-    # ------------------------------------------------------------ 백업 실행
+    # ------------------------------------------------------------ 백업 실행 (워커 CAPTURE 시퀀스)
     def on_clicked_backup(self):
-        if self._is_backup_running:
-            return
-
-        if not self.svc_port.connect_info:
-            QMessageBox.warning(self, "Connection Error",
-                                "Communication is not connected. Please check the connection status.")
-            return
-
-        self.backup_params = self._get_checked_params()
-        self.backup_contents = []
-
-        if not self.backup_params:
+        params = self._get_checked_params()
+        if not params:
             QMessageBox.information(self, "Information", "There are no parameters checked for backup.")
             return
 
-        self._is_backup_running = True
-        self._sync_lock_state()  # Backup 액션·트리 잠금 (진행 중 체크 변경 방지)
-        self.statusbar.set_progress(0)
-        self._log.info("[Backup Start !!!]")
-        self.param_worker.single_read_request(self.backup_params[0])
-
-    def handle_changed_connection_info(self, info: str):
-        super().handle_changed_connection_info(info)
-
-        # 연결이 끊기면 진행 중 백업을 중단한다 — single read 는 워커 상태 머신
-        # 밖이라 handle_disconnected() 로는 멈추지 않는다.
-        # (in-flight 응답은 _is_backup_running 가드로 폐기됨)
-        if not info and self._is_backup_running:
-            self._log.error("[Backup Aborted]: connection lost")
-            self._finish_backup()
-
-    def handle_single_read_result(self, req_msg:str, resp_msg: str, param: Parameter, err_type:SvcPortErrType):
-        if not self._is_backup_running:
+        result = self.param_worker.capture(params, max_retry=self.RETRY_MAX)
+        if result != StartResult.OK:
+            show_param_write_warning(self, result)   # NOT_CONNECTED / BUSY — 진행률·잠금은 워커 시그널이 맡는다
             return
 
-        if err_type != SvcPortErrType.NONE:
-            # 연결된 상태의 일시적 오류만 재시도한다 (끊김은 connection_info 경유 중단)
-            self._log.error(f"[Port Error]: Parameter = {param.path}.{param.name}, packet = {req_msg}, err_type = {err_type.name}")
-            self.param_worker.single_read_request(param)
-            return
+        self._backup_params = params
+        self.toolbar.set_action_enabled("Abort", True)
+        self._log.info(f"[Backup Start !!!]: {len(params)} items")
 
-        # 응답 검증과 저장 패킷 생성은 spec 에 맡긴다 — 이 창은 프로토콜 형식을 모른다.
-        # 파일에는 쓰기 패킷을 그대로 저장한다 (결정 10: 현행 형식 유지)
-        registry = SpecRegistry()
-        read_spec = registry.get_read_spec(param)
-        write_spec = registry.get_write_spec(param)
-        resp_check_prefix = read_spec.expected_response_prefix if read_spec is not None else None
+    def on_clicked_abort(self):
+        self.param_worker.abort_sequence()   # 결과는 handle_sequence_report(end=ABORTED) 로
 
-        if resp_check_prefix is None or write_spec is None or not resp_msg.startswith(resp_check_prefix):
-            self._log.error(f"[Packet Error]: Parameter = {param.path}.{param.name}, packet = {resp_msg}")
-        else:
-            self._log.info(f"[Success]: Parameter = {param.path}.{param.name}")
-            value = resp_msg[len(resp_check_prefix):]
-            # 백업 파일은 선로 원문 그대로 — codec 을 거치지 않는 build_request_line (복원 독립성)
-            content = f"{param.path}.{param.name}, {write_spec.build_request_line(value)}"
-            self.backup_contents.append(content)
+    def handle_sequence_report(self, report: SequenceReport):
+        self.toolbar.set_action_enabled("Abort", False)
 
-        try:
-            current_idx = self.backup_params.index(param)
-            next_idx = current_idx + 1
-
-            self.statusbar.set_progress(int((next_idx / len(self.backup_params)) * 100))
-
-            if next_idx < len(self.backup_params):
-                next_param = self.backup_params[next_idx]
-                self.param_worker.single_read_request(next_param)
+        # 성공한 param 의 선로 원문은 보고서가 읽은 자리에서 떠 둔 사본(lines)으로 — 값은 보통 읽기처럼 param 에도 반영됐다.
+        # 실패는 사유와 함께 로그에
+        captured: dict[Parameter, str] = {}
+        for result in report.results:
+            names = ", ".join(f"{p.path}.{p.name}" for p in result.params)
+            if result.outcome.verdict is Verdict.OK:
+                captured.update(result.lines)
+                self._log.info(f"[Success]: Parameter = {names}")
             else:
-                self._log.info("[Backup Completed Successfully !!!]")
-                self._finish_backup()
-                self.save_backup_to_file()
+                self._log.error(f"[Read Failed]: Parameter = {names}, {result.outcome.reason.name}")
 
-        except ValueError:
-            self._log.error(f"[Error]: Parameter {param.name} is not in backup list.")
-            self._finish_backup()
+        if report.end is not SequenceEnd.COMPLETED:
+            # 사용자 취소 / 끊김 — 파일은 만들지 않는다 (끊김은 상태바가 보인다, 2026-10-12 결정)
+            self._log.error(f"[Backup Aborted]: {report.end.name.lower()} ({len(report.results)}/{report.total} reads done)")
+            return
 
-    def _finish_backup(self):
-        self._is_backup_running = False
-        self._sync_lock_state()
-        self.statusbar.set_progress(0)
+        # 누락 = 체크했는데 성공하지 못한 것 (재시도 소진·거부·미지원·spec 없음) — 스키마 순서 유지
+        missing = [p for p in self._backup_params if p not in captured]
+        self._log.info("[Backup Completed]" + (f": {len(missing)} missing" if missing else " Successfully !!!"))
 
-    def save_backup_to_file(self):
+        if missing and not ask_save_partial_backup(self, [f"{p.path}.{p.name}" for p in missing]):
+            self._log.info("[Save Cancelled]: partial backup not saved")
+            return
+
+        # 파일 행은 쓰기 패킷 그대로 — 읽은 선로 원문을 codec 없이 build_request_line 으로 (복원 독립성, 결정 10). 순서는 스키마 순서
+        registry = SpecRegistry()
+        contents = [f"{p.path}.{p.name}, {registry.get_write_spec(p).build_request_line(captured[p])}"
+                    for p in self._backup_params if p in captured]
+        self.save_backup_to_file(contents)
+
+    def save_backup_to_file(self, contents: list[str]):
         # FU 모드는 파일명을 제안한다 — 업데이트 후 복원 창이 이 파일을 자동 로드하므로
         # 어떤 장비의 어느 시점 백업인지 이름만으로 알 수 있게 한다
         default_name = ""
@@ -353,7 +327,7 @@ class BackupWin(ServiceWin):
             user_iface_value = self.user_iface_param.value if self.user_iface_param is not None else None
             header = backup_file_helper.build_header(firmware_value, user_iface_value)
 
-            file_data = "\n".join([header] + self.backup_contents)
+            file_data = "\n".join([header] + contents)
 
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(file_data)

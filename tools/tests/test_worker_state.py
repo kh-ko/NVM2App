@@ -11,6 +11,12 @@
      기준 시퀀스가 끝나면 자동으로 시작해 MONITOR 에 닿는다; 기준 워커 자신도 refresh 중 write 는 BUSY
   4. write: MONITOR 중 write → 쓰기 요청 1건 → read-back → MONITOR 복귀, sig_finish_refresh 는 발화하지 않음
   5. 끊김: handle_disconnected → DISCONNECTED, 타이머 정지, 요청 중단; 미연결 refresh 는 NOT_CONNECTED
+  6. capture(백업, data-protocol-2): 잡음은 max_retry 까지 같은 작업 재시도 뒤 실패 기록, 성공은 값 반영, 보고 1회(COMPLETED, 작업별
+     Outcome), 시퀀스 중 is_working·BUSY, 끝나면 MONITOR 복귀
+  7. raw_write(복원): NV2 쓰기 패킷의 장비 거부(p:78)는 재시도 없이 REJECTED, 빈 응답은 상한까지 재시도 뒤 TRANSIENT, 정상은 OK —
+     꼬리표가 보고에 그대로
+  8. abort_sequence: 보내 둔 요청의 응답은 폐기, ABORTED 보고(그때까지의 결과), MONITOR 복귀; refresh/write 시퀀스에는 False
+  9. 끊김 중 보고: capture 도중 handle_disconnected → DISCONNECTED 보고 뒤 DISCONNECTED 상태
 """
 
 from __future__ import annotations
@@ -39,42 +45,13 @@ QTimer.singleShot(90000, lambda: (print("TIMEOUT", flush=True), os._exit(3)))
 from b_core.b_datatype.general_enum import ParamAccType, ParamDataType, SvcPortErrType  # noqa: E402
 from b_core.c_manager.parameter_manager import ParamManager  # noqa: E402
 from b_core.d_dal.service_port import ServicePort  # noqa: E402
-from b_core.e_worker_ver2.parameter_run_worker import ParameterRunWorker, StartResult, _WorkerState  # noqa: E402
+from b_core.e_worker_ver2.parameter_run_worker import (ParameterRunWorker, SequenceEnd, SequenceKind,  # noqa: E402
+                                                       StartResult, _WorkerState)
 from b_core.g_protocol.codec import TextCodec  # noqa: E402
+from b_core.g_protocol.packet_spec import Verdict  # noqa: E402
 from b_core.g_protocol.spec_registry import SpecRegistry  # noqa: E402
 
-
-class ScriptedTransport:
-    """request_string(packet) 대역 — 요청마다 스크립트의 응답을 순서대로 돌려주고(마지막 것 반복) 요청을 기록한다.
-
-    script: {요청 문자열: [응답, ...]}. 응답이 SvcPortErrType 이면 통신 오류로 ("", err) 를 돌려준다.
-    gate: {요청 문자열: threading.Event} — 이벤트가 set 될 때까지 응답을 미룬다 (기준 워커를 refresh 중에 붙들어 두는 용도).
-    스크립트에 없는 요청은 '응답 없음'(READ_TIMEOUT) 으로 처리한다."""
-
-    def __init__(self, script: dict):
-        self._script = {k: list(v) if isinstance(v, (list, tuple)) else [v] for k, v in script.items()}
-        self._lock = threading.Lock()
-        self.requests: list[str] = []
-        self.gate: dict[str, threading.Event] = {}
-
-    def request_string(self, packet: str):
-        with self._lock:
-            self.requests.append(packet)   # 도착 즉시 기록 — gate 에 붙들린 요청도 '보냈다' 로 센다
-        gate = self.gate.get(packet)
-        if gate is not None:
-            gate.wait(10)
-        with self._lock:
-            responses = self._script.get(packet)
-            if not responses:
-                return "", SvcPortErrType.READ_TIMEOUT_ERROR
-            response = responses.pop(0) if len(responses) > 1 else responses[0]
-        if isinstance(response, SvcPortErrType):
-            return "", response
-        return response, SvcPortErrType.NONE
-
-    def count(self, packet: str) -> int:
-        with self._lock:
-            return self.requests.count(packet)
+ScriptedTransport = _harness.ScriptedTransport   # 하네스 단일본 (창 테스트와 공유)
 
 
 def pump(cond, timeout_s: float, label: str) -> bool:
@@ -103,9 +80,10 @@ def main() -> int:
         return rep.summary()
     num_a, num_b = nums
     rs_sn, rs_a, rs_b = (reg.get_read_spec(p) for p in (sn, num_a, num_b))
-    ws_b = reg.get_write_spec(num_b)
+    ws_a, ws_b = reg.get_write_spec(num_a), reg.get_write_spec(num_b)
     req_sn, req_a, req_b = rs_sn.build_request(), rs_a.build_request(), rs_b.build_request()
     write_b = ws_b.build_request({num_b: 5})
+    raw_ok, raw_rej, raw_noise = ws_b.build_request({num_b: 6}), ws_a.build_request({num_a: 3}), ws_b.build_request({num_b: 9})
 
     def ok(spec, value):
         return spec.expected_response_prefix + str(value)
@@ -113,7 +91,13 @@ def main() -> int:
     # 기준 워커(MainWin 역할): init [SN], read [num_a]. 보조 워커(설정 창 역할): read [num_b]
     t_main = ScriptedTransport({req_sn: [SvcPortErrType.READ_TIMEOUT_ERROR, ok(rs_sn, "SN123")],   # 통신 오류 1회 → 재시도
                                 req_a: ["p:", "garbage", ok(rs_a, 7)]})                           # WRONG_FORMAT, WRONG_PREFIX → 재시도
-    t_sub = ScriptedTransport({req_b: ok(rs_b, 11), write_b: ws_b.expected_response_prefix})
+    t_sub = ScriptedTransport({req_b: ok(rs_b, 11), write_b: ws_b.expected_response_prefix,
+                               req_a: ["p:", "x", "y", "z", ok(rs_a, 42)],                 # capture: 잡음 4번 뒤 정상
+                               raw_ok: ws_b.expected_response_prefix,                        # raw: 정상
+                               raw_rej: "p:78" + ws_a.expected_response_prefix[4:],         # raw: 장비 거부 (오류 코드 78)
+                               raw_noise: ["", "", "", "", ws_b.expected_response_prefix]})  # raw: 빈 응답 4번 뒤 정상
+    reports = []
+    w_sub_report = reports.append
     w_main = ParameterRunWorker(log_source="T_main", is_primary=True, transport=t_main, monitor_tick=10)
     w_sub = ParameterRunWorker(log_source="T_sub", transport=t_sub, monitor_tick=10)
     w_main.add_init_param_ptr(sn); w_main.add_read_param_ptr(num_a)
@@ -121,6 +105,7 @@ def main() -> int:
     finished = {"main": 0, "sub": 0}
     w_main.sig_finish_refresh.connect(lambda: finished.__setitem__("main", finished["main"] + 1))
     w_sub.sig_finish_refresh.connect(lambda: finished.__setitem__("sub", finished["sub"] + 1))
+    w_sub.sig_sequence_report.connect(w_sub_report)
     for p in (sn, num_a, num_b):
         p._value = None; p.str_value = ""
 
@@ -168,8 +153,70 @@ def main() -> int:
             rep.check(req_b in t_sub.requests[idx + 1:], "쓰기 뒤 read-back")
             rep.check(finished["sub"] == 1, "write 완료에는 sig_finish_refresh 가 발화하지 않는다")
 
+            # ---------------------------------------------------- 6. capture (백업) — 상한 재시도·실패 기록·보고
+            n_a0 = t_sub.count(req_a)
+            rep.check(w_sub.capture([num_a, num_b], max_retry=2) is StartResult.OK, "capture 시작 OK")
+            rep.check(w_sub.is_working and w_sub._state is _WorkerState.SEQUENCE, "capture 중 is_working/SEQUENCE")
+            rep.check(w_sub.capture([num_a], max_retry=2) is StartResult.BUSY and w_sub.write([(num_b, 5)]) is StartResult.BUSY,
+                      "capture 중 capture/write → BUSY")
+            pump(lambda: len(reports) == 1, 5, "capture 보고")
+            r = reports[0] if reports else None
+            rep.check(r is not None and r.kind is SequenceKind.CAPTURE and r.end is SequenceEnd.COMPLETED and r.total == 2,
+                      f"capture 보고: {r}")
+            rep.check(r is not None and [x.params for x in r.results] == [(num_a,), (num_b,)], "보고 순서 = 작업 순서, params 포함")
+            rep.check(r is not None and r.results[0].lines == {} and r.results[1].lines == {num_b: "11"},
+                      f"성공 작업만 읽은 선로 원문 사본(lines): {[x.lines for x in r.results] if r else None}")
+            rep.check(r is not None and r.results[0].outcome.verdict is Verdict.TRANSIENT and r.results[1].outcome.verdict is Verdict.OK,
+                      f"num_a 는 재시도 소진(TRANSIENT), num_b 는 OK: {[x.outcome.verdict.name for x in r.results] if r else None}")
+            rep.check(t_sub.count(req_a) - n_a0 == 3, f"max_retry=2 → 같은 요청 3번 (실제 {t_sub.count(req_a) - n_a0})")
+            rep.check(num_b.value == 11 and not num_b.is_err,
+                      "성공 param 은 값 반영 (num_a 의 is_err 는 기준 워커의 모니터링 정상 읽기가 곧바로 되돌리므로 보고의 Outcome 으로 본다)")
+            rep.check(w_sub._state is _WorkerState.MONITOR and not w_sub.is_working, "capture 뒤 MONITOR 복귀")
+
+            # ---------------------------------------------------- 7. raw_write (복원) — 거부는 재시도 없음, 잡음은 상한까지
+            reports.clear()
+            rep.check(w_sub.raw_write([("ok", raw_ok), ("rej", raw_rej), ("noise", raw_noise)], max_retry=1) is StartResult.OK,
+                      "raw_write 시작 OK")
+            pump(lambda: len(reports) == 1, 5, "raw 보고")
+            r = reports[0] if reports else None
+            rep.check(r is not None and r.kind is SequenceKind.RAW and r.end is SequenceEnd.COMPLETED and r.total == 3
+                      and [x.tag for x in r.results] == ["ok", "rej", "noise"], f"raw 보고 꼬리표: {r}")
+            rep.check(r is not None and [x.outcome.verdict.name for x in r.results] == ["OK", "REJECTED", "TRANSIENT"],
+                      f"raw 부류: {[x.outcome.verdict.name for x in r.results] if r else None}")
+            rep.check(t_sub.count(raw_rej) == 1 and t_sub.count(raw_noise) == 2,
+                      f"거부 1회(재시도 없음) / 빈 응답은 max_retry=1 → 2회 (실제 {t_sub.count(raw_rej)}, {t_sub.count(raw_noise)})")
+            rep.check(all(x.params == () for x in r.results) if r else False, "raw 작업은 params 없음")
+            rep.check(w_sub._state is _WorkerState.MONITOR and not w_sub.is_working, "raw 뒤 MONITOR 복귀")
+
+            # ---------------------------------------------------- 8. abort_sequence
+            reports.clear()
+            t_sub.gate[raw_ok] = threading.Event()
+            n_ok0 = t_sub.count(raw_ok)
+            rep.check(w_sub.raw_write([("ok", raw_ok), ("rej", raw_rej)], max_retry=1) is StartResult.OK, "abort 용 raw 시작")
+            pump(lambda: t_sub.count(raw_ok) > n_ok0, 3, "첫 요청 도착")
+            rep.check(w_sub.abort_sequence() and len(reports) == 1 and reports[0].end is SequenceEnd.ABORTED
+                      and reports[0].results == [] and reports[0].total == 2, f"abort → ABORTED 보고(결과 0/2): {reports}")
+            rep.check(w_sub._state is _WorkerState.MONITOR and not w_sub.is_working, "abort 뒤 MONITOR 복귀·잠금 해제")
+            t_sub.gate[raw_ok].set()
+            app.processEvents(); time.sleep(0.05); app.processEvents()
+            rep.check(len(reports) == 1 and t_sub.count(raw_rej) == 1, "늦은 응답은 폐기 — 다음 작업으로 가지 않는다")
+            del t_sub.gate[raw_ok]
+            rep.check(not w_sub.abort_sequence(), "시퀀스 없을 때 abort → False")
+            rep.check(w_sub.write([(num_b, 5)]) is StartResult.OK and not w_sub.abort_sequence(), "write 시퀀스에는 abort → False")
+            pump(lambda: w_sub._state is _WorkerState.MONITOR, 5, "write 종료")
+
+            # ---------------------------------------------------- 9. 끊김 중 보고 (capture 도중 끊김) — 5 와 이어진다
+            reports.clear()
+            t_sub.gate[req_a] = threading.Event()
+            n_a1 = t_sub.count(req_a)
+            rep.check(w_sub.capture([num_a], max_retry=1) is StartResult.OK, "끊김 용 capture 시작")
+            pump(lambda: t_sub.count(req_a) > n_a1, 3, "요청 도착")
+
             # ---------------------------------------------------- 5. 끊김
             w_sub.handle_disconnected()
+            rep.check(len(reports) == 1 and reports[0].kind is SequenceKind.CAPTURE and reports[0].end is SequenceEnd.DISCONNECTED
+                      and reports[0].results == [], f"끊김 → DISCONNECTED 보고: {reports}")
+            t_sub.gate[req_a].set()
             n_before = len(t_sub.requests)
             rep.check(w_sub._state is _WorkerState.DISCONNECTED and not w_sub.is_working
                       and not w_sub.monitor_timer.isActive(), "handle_disconnected → DISCONNECTED, 타이머 정지")

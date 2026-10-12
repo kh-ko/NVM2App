@@ -25,7 +25,7 @@ from b_core.e_worker_ver2.parameter_run_worker import StartResult
 
 
 def show_param_write_warning(parent, result: StartResult) -> None:
-    """write() 결과 중 경고 대상만 표시.
+    """write() 결과 중 경고 대상만 표시 — capture()/raw_write()(백업·복원 시퀀스) 의 시작 결과도 같은 문구를 쓴다.
 
     OK/EMPTY(표시할 것 없음), NEED_LOCAL_SWITCH(질문은 ask_local_switch 로)는
     표시하지 않는다."""
