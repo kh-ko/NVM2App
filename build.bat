@@ -28,15 +28,24 @@ if not exist ".venv" (
 
 :: 2. Get version from user
 ::    leading 'v'/'V' and spaces are stripped - app_info.py stores pure version ("1.0.0")
+::    USER_VERSION is cleared first and re-checked after every edit: an inherited environment variable
+::    or an empty Enter must not pass, and cmd expands a modifier on an undefined variable into
+::    literal text (" =") which would slip through a plain =="" test (F047)
+set "USER_VERSION="
 set /p USER_VERSION="Enter build version (e.g. 1.0.0): "
+if not defined USER_VERSION goto :empty_version
 set "USER_VERSION=%USER_VERSION: =%"
+if not defined USER_VERSION goto :empty_version
 if /i "%USER_VERSION:~0,1%"=="v" set "USER_VERSION=%USER_VERSION:~1%"
-if "%USER_VERSION%"=="" (
-    echo [ERROR] Version cannot be empty.
-    pause
-    exit /b 1
-)
+if not defined USER_VERSION goto :empty_version
+goto :version_ok
 
+:empty_version
+echo [ERROR] Version cannot be empty.
+pause
+exit /b 1
+
+:version_ok
 call .venv\Scripts\activate.bat
 
 :: 3. Prepare temp build folder + backup app_info.py (restored after build)

@@ -160,7 +160,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        self.chart_panel = MainChartPanel()
+        self.chart_panel = MainChartPanel(log_source=self.win_name)
         self.chart_panel.capture_btn.clicked.connect(self.on_clicked_analysis_chart)
         main_layout.addWidget(self.chart_panel)
 
@@ -640,6 +640,7 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         if not WinManager().close_all():
             event.ignore()
             return
+        self.chart_panel.stop_recording_for_exit()   # 기록 중 종료 — 파일을 닫고 위치를 로그에 (F067)
         event.accept()
 
     def handle_changed_acc_mode_param(self):

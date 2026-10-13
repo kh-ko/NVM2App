@@ -14,6 +14,7 @@
 - 매 append(200ms 배치)마다 flush — 비정상 종료 시에도 직전 배치까지 보존된다.
 - 저장 위치 확정(다이얼로그/이동)은 사용측(차트 패널) 몫이다. stop() 은
   파일만 닫고 임시 폴더 경로를 돌려준다.
+- 폴더/파일 만들기·쓰기·닫기의 OSError 는 그대로 호출측으로 간다 — 사용측이 세션을 끝내고 알린다 (F066/N099).
 
 읽기 (정적 — 기록 세션과 무관):
 - read_csv_files() 가 파싱/다중 파일 병합/timestamp 정렬/단위 코드 변환을
@@ -24,6 +25,7 @@
 
 import csv
 import os
+import shutil
 import tempfile
 import time
 
@@ -59,11 +61,16 @@ class ChartCSVFileHelper:
         self._file = None
         self._writer = None
         self._file_start = 0.0
-        self._open_new_file()
+        try:
+            self._open_new_file()
+        except OSError:
+            shutil.rmtree(self.record_dir, ignore_errors=True)   # 빈 세션 폴더를 남기지 않는다 (N099)
+            raise
 
     def _open_new_file(self):
         if self._file is not None:
             self._file.close()
+            self._file = None   # 새 파일을 못 열어도 _file 은 '열린 파일 또는 None' — 닫힌 파일에 다시 쓰지 않는다
 
         self._file_start = time.time()
 
@@ -102,11 +109,11 @@ class ChartCSVFileHelper:
         return "" if value != value else value
 
     def stop(self) -> str:
-        """기록을 종료하고 임시 폴더 경로를 반환한다 (폴더 이동은 사용측 몫)."""
-        if self._file is not None:
-            self._file.close()
-            self._file = None
-
+        """기록을 종료하고 임시 폴더 경로를 반환한다 (폴더 이동은 사용측 몫). 닫기의 OSError 는 호출측으로 —
+        직전 flush 까지의 데이터는 디스크에 있다."""
+        file, self._file = self._file, None
+        if file is not None:
+            file.close()
         return self.record_dir
 
     # ------------------------------------------------------------ 읽기 (정적)

@@ -113,7 +113,7 @@ class RestoreWin(ServiceWin):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 lines = f.read().splitlines()
-        except OSError as e:
+        except (OSError, UnicodeDecodeError) as e:
             self._log.error(f"[Error]: Failed to read file. {e}")
             QMessageBox.critical(self, "Error", f"An error occurred while reading the file:\n{e}")
             return

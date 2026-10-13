@@ -36,6 +36,7 @@ from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QMessageBox, QVBoxLayout
 
 from b_core.b_datatype import param_enum as p_enum
+from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper
 
@@ -66,9 +67,10 @@ _ROW_PRES_TGT = 4
 
 class MainChartPanel(PanelWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, log_source: str, parent=None):
         super().__init__(title=None, fit=True, parent=parent)
 
+        self._log = AppLogManager().get_logger(log_source)   # MainWin 의 LogView 에 보이도록 창 이름으로
         self.local_setting = LocalSettingManager()
         self.pres_converter = PresConverterManager()
 
@@ -364,7 +366,14 @@ class MainChartPanel(PanelWidget):
                 record_rows.append((data.timestamp, posi_act, posi_tgt, pres_act, pres_tgt, pres_unit))
 
         if record_rows is not None:
-            self._recorder.append(record_rows)
+            try:
+                self._recorder.append(record_rows)
+            except OSError as error:
+                # 쓰기 실패(디스크 부족 등) — 기록만 끝내고 차트는 계속 그린다 (F066)
+                record_dir = self._close_record_session()
+                self._log.error(f"[Record] write failed, recording stopped: {error} / data remains in: {record_dir}")
+                QMessageBox.warning(self, "Record",
+                                    f"Recording stopped: write failed ({error}).\nRecorded data remains in:\n{record_dir}")
 
         self._redraw()
 
@@ -496,17 +505,19 @@ class MainChartPanel(PanelWidget):
     # ------------------------------------------------------------ 기록 (Record)
     def on_clicked_record(self):
         if self._recorder is None:
-            self._recorder = ChartCSVFileHelper()
+            try:
+                self._recorder = ChartCSVFileHelper()
+            except OSError as error:
+                # 임시 폴더/첫 파일을 만들지 못함 — 기록은 시작되지 않았고 버튼은 Record 그대로 (N099)
+                self._log.error(f"[Record] cannot start recording: {error}")
+                QMessageBox.warning(self, "Record", f"Cannot start recording:\n{error}")
+                return
             self.record_btn.set_icon(icons.GLYPH_STOP, tokens().danger)
             self.record_btn.setText("Stop - 00:00:00")
             self._record_timer.start()
             return
 
-        record_dir = self._recorder.stop()
-        self._recorder = None
-        self._record_timer.stop()
-        self.record_btn.set_icon(icons.GLYPH_RECORD, tokens().danger)
-        self.record_btn.setText("Record")
+        record_dir = self._close_record_session()
 
         # 저장 폴더 이름 입력 — getExistingDirectory 는 새 이름 입력이 불가하므로
         # 파일 저장 다이얼로그를 '폴더 경로 입력'으로 사용한다
@@ -533,6 +544,25 @@ class MainChartPanel(PanelWidget):
             return
 
         QMessageBox.information(self, "Record", f"Recorded data saved to:\n{target}")
+
+    def _close_record_session(self) -> str:
+        """기록 세션을 닫고 임시 폴더 경로를 돌려준다 — 버튼·타이머도 Record 상태로. 닫기 실패는 로그만 (N099)."""
+        recorder, self._recorder = self._recorder, None
+        self._record_timer.stop()
+        self.record_btn.set_icon(icons.GLYPH_RECORD, tokens().danger)
+        self.record_btn.setText("Record")
+        try:
+            return recorder.stop()
+        except OSError as error:
+            self._log.error(f"[Record] closing the record file failed: {error}")
+            return recorder.record_dir
+
+    def stop_recording_for_exit(self):
+        """앱 종료 직전(MainWin.closeEvent) — 기록 중이면 파일을 닫고 남는 위치를 로그에만 남긴다 (F067)."""
+        if self._recorder is None:
+            return
+        record_dir = self._close_record_session()
+        self._log.warning(f"[Record] application closed while recording - data remains in: {record_dir}")
 
     def get_capture_snapshot(self):
         """현재 X 시간창에 표시 중인 구간의 스냅샷 (복사본 — 이후 실시간 갱신과 무관).

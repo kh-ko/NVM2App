@@ -7,7 +7,7 @@
   -> 성공: 스크립트 파일 생성 -> 다른 창 닫기 -> 앱 종료 -> aboutToQuit 에서 스크립트 기동
      (스크립트가 파일 교체 후 앱을 재실행한다). 어떤 창이 닫기/종료를 거부하면 설치하지
      않고 IDLE 로 돌아온다 — 스크립트가 먼저 떠서 앱 종료를 기다리다 실패하는 일이 없게.
-  -> 실패/중단: 메시지, 진행바는 멈춘 자리 유지
+  -> 실패/중단: 메시지, 퍼센트 진행바는 멈춘 자리 유지 (무한 표시였으면 0 으로 — F093)
 
 GUI 표시 정책: 사용자에게 보이는 것은 [Installed Version / Selected Version]
 과 진행바 하나뿐이다. 다운로드/압축 해제/스크립트 같은 세부 단계는 LogView
@@ -93,6 +93,11 @@ class _ProgressRow(QWidget):
     def set_busy(self):
         # 전체 크기를 모를 때(서버가 SIZE 미지원) — 무한 진행 표시
         self.progress.setRange(0, 0)
+
+    def stop_busy(self):
+        # 무한 진행(set_busy) 표시에는 '멈춘 자리' 가 없다 — 실패 뒤 0 으로 (F093). 퍼센트 표시는 멈춘 자리에 둔다
+        if self.progress.maximum() == 0:
+            self.set_value(0)
 
     def set_checked(self, checked: bool):
         self.check.set_checked(checked)
@@ -328,8 +333,12 @@ class HelpNvmUpdateWin(ServiceWin):
             app_update_helper.discard_package(self._prepare_version)
             ok, package_root, msg = False, "", ABORT_MESSAGE
 
+        # 준비 단계가 끝났다 — 무한 진행 표시는 여기서 0 으로 (F093). 이 아래 어느 분기로 IDLE 이 되어도 무한 애니메이션이
+        # 남지 않고, 퍼센트 진행바는 멈춘 자리에 둔다 (설치 확정은 set_checked 가 100 으로)
+        self.row_progress.stop_busy()
+
         if not ok:
-            # 진행바는 멈춘 자리에 둔다 — 세부 사유는 메시지와 LogView 로
+            # 세부 사유는 메시지와 LogView 로
             self._set_stage(_Stage.IDLE)
             if msg == ABORT_MESSAGE:
                 QMessageBox.information(self, "Application Update", "The update was aborted.")

@@ -194,7 +194,7 @@ class ParamWin(ServiceWin):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 loaded_data = json.load(f)
-        except (OSError, json.JSONDecodeError) as e:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
             QMessageBox.critical(self, "Error", f"An error occurred while reading the file:\n{e}")
             return
 

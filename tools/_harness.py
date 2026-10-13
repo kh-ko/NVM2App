@@ -7,7 +7,8 @@
 - isolate_runtime()      : 설정·로그·펌웨어 캐시 경로를 임시 폴더로 돌린다 — 실제 2_resource/config 를 더럽히지 않는다.
                            매니저 3종(AppLog/LocalSetting/ConnectionSetting)·ServicePort·펌웨어 창은 호출 시점에
                            path_def 를 읽으므로 앱 코드 수정 없이 동작한다. 반드시 b_core 매니저 import 전에 부른다.
-                           임시 폴더는 프로세스 종료 때 지운다 (F106/N131 — %TEMP% 누적 없음).
+                           임시 폴더는 프로세스 종료 때 지우고, 밖에서 죽어(러너 시간 초과 kill, 워치독 os._exit) 남은 것은
+                           1시간(_STALE_RUNTIME_SEC) 넘은 것부터 다음 실행이 지운다 (F106/N131 — %TEMP% 누적 없음).
 - Report                 : 검사 수 / 실패 수 / 메모 집계와 결과 출력 (파일마다 복사되던 클래스의 단일본, F107).
 - make_app()             : offscreen QApplication (이미 있으면 그것).
 - fake_connected(svc)    : ServicePort 를 '연결된 것처럼' 두는 컨텍스트 — 포트는 열지 않는다. transport 를 주입하지 않은
@@ -43,6 +44,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import traceback
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -51,6 +53,7 @@ FIXTURES_DIR = os.path.join(TOOLS_DIR, "fixtures")
 
 _runtime_dir: tempfile.TemporaryDirectory | None = None
 _CONFIG_FILES = ("local_setting.json", "connections.json", "ftp_connection.json")
+_STALE_RUNTIME_SEC = 3600   # 지난 실행의 격리 폴더로 보는 기준 — 러너 제한(600초)보다 넉넉히
 
 
 # ------------------------------------------------------------ 런타임 격리
@@ -67,6 +70,7 @@ def isolate_runtime(name: str = "nvm2app_test", copy_config: bool = True) -> str
         sys.path.insert(0, ROOT)
     from b_core.a_define import file_folder_path as path_def  # noqa: E402  (매니저 아님 — 상수 모듈)
 
+    _sweep_stale_runtime_dirs(f"{name}_")
     _runtime_dir = tempfile.TemporaryDirectory(prefix=f"{name}_", ignore_cleanup_errors=True)
     atexit.register(_cleanup_runtime)
     base = _runtime_dir.name
@@ -91,6 +95,26 @@ def isolate_runtime(name: str = "nvm2app_test", copy_config: bool = True) -> str
     path_def.RSRC_APP_CPU1_FILE = os.path.join(path_def.RSRC_TEMP_PATH, "fcpua.dlla")
     path_def.RSRC_APP_CPU2_FILE = os.path.join(path_def.RSRC_TEMP_PATH, "fcpub.dlla")
     return base
+
+
+def _sweep_stale_runtime_dirs(prefix: str) -> None:
+    """지난 실행이 남긴 격리 폴더를 지운다 — 테스트 프로세스가 밖에서 죽으면(러너 시간 초과 kill, 워치독 os._exit)
+    atexit 정리가 돌지 않아 %TEMP% 에 쌓인다 (2026-10-12 실측 29개). 폴더 mtime 이 기준 시간을 넘긴 것만 — mtime 은 직계 항목
+    (config/log/temp) 생성 때만 바뀌므로 같은 PC 에서 동시에 도는 테스트는 기준 시간 안에 끝나는 한 건드리지 않는다
+    (디버거로 1시간 넘게 멈춰 둔 개별 실행의 폴더는 지워질 수 있다 — 격리 사본이라 결과에는 영향 없음)."""
+    root = tempfile.gettempdir()
+    try:
+        entries = os.listdir(root)
+    except OSError:
+        return
+    now = time.time()
+    for entry in entries:
+        path = os.path.join(root, entry)
+        try:
+            if entry.startswith(prefix) and os.path.isdir(path) and now - os.path.getmtime(path) > _STALE_RUNTIME_SEC:
+                shutil.rmtree(path, ignore_errors=True)
+        except OSError:
+            pass
 
 
 def runtime_dir() -> str | None:
