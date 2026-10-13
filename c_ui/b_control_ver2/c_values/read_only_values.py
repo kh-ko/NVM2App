@@ -253,42 +253,6 @@ class ReadOnlyMultipleEnumValueWidget(ValueWidget):
     def is_dirty(self):
         return False
 
-class ReadOnlyScaleValueWidget(ValueWidget):
-    def __init__(self, label_text="", scale=100.0, label_width=150, is_vertical_mode = False, parent=None):
-        value_widget = BaseLabel("")
-        self.scale = scale
-        super().__init__(label_text = label_text, label_width = label_width, is_show_dirty = False, value_widget = value_widget, is_vertical_mode = is_vertical_mode, parent=parent)
-
-        self.set_value(None)
-
-    def set_value(self, value):
-        if value is not None:
-            value = value * self.scale
-
-        str_value = to_sig_str(value)
-
-        if str_value:
-            self.value_widget.setText(str_value)
-        else:
-            self.value_widget.setText(self._no_value_text(value))
-        self._sync_enabled()
-
-    def _value_allows_enable(self) -> bool:
-        return self.get_value() is not None  # 값 없음(Unknown) = 비활성 (RO 표시 정책)
-
-    def get_value(self):
-        try:
-            float_value = float(self.value_widget.text())
-            return float_value / self.scale
-        except Exception:
-            return None
-
-    def reg_value_widget_event(self):
-        self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)
-
-    def is_dirty(self):
-        return False
-
 class ReadOnlyIntValueWidget(ValueWidget):
     def __init__(self, label_text="", label_width=150, is_vertical_mode = False, parent=None):
         value_widget = BaseLabel("")

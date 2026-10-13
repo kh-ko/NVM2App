@@ -1,7 +1,7 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
-from b_core.f_helper.float_util import is_float_equal, to_sig_str
+from b_core.f_helper.float_util import is_float_equal
 
 from c_ui.b_control_ver2.a_theme.tokens import tokens
 from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors
@@ -201,25 +201,6 @@ class ValueWidget(QWidget, ColorStyled):
 
         return curr_value != self.ori_value
         
-    def get_value_str(self):
-        curr_value = self.get_value()
-
-        if curr_value is None:
-            return None
-
-        if isinstance(curr_value, float):
-            # 앱 전역 유효숫자 정책의 단일 구현(float_util.to_sig_str)에 위임한다
-            return to_sig_str(curr_value)
-        elif isinstance(curr_value, int):
-            try:
-                return str(curr_value)
-            except Exception:
-                return None
-        elif isinstance(curr_value, str):
-            return curr_value
-        
-        return None        
-
     def set_value(self, value):
         #하위 클래스에서 구현해야하며 각 value_widget의 종류에 따라 알맞게 구현해야됨.
         #표시만 바꾸고 self._sync_enabled() 를 부른다 — setEnabled 를 직접 호출하지 않는다 (8-d)

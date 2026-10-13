@@ -218,65 +218,6 @@ class ReadWriteFloatValueWidget(ValueWidget):
         self.value_widget.sig_editing_by_user.connect(self.on_editing_by_user)  # 실시간 dirty 표시
         self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)
 
-class ReadWriteScaleValueWidget(ValueWidget):
-    """BaseFloatLineEdit 기반 배율(scale) 입력 — float 라인에딧 버전과 같은 공개 API/루틴.
-
-    ReadOnlyScaleValueWidget 의 RW 대응: 원시값에 scale 을 곱해 표시하고
-    (예: scale=100.0 이면 0.5 -> "50"), get_value() 는 표시값을 다시 scale 로
-    나눈 원시값을 반환한다. set_range 는 다른 RW 위젯들과 동일하게 표시값
-    기준이다 — 스키마 min/max 가 표시 범위 기준(예: 0~100(%))이므로 그대로
-    전달하면 된다.
-
-    '값 없음' 상태 지원: set_value(None) 은 빈 표시 + placeholder("Unknown"/
-    "Not Support") 로 나타나고 get_value() 는 None 을 반환한다."""
-
-    def __init__(self, label_text="", scale=100.0, label_width=150, is_vertical_mode = False, parent=None):
-        value_widget = BaseFloatLineEdit()
-        value_widget.setPlaceholderText("Unknown")
-        # 자릿수 미지정 — BaseFloatLineEdit 기본인 유효숫자 6자리 모드를 그대로 쓴다
-        self.scale = scale
-
-        super().__init__(label_text = label_text, label_width = label_width, is_show_dirty = True, value_widget = value_widget, is_vertical_mode = is_vertical_mode, parent=parent)
-
-        # 초기 상태를 clean 으로 확정한다 — c_values 는 param 바인딩 레이어가 아니므로
-        # 단독 사용 시에도 dirty 마커 없이 시작해야 한다
-        self.set_value(None)
-        self.commit()
-
-    def set_range(self, min_value, max_value):
-        # 표시값 기준 (다른 RW 위젯들과 동일 — 스키마 min/max 를 그대로 전달)
-        self.value_widget.setRange(min_value, max_value)
-
-    def set_decimals(self, decimals):
-        self.value_widget.setDecimals(decimals)
-
-    def set_value(self, value):
-        self.value_widget.setPlaceholderText(self._no_value_text())
-        self._sync_enabled()
-
-        # None 은 빈 표시(placeholder 노출) — enum 콤보의 -1 과 동일 의미론 (BaseFloatLineEdit 계약)
-        if value is not None:
-            value = value * self.scale
-        self.value_widget.setValue(value)
-
-    def get_value(self):
-        # 값 없음/편집 중간 상태("", "-" 등)는 None. 표시값을 원시값으로 되돌린다
-        value = self.value_widget.value()
-        if value is None:
-            return None
-        return value / self.scale
-
-    def _render_not_support(self, is_not_support):
-        super()._render_not_support(is_not_support)
-        if is_not_support:
-            self.commit()  # 값 없음이 dirty 로 남지 않게
-
-    def reg_value_widget_event(self):
-        self.value_widget.sig_edited_by_user.connect(self.on_edited_by_user)
-        self.value_widget.sig_edited_by_enter.connect(self.on_edit_by_enter)
-        self.value_widget.sig_editing_by_user.connect(self.on_editing_by_user)  # 실시간 dirty 표시
-        self.value_widget.sig_assigned_by_code.connect(self.on_assigned_by_code)
-
 class ReadWriteIntValueWidget(ValueWidget):
     """BaseFloatLineEdit(소수 0자리) 기반 정수 입력 — float 라인에딧 버전과 같은 공개 API/루틴.
 

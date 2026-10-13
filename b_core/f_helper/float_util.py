@@ -7,8 +7,8 @@
 안전망이다 (상대 기준이 0 에 수렴하는 구간의 연산 잡음 흡수).
 
 표시 문자열도 같은 정책을 따른다 — to_sig_str() 이 유효숫자 6자리 포맷의
-단일 구현이고(BaseFloatLineEdit 유효숫자 모드 / ValueWidget.get_value_str /
-각 컨버터가 직접 사용), 고정 자릿수 표시는 to_str_with_decimal_places() 다.
+단일 구현이고(BaseFloatLineEdit 유효숫자 모드 / codec 의 encode / RO 실수 라벨 표시 등이
+쓴다), 고정 자릿수 표시는 to_str_with_decimal_places() 다.
 
 GUI(c_values 의 is_dirty)뿐 아니라 b_core 어디서든 이 함수를 사용한다.
 장비 통신 정밀도가 바뀌면(예: double) 아래 상수만 조정하면 된다.

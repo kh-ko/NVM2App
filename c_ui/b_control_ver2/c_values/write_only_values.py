@@ -52,17 +52,8 @@ class WriteOnlyEnumValueWidget(WriteOnlyButtonValueWidget):
         else:
             self._root_layout.insertWidget(index, self.combo_widget)
 
-    def set_value(self, value):
-        pass
-
     def get_value(self):
         return self.combo_widget.currentData()
-
-    def reg_value_widget_event(self):
-        self.value_widget.clicked.connect(self.on_edited_by_user)
-
-    def is_dirty(self):
-        return False
 
 
 class WriteOnlyFloatValueWidget(WriteOnlyButtonValueWidget):
@@ -93,11 +84,5 @@ class WriteOnlyFloatValueWidget(WriteOnlyButtonValueWidget):
     def set_decimals(self, decimals):
         self.edit_widget.setDecimals(decimals)
 
-    def set_value(self, value):
-        pass
-
     def get_value(self):
         return self.edit_widget.value()
-
-    def is_dirty(self):
-        return False

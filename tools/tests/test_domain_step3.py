@@ -351,8 +351,9 @@ def main() -> int:
         w.cleanup()
 
     # ---------------------------------------------------------------- 5. 위젯 (offscreen)
-    from c_ui.b_control_ver2.d_param.param_values import (ParamReadOnlyPosiValueWidget, ParamReadOnlyPresValueWidget,
-                                                          ParamReadOnlyScaleValueWidget, ParamReadWritePresValueWidget)
+    from c_ui.b_control_ver2.d_param.param_values import (ParamReadOnlyPosiValueWidget, ParamReadOnlyPresSlopeValueWidget,
+                                                          ParamReadOnlyPresValueWidget, ParamReadOnlyScaleValueWidget,
+                                                          ParamReadWritePresValueSpinBoxWidget, ParamReadWritePresValueWidget)
     set_param(unit_p, p_enum.RS232PositionUnitEnum.ZERO_TO_100000.value)
     new_posi.local_setting = FakeLocalSetting(DOMAIN_PRES_UNIT, posi_decimal_places=2)
     new_posi.handle_posi_decimal_places_changed()
@@ -368,9 +369,22 @@ def main() -> int:
     wdg = ParamReadOnlyPresValueWidget(act_pres.full_path)
     rep.check(wdg.value_widget.text() == "1500.0", f"pres RO 위젯 표시 (1.5 Torr → mTorr): {wdg.value_widget.text()!r}")
     rep.check(feq(wdg.get_value(), 1.5), "pres RO get_value → Torr")
+    unit_desc = p_enum.SensUnitEnum.get_desc(p_enum.SensUnitEnum.MTORR.value)
+    rep.check(wdg.lbl_label.text() == f"{act_pres.name} ({unit_desc})", f"pres RO 라벨에 표시 단위: {wdg.lbl_label.text()!r}")
+    slope = ParamReadOnlyPresSlopeValueWidget("Pressure Control.General Settings.Profile Ramp.Actual Slope")
+    rep.check(slope.lbl_label.text().endswith(f"({unit_desc}/sec)"), f"slope RO 라벨에 /sec: {slope.lbl_label.text()!r}")
     rw = ParamReadWritePresValueWidget("Pressure Control.Basic.Target.Target Pressure")
     rw.set_value(2.0)
     rep.check(feq(rw.get_value(), 2.0), f"pres RW 왕복 (Torr→mTorr→Torr): {rw.get_value()}")
+    rw.import_backup_value(3.0, p_enum.SensUnitEnum.TORR.value)   # Torr 로 저장된 백업 값을 mTorr 표시 중에 Load
+    rep.check(feq(rw.value_widget.value(), 3000.0) and feq(rw.get_value(), 3.0) and feq(rw.export_backup_value(), 3000.0)
+              and rw.export_backup_unit() == p_enum.SensUnitEnum.MTORR.value,
+              f"pres RW Load 단위 환산 (3 Torr → 3000 mTorr 표시, export 는 표시 단위): {rw.value_widget.value()}")
+    target_pres = pm.get_by_full_path("Pressure Control.Basic.Target.Target Pressure")
+    target_pres.value = 2.0
+    spin = ParamReadWritePresValueSpinBoxWidget(target_pres.full_path)
+    rep.check(feq(spin.value_widget.value(), 2000.0) and not spin.is_dirty(),
+              f"pres SpinBox 생성 시 범위가 먼저 — 기본 범위(99.99)에 클램프되지 않음: {spin.value_widget.value()}")
     speed.value = 55.0
     wdg = ParamReadOnlyScaleValueWidget(speed.full_path)
     rep.check(wdg.value_widget.text() == "55", f"scale RO 위젯 표시 (배율은 codec): {wdg.value_widget.text()!r}")

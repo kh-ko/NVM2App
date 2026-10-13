@@ -270,7 +270,7 @@ class ParamWin(ServiceWin):
         # WO enum(모드 선택형)은 콤보에서 고른 현재 값을, 위치 입력형은 입력한 백분율(도메인 값 —
         # 선로 문자열은 spec 의 codec 이 만든다)을, 버튼형은 스키마에 고정된 btn_str_value 를 보낸다
         if isinstance(param_component, ParamWriteOnlyEnumValueWidget):
-            self.single_param_write(param_component.param, param_component.get_value_str())
+            self.single_param_write(param_component.param, param_component.get_value())   # enum 값(int) (N097)
         elif isinstance(param_component, ParamWriteOnlyPosiValueWidget):
             value = param_component.get_value()
             if value is not None:
