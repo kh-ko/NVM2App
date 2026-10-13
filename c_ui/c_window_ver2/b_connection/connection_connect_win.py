@@ -23,7 +23,7 @@ class ConnectionConnectWin(QMainWindow):
        - 좌측 리스트(왼쪽): 저장된 통신 설정 항목 목록을 표시합니다.
        - 우측 리스트(오른쪽): 현재 PC에서 검색된 COM Port 목록과 연결(Open) 테스트 결과를 표시합니다.
 
-    2. 포트 스캔 과정(PortScanThread 활용):
+    2. 포트 스캔 과정(ComportScanRunWorker 의 시그널):
        - 통신 설정 리스트에서 특정 항목이 선택되거나 'Scan' 버튼을 누르면, 백그라운드 스레드에서 포트 검색을 시작합니다.
        - 기존에 진행 중인 스캔/연결 작업이 있다면 안전하게 중지(Stop)시킨 후 새로운 작업을 수행합니다.
        - 검색된 모든 COM Port에 대해 "Checking..." 상태로 등록 후,
@@ -43,7 +43,10 @@ class ConnectionConnectWin(QMainWindow):
         self._open_setting: SerialSetting | None = None  # 더블클릭으로 선택된 연결 대상 (포트 + 설정)
         self._wait_box = None        # 스캔 종료 대기 안내 박스
 
-        self.scan_worker = ComportScanRunWorker(self.handle_ports_found, self.handle_port_checked, self.handle_scan_stopped, parent=self)
+        self.scan_worker = ComportScanRunWorker(parent=self)
+        self.scan_worker.sig_ports_found.connect(self.handle_ports_found)
+        self.scan_worker.sig_port_checked.connect(self.handle_port_checked)
+        self.scan_worker.sig_scan_stopped.connect(self.handle_scan_stopped)
         self.scan_worker.sig_wait_started.connect(self.handle_wait_started)
         self.scan_worker.sig_wait_finished.connect(self.handle_wait_finished)
 

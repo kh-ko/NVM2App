@@ -1,8 +1,15 @@
-"""COM 포트 스캔 워커.
+"""COM 포트 스캔 워커 — PortScanThread(스캔 스레드) + ComportScanRunWorker(QObject 래퍼).
 
-ver2 변경: 워커가 직접 띄우던 대기 QMessageBox 를 제거 — 워커는
-sig_wait_started(title, message) / sig_wait_finished 시그널만 내고,
-표시는 윈도우가 담당한다. (c_window_ver2/x_message/wait_message_box.py 참고)
+창은 래퍼의 시그널에만 바운드 메서드로 1:1 연결한다 (다른 래퍼 Firmware/AppUpdate/Compound 와 같은 모양):
+    sig_ports_found(list)            스캔 시작 직후 포트 이름 목록
+    sig_port_checked(str, bool, str) 포트마다 (port_name, success, read_data)
+    sig_scan_stopped()               stop() 이 False 를 돌려준 뒤 스캔이 실제로 끝났을 때 1회 (그 전에 start() 가 오면
+                                     중지 알림은 취소되고 새 스캔이 시작된다 — 끝난 뒤 할 일은 하나, 마지막 요청 우선)
+    sig_wait_started(title, message) 이전 스캔 종료를 기다리기 시작할 때 — 대기 표시는 창이 담당
+                                     (c_window_ver2/x_message/wait_message_box.py)
+    sig_wait_finished()              스레드를 치울 때마다(첫 start 포함) — 창은 표시 중일 때만 닫는다 (None 가드)
+스레드 시그널은 래퍼 시그널로 전달(signal-to-signal)된다. 래퍼는 창의 자식(메인 스레드)이라 창 슬롯은 메인 스레드에서
+실행된다 — 이전의 '스레드 시그널 → 창 슬롯 직접 연결' 과 배달 순서·스레드가 같다 (2026-10-13 실측).
 """
 
 import serial.tools.list_ports
@@ -13,7 +20,7 @@ from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.d_dal.serial_setting import SerialSetting, probe_once
 from b_core.d_dal.service_port import ServicePort
 
-SCAN_PACKET = "i:83"  # 장비 식별 요청 (ver1 과 같은 SN 읽기 요청) — 응답 유무·내용만 표시한다
+SCAN_PACKET = "i:83"  # 장비 식별(SN 읽기) 요청 — 응답 유무·내용만 표시한다
 
 class PortScanThread(QThread):
     """PC 의 COM 포트를 나열하고, 포트마다 선택된 통신 설정으로 1왕복(probe_once) 해 본다.
@@ -54,22 +61,22 @@ class PortScanThread(QThread):
                 self.port_checked.emit(port_name, False, "")
                 continue
 
-            # 예외가 없으면 응답 유무와 무관하게 통신 가능으로 본다 (ver1 과 같은 기준)
+            # 예외가 없으면 응답 유무와 무관하게 통신 가능으로 본다
             self.port_checked.emit(port_name, True, response.decode("utf-8", errors="ignore").strip())
 
 class ComportScanRunWorker(QObject):
+    sig_ports_found = Signal(list)
+    sig_port_checked = Signal(str, bool, str)  # port_name, success, read_data
+    sig_scan_stopped = Signal()
     # 이전 스캔 종료를 기다리는 동안 윈도우가 대기 표시를 띄우고/내리게 한다
     sig_wait_started = Signal(str, str)  # title, message
     sig_wait_finished = Signal()
 
-    def __init__(self, port_found_slot, port_checked_slot, scan_stopped_slot, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self._thread = None
         self._next_setting = None
         self._on_finished = None  # 스캔 스레드가 끝나면 할 일(_start_thread / _stopped_thread) — 중지 요청 때 기록 (N035)
-        self.port_found_slot = port_found_slot
-        self.port_checked_slot = port_checked_slot
-        self.scan_stopped_slot = scan_stopped_slot
         self._is_cleaned = False
 
         app = QCoreApplication.instance()
@@ -93,7 +100,10 @@ class ComportScanRunWorker(QObject):
 
         finished 는 스레드를 만들 때 이미 연결돼 있다 — 호출측의 isRunning() 검사와 이 호출 사이에
         스레드가 먼저 끝나 finished 가 큐에 들어가 있어도 _handle_thread_finished 가 기록된 on_finished 를
-        수행하므로 놓치지 않는다 (N035: 놓치면 대기 박스가 영구히 남아 앱이 고착됐다)."""
+        수행하므로 놓치지 않는다 (N035: 놓치면 대기 박스가 영구히 남아 앱이 고착됐다).
+        결과 시그널의 전달 연결은 여기서 끊는다 — 끊은 뒤 옛 스캔이 내는 결과가 대기 표시 중인 목록을 더 갱신하지 않게.
+        끊기 전에 큐에 들어간 결과는 그대로 도달하고, 옛 결과는 같은 큐에서 finished 보다 먼저 처리되므로 새 스캔의
+        목록을 덮어쓰는 일은 없다 (blockSignals 로 바꾸면 finished 까지 막혀 N035 가 재발한다)."""
         self._on_finished = on_finished
         self.sig_wait_started.emit(title, message)
 
@@ -108,8 +118,8 @@ class ComportScanRunWorker(QObject):
     def _start_thread(self):
         self._clean_thread()
         self._thread = PortScanThread(ServicePort().get_port_name(), self._next_setting, parent=self)
-        self._thread.ports_found.connect(self.port_found_slot)
-        self._thread.port_checked.connect(self.port_checked_slot)
+        self._thread.ports_found.connect(self.sig_ports_found)      # 스레드 → 래퍼 시그널 전달
+        self._thread.port_checked.connect(self.sig_port_checked)
         self._thread.finished.connect(self._handle_thread_finished)  # 시작 전에 — 종료를 놓치지 않는다 (N035)
         self._thread.start()
 
@@ -121,6 +131,8 @@ class ComportScanRunWorker(QObject):
             on_finished()
 
     def stop(self) -> bool:
+        """True = 스캔 중이 아니라 즉시 끝남. False = 중지를 요청했고, 끝나면 sig_scan_stopped 를 1회 낸다
+        (끝나기 전에 start() 가 오면 중지 알림은 취소되고 새 스캔이 시작된다 — 마지막 요청 우선)."""
         if self._thread is not None and self._thread.isRunning():
             self._stop_thread("Closing", "Please wait for the previous scan to complete...", self._stopped_thread)
             return False
@@ -129,7 +141,7 @@ class ComportScanRunWorker(QObject):
 
     def _stopped_thread(self):
         self._clean_thread()
-        self.scan_stopped_slot()
+        self.sig_scan_stopped.emit()
 
     def _clean_thread(self):
         # 대기 표시 중이 아니어도 발화될 수 있다 — 윈도우 쪽에서 None 가드
