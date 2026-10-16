@@ -17,6 +17,7 @@
      꼬리표가 보고에 그대로
   8. abort_sequence: 보내 둔 요청의 응답은 폐기, ABORTED 보고(그때까지의 결과), MONITOR 복귀; refresh/write 시퀀스에는 False
   9. 끊김 중 보고: capture 도중 handle_disconnected → DISCONNECTED 보고 뒤 DISCONNECTED 상태
+ 10. 재부팅 대기(start_reboot_wait) 뒤 probe 성공 → ServicePort.open 실패: sig_reboot_finished(False) 1회, REBOOT 해제, 포트 닫힘 (F030)
 """
 
 from __future__ import annotations
@@ -44,6 +45,7 @@ QTimer.singleShot(90000, lambda: (print("TIMEOUT", flush=True), os._exit(3)))
 
 from b_core.b_datatype.general_enum import ParamAccType, ParamDataType, SvcPortErrType  # noqa: E402
 from b_core.c_manager.parameter_manager import ParamManager  # noqa: E402
+from b_core.d_dal.serial_setting import SerialSetting  # noqa: E402
 from b_core.d_dal.service_port import ServicePort  # noqa: E402
 from b_core.e_worker_ver2.parameter_run_worker import (ParameterRunWorker, SequenceEnd, SequenceKind,  # noqa: E402
                                                        StartResult, _WorkerState)
@@ -229,6 +231,24 @@ def main() -> int:
         w_sub.cleanup(); w_main.cleanup()
         for p in (sn, num_a, num_b):
             p._value = None; p.str_value = ""
+
+    # ---------------------------------------------------- 10. 재부팅 대기 뒤 재연결 실패 (F030)
+    # probe 성공을 직접 넣으면 워커가 ServicePort.open 으로 정식 연결을 시도한다 — 없는 포트라 실패하고 False 가 나와야 한다
+    w_rb = ParameterRunWorker(log_source="T_reboot", transport=ScriptedTransport({}), monitor_tick=10)
+    finished = []
+
+    def on_reboot_finished(ok):
+        finished.append(ok)
+
+    w_rb.sig_reboot_finished.connect(on_reboot_finished)
+    try:
+        setting = SerialSetting("COM_NONE_NVM2", 9600, 8, 0, 1, 0)
+        rep.check(w_rb.start_reboot_wait(setting) and w_rb._state is _WorkerState.REBOOT, "재부팅 대기 시작 (외부 시작 경로)")
+        w_rb._handle_reboot_probe_result(w_rb._seq, True, "probe ok")
+        rep.check(finished == [False] and w_rb._state is not _WorkerState.REBOOT and svc.setting is None,
+                  f"probe 성공 뒤 포트 열기 실패 → sig_reboot_finished(False), 대기 해제, 포트 닫힘 (F030): {finished}")
+    finally:
+        w_rb.cleanup()
 
     _harness.assert_isolated()
     return rep.summary()

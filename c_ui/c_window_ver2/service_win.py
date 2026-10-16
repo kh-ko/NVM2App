@@ -129,7 +129,8 @@ class ParamWorkerWinMixin:
         self._reboot_wait_box.quit_button.clicked.connect(self.on_clicked_quit_app)
 
     def handle_finished_reboot(self, is_success: bool):
-        # True = 재부팅 후 통신 복구 (재연결 refresh 는 connect_info_changed 경유)
+        # True = 재부팅 후 통신 복구 (재연결 refresh 는 connect_info_changed 경유).
+        # False = 취소 또는 재연결 실패 — 포트는 닫힌 채라 상태바가 끊김을 보인다. 안내는 취소 버튼을 둔 창(FU)만 (F030)
         if self._reboot_wait_box is not None:
             box = self._reboot_wait_box
             self._reboot_wait_box = None

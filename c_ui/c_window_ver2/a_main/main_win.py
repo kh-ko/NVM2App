@@ -39,7 +39,7 @@ from c_ui.c_window_ver2.h_help.help_nvm_update_win import HelpNvmUpdateWin
 from c_ui.c_window_ver2.h_help.help_about_win import HelpAboutWin
 
 from c_ui.c_window_ver2.log_view_win import LogViewWin
-from c_ui.c_window_ver2.x_message.connection_message_box import ask_disconnect
+from c_ui.c_window_ver2.x_message.connection_message_box import ask_disconnect, show_device_info_unavailable
 from c_ui.c_window_ver2.x_message.firmware_update_message_box import ask_backup_before_update
 from c_ui.c_window_ver2.x_message.not_ready_message_box import show_not_ready
 
@@ -507,9 +507,10 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         WinManager().show_window(win_class=ParamIfaceEtherCatWin, win_name="Interface EtherCAT", win_id="ParamWin_Interface EtherCAT", parent=self, is_modal=False, paths=["Interface EtherCAT.Basic", "Interface.Scaling", "Interface EtherCAT.Scaling", "Interface EtherCAT.Range", "Interface EtherCAT.Connection Loss Reaction"], filter_param_paths=[], is_editblock_win=False, label_width=210)
 
     def on_clicked_cluster_setting(self):
-        if self.user_iface_param.value is None:
-            return
-        elif self.firmware_version_param.value is None:
+        if self.user_iface_param.value is None or self.firmware_version_param.value is None:
+            # 필터를 정하려면 두 값이 필요하다 — 아직 한 번도 읽지 못한 경우(연결된 적 없음 / 첫 refresh 전; 값은 끊겨도 남는다) (F076)
+            self._log.warning("[Cluster Settings] not opened - user interface / firmware version not available yet")
+            show_device_info_unavailable(self)
             return
 
         filter_param_paths = []
@@ -521,7 +522,10 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         # 펌웨어 버전 비교는 hex 코드 기준 (예: "6.5.5" -> 0x655)
         firmware_code = firmware_util.to_version_code(self.firmware_version_param.value)
         if firmware_code is None:
-            return  # 형식이 예상과 다르면 버전 미확인으로 보고 열지 않는다
+            # 형식이 예상과 다르면 버전 미확인으로 보고 열지 않는다 (F076)
+            self._log.warning(f"[Cluster Settings] not opened - firmware version format not recognized: {self.firmware_version_param.value!r}")
+            show_device_info_unavailable(self, self.firmware_version_param.value)
+            return
 
         if firmware_code < 0x623:
             filter_param_paths.append("Cluster.Settings.Baud Rate V2")

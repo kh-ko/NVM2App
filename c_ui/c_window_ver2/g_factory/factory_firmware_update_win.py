@@ -164,6 +164,7 @@ class FactoryFirmwareUpdateWin(ParamWin):
 
         self._stage = _Stage.IDLE
         self._wait_box = None
+        self._reboot_cancel_requested = False   # 재부팅 대기 박스의 Cancel 을 눌렀는가 — finished(False) 의 사유 구분 (F030)
         self._log = AppLogManager().get_logger(self.win_name)
         self._job: FirmwareWriteJob | None = None
         self._saved_port_setting: SerialSetting | None = None  # 업데이트 전 ServicePort 설정 (재연결용)
@@ -296,6 +297,7 @@ class FactoryFirmwareUpdateWin(ParamWin):
 
     def on_clicked_cancel_reboot_wait(self):
         # 재부팅 대기 취소 — 워커가 sig_reboot_finished(False) 를 내고 포트는 닫힌 채 남는다
+        self._reboot_cancel_requested = True
         self.param_worker.cancel_reboot()
 
     # ------------------------------------------------------------ 선택 흐름
@@ -466,6 +468,7 @@ class FactoryFirmwareUpdateWin(ParamWin):
         if self._reboot_wait_box is not None:
             return
 
+        self._reboot_cancel_requested = False
         self._reboot_wait_box = show_busy_wait_message_box(
             self, "Reboot",
             "The device is rebooting.\nWaiting for reconnection...",
@@ -478,12 +481,22 @@ class FactoryFirmwareUpdateWin(ParamWin):
         if is_success or self._stage not in (_Stage.WAIT_REBOOT, _Stage.FACTORY_RESET):
             return
 
-        # 취소됨 — 포트는 닫힌 채(단선과 동일). 나머지 절차는 사용자가 수동으로
-        self._log.warning("[Reboot Wait] cancelled by user — reconnect manually")
-        self._set_stage(_Stage.IDLE)
-        QMessageBox.information(self, "Reboot Wait Cancelled",
-                                "Reconnection wait was cancelled.\n"
-                                "Reconnect the device via Connection > Connect after it has rebooted.")
+        self._set_stage(_Stage.IDLE)   # 포트는 닫힌 채(단선과 동일). 나머지 절차는 사용자가 수동으로
+        # 백업이 있으면 복원 창 자동 열기(handle_finished_refresh)는 더 오지 않는다 — 수동 복원을 같은 박스에서 안내
+        backup_note = ("" if self._backup_file_path is None else
+                       "\n\nThe backup saved before the update has not been restored - "
+                       "open Advanced Setup > Restore and load it after reconnecting.")
+        if self._reboot_cancel_requested:
+            self._log.warning("[Reboot Wait] cancelled by user - reconnect manually")
+            QMessageBox.information(self, "Reboot Wait Cancelled",
+                                    "Reconnection wait was cancelled.\n"
+                                    "Reconnect the device via Connection > Connect after it has rebooted." + backup_note)
+        else:
+            # 워커가 끝냈다 — 재연결 포트 열기 실패, 또는 재부팅 대기 진입 조건 미비. 사유는 LogView (F030)
+            self._log.error("[Reboot Wait] reconnection failed - see the log, reconnect manually")
+            QMessageBox.warning(self, "Reconnection Failed",
+                                "The device could not be reconnected after the reboot.\n"
+                                "Reconnect it via Connection > Connect and check the log." + backup_note)
 
     def handle_finished_refresh(self):
         # 재연결 refresh 완료 = 새 펌웨어로 부팅한 장비와 통신 확인

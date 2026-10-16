@@ -44,10 +44,6 @@ class ThemeTokens:
     status_ok_bg: str = "transparent"    # 연결됨
     status_bad_bg: str = "#ffebee"       # 연결 끊김
 
-    # 에러 배지
-    badge_error_bg: str = "#ffebee"
-    badge_error_text: str = "#c62828"
-
     # 툴바
     toolbar_bg: str = "#24292e"
     toolbar_border: str = "#000000"

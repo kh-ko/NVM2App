@@ -1,4 +1,4 @@
-"""연결(ServicePort) 관련 메시지 박스.
+"""연결(ServicePort)·장비 정보(미연결/첫 refresh 전) 관련 메시지 박스.
 
 == x_message 컨셉 ==
 이 폴더의 메시지 박스는 전부 '표시 전용' 모듈 함수다.
@@ -20,3 +20,15 @@ def ask_disconnect(parent) -> bool:
         QMessageBox.StandardButton.No)
 
     return reply == QMessageBox.StandardButton.Yes
+
+
+def show_device_info_unavailable(parent, firmware_version: str | None = None) -> None:
+    """장비 정보(User Interface / Firmware Version)가 없어 창을 열 수 없을 때 — 미연결 또는 첫 refresh 전 (F076).
+    firmware_version 이 주어지면 '형식을 해석할 수 없다' 쪽 문구."""
+    if firmware_version is None:
+        text = ("Device information (user interface / firmware version) is not available yet.\n"
+                "Connect the device and wait for the first refresh, then try again.")
+    else:
+        text = (f"The firmware version '{firmware_version}' is not in the expected format,\n"
+                "so the window cannot choose its parameters.")
+    QMessageBox.information(parent, "Device Information", text)

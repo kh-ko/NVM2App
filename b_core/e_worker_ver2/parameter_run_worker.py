@@ -205,7 +205,7 @@ class ParameterRunWorker(QObject):
     # 외부 공개
     sig_sequence_report = Signal(object)  # SequenceReport — CAPTURE/RAW 시퀀스가 끝날 때 1회 (완료·중단·끊김 모두)
     sig_reboot_started = Signal()
-    sig_reboot_finished = Signal(bool)  # True=재부팅 후 통신 복구, False=취소됨
+    sig_reboot_finished = Signal(bool)  # True=재부팅 후 통신 복구, False=취소됨 또는 재연결 실패(포트 열기 실패·진입 조건 미비)
     sig_progress_changed = Signal(int)
     sig_is_working_changed = Signal(bool)
     sig_finish_refresh = Signal()
@@ -607,7 +607,7 @@ class ParameterRunWorker(QObject):
     def cancel_reboot(self):
         """재부팅 대기 취소. 포트는 닫힌 상태로 둔다 (단선과 동일 취급).
 
-        호출측(윈도우)은 취소 후 해당 윈도우를 닫아 동작을 마무리한다."""
+        호출측(윈도우)은 sig_reboot_finished(False) 로 대기 박스를 닫고 자기 단계를 되돌린다 (창은 열어 둔다)."""
         if self._state != _WorkerState.REBOOT:
             return
 
@@ -714,8 +714,13 @@ class ParameterRunWorker(QObject):
         # 재연결 경로(refresh)를 태우므로, 여기서 refresh 를 직접 호출하지 않는다.
         setting = self._reboot_port_setting
         self._stop_all()
-        self.sig_reboot_finished.emit(True)  # 윈도우가 대기 다이얼로그를 닫는다
-        ServicePort().open(setting)
+        if not ServicePort().open(setting):
+            # 장비는 응답했지만 포트를 다시 열지 못함 — ServicePort 가 ERROR 로그를 남긴다. 포트는 재부팅 진입 때 이미 닫혀
+            # 있었으므로 새 연결 시그널은 없고 상태바는 끊김 그대로. 창에는 실패로 알려 대기 단계에 갇히지 않게 한다 (F030)
+            self.sig_reboot_finished.emit(False)
+            return
+        # 창이 대기 박스를 닫는다 — open() 의 connect_info_changed 는 큐 배달이라 그 뒤에 닿아 재연결 refresh 를 태운다
+        self.sig_reboot_finished.emit(True)
 
     # ------------------------------------------------------------ 작업 큐 처리
     def _start_sequence(self, jobs: list[_Job], kind: SequenceKind):
