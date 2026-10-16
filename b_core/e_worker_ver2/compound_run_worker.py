@@ -1,19 +1,27 @@
-"""Compound 슬롯 기록 + 고속 폴링 워커 (기존 e_worker/compounds_run_worker.py 대응).
+"""Compound 슬롯 기록 + 고속 폴링 워커.
 
-ver1 에서 달라진 점:
-- 슬롯 구성(12개 param 경로, "Compound Commands 1" 뱅크)이 워커에 하드코딩되어
-  있던 것을 제거. 사용측(윈도우)이 configure() 로 주입한다 — 어떤 윈도우든
-  자기 UI 기능 정의에 맞는 슬롯 구성으로 사용 가능.
-- 응답 값의 형 변환도 워커가 모른다. 사용측이 주입한 sample_factory 가
-  워커 스레드에서 호출되어 형 변환을 수행한다 (UI 스레드 부하 방지는 ver1 유지).
+계약:
+- 슬롯 구성은 사용측(윈도우)이 configure() 로 주입한다 — 어떤 param 을 어느 슬롯에 둘지는 워커가 정하지 않는다
+  (워커는 받은 pairs 로 쓰기/폴링 명령을 만들고 ref 갱신에만 쓴다; 폴링 스레드는 param 을 전혀 모른다).
+- 응답 값의 형 변환은 사용측이 주입한 sample_factory 가 워커 스레드에서 수행한다 (UI 스레드 부하 방지).
   미지정 시 원시 문자열 튜플(CompoundSample)을 큐에 쌓는다.
-- 폴링 제어권은 윈도우 소유 — 워커는 연결 시그널을 구독하지 않는다.
-  생성 직후에는 폴링 게이트가 비활성(idle)이며, 윈도우가 start_polling() 을
-  호출해야 [슬롯 쓰기 -> 폴링] 이 시작된다. (보통 ParameterRunWorker 의
-  sig_finish_refresh 수신 시점) stop_polling() 은 스레드를 유지한 채
-  idle 루프로 되돌린다. (연결 끊김 시 윈도우가 호출)
-- ref param 자동 갱신은 pop_all_data()(UI 스레드) 에서 현재 구성 세대의 마지막 샘플의
-  원시 문자열로 수행한다 (ver1 의 형변환 -> str() 왕복 제거; 옛 슬롯 배치의 샘플은 제외 — N043).
+- 폴링 제어권은 윈도우 소유 — 워커는 연결 시그널을 구독하지 않는다. 생성 직후에는 폴링 게이트가 비활성(idle)이며,
+  윈도우가 start_polling() 을 호출해야 [슬롯 쓰기 -> 폴링] 이 시작된다 (보통 ParameterRunWorker 의 sig_finish_refresh
+  수신 시점). stop_polling() 은 스레드를 유지한 채 idle 루프로 되돌린다 (연결 끊김 시 윈도우가 호출).
+- ref param 자동 갱신은 pop_all_data()(UI 스레드)에서 현재 구성 세대의 마지막 샘플의 원시 문자열로 수행한다
+  (옛 슬롯 배치의 샘플은 제외 — N043).
+
+프로토콜 규칙의 명시된 예외 (N042):
+  g_protocol 의 규칙(packet_spec.py 머리글)은 프로토콜 지식이 그 폴더 밖으로 나가지 않는 것 — 워커는 spec 의
+  build_request / apply_response 를 호출할 뿐 'p:' 를 모른다 — 이지만, 이 워커는 Compound 서비스(01 슬롯 쓰기 / 29 폴링)의
+  NV2 프레이밍 — 요청 조립 "p:01…"/"p:29…", 응답 판정 "p:0001"/"p:0029" 접두, 헤더 16자 뒤 ';' 분할 — 을 직접 다룬다.
+  PacketSpec 은 param 바인딩이 SpecRegistry 에 고정되고 응답마다 apply_response 로 값·플래그를 param 에 반영하는 계약인데,
+  이 워커는 슬롯 배치를 실행 중 주입받고 폴링 결과를 param 에 바로 반영하지 않고 큐에 쌓아 마지막 샘플만 ref 에 쓴다
+  (플래그 없음). 이 차이 때문에 그대로 얹지 않았고, 지금 동작 중인 폴링 루프를 그대로 두기 위한 선택이다.
+  그 대가로 쓰기 판정은 접두 비교만이고(장비 오류 코드 구분 없음, 실패 시 WRITE_RETRY_DELAY_MS 뒤 슬롯 목록 전체를
+  처음부터 재전송, 상한 없음),
+  'p:' 를 아는 워커는 이것 하나다. g_protocol 로 옮기려면(Nv2CompoundSpec) 폴링 스레드 transport 주입 + 헤드리스
+  검사 + 실장비 재확인이 선행돼야 한다 — 그때 이 문단을 지운다.
 
 동작 흐름:
 1. start_polling() 되면 configure() 된 슬롯 쓰기 명령("p:01...")을 일괄 전송한다.
