@@ -22,7 +22,8 @@ Thumbs.db
 
 # Distribution / packaging
 dist/
-build/
+# PyInstaller default workpath at the project root only - an unanchored 'build/' would also hide tools/build/ (build_support.py)
+/build/
 0_build/
 temp_build/
 *.egg-info/
@@ -30,6 +31,9 @@ temp_build/
 
 # App runtime logs
 3_log/
+
+# Chart recordings (Record -> Stop; save-canceled sessions stay here) - per-PC user data, not deployed
+4_chart_record/
 
 # Generated Qt resource module (pyside6-rcc; build.bat regenerates it)
 resources_rc.py

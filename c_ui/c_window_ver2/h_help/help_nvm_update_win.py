@@ -354,6 +354,7 @@ class HelpNvmUpdateWin(ServiceWin):
             self._package_root = package_root
         except Exception as e:
             self._log.error(f"[Install] could not create the installer script: {e}")
+            app_update_helper.discard_package(self._prepare_version)   # 설치되지 않는 패키지는 바로 지운다
             self._set_stage(_Stage.IDLE)
             QMessageBox.critical(self, "Application Update Failed",
                                  f"The update package is ready, but the installer could not be started.\n\n{e}")
@@ -362,6 +363,7 @@ class HelpNvmUpdateWin(ServiceWin):
         # 다른 창을 먼저 닫는다 — 하나라도 거부(펌웨어 쓰기 중, FU 백업 중 등)하면 설치하지 않는다
         if not WinManager().close_all(exclude=(self,)):
             self._log.error("[Install] another window refused to close - update not started")
+            app_update_helper.discard_package(self._prepare_version)
             self._set_stage(_Stage.IDLE)
             QMessageBox.warning(self, "Application Update",
                                 "Another window could not be closed (an operation may be in progress).\n"
@@ -383,6 +385,7 @@ class HelpNvmUpdateWin(ServiceWin):
         # aboutToQuit 도 이미 발화했다
         if any(w.isVisible() for w in QApplication.topLevelWidgets()):
             app.aboutToQuit.disconnect(self._start_installer_on_quit)
+            app_update_helper.discard_package(self._prepare_version)   # 종료가 거부됐다 — 패키지는 설치되지 않는다
             self._log.error("[Install] application refused to quit - update not started")
             self.row_progress.set_checked(False)
             self._set_stage(_Stage.IDLE)

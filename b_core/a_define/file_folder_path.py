@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 
 # Qt 리소스 시스템 베이스 경로 (qrc 파일에 설정된 prefix/폴더 구조에 맞춤)
 # OS에 상관없이 무조건 슬래시(/)를 사용합니다.
@@ -39,6 +40,16 @@ else:
 
 # 로그 폴더 
 LOG_PATH = os.path.join(EXE_BASE, "3_log")
+
+# 차트 기록 작업 폴더 — Record 중 CSV 가 쌓이고, Stop 뒤 저장을 취소하면 여기 남는다 (사용자 데이터, 앱이 지우지 않는다).
+# 패키지에 없는 최상위 폴더라 앱 업데이트 교체에 걸리지 않는다. git 비추적, 소스 스냅샷 제외 (build.bat), 보존 폴더 등록
+# (app_update_helper.PRESERVED_RELATIVE_DIRS). 2026-10-16 결정 — %TEMP% 는 Windows 디스크 정리가 비우므로 기록을 두지 않는다
+CHART_RECORD_PATH = os.path.join(EXE_BASE, "4_chart_record")
+
+# 앱 임시 폴더 — 가치가 없어진 뒤 지워도 되는 것만 둔다. 정리는 하위 폴더별 — 지금은 update 만
+# (app_temp_helper.sweep_stale_update_files, 기동 때). 새 하위를 만들면 정리도 함께 둔다
+APP_TEMP_PATH = os.path.join(tempfile.gettempdir(), "NVM2App")
+APP_TEMP_UPDATE_PATH = os.path.join(APP_TEMP_PATH, "update")   # 앱 업데이트 zip · 압축 해제본 · 설치 스크립트
 
 # 로컬 리소스 베이스 폴더
 RSRC_BASE = os.path.join(EXE_BASE, "2_resource")

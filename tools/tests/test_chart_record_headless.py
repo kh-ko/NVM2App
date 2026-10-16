@@ -1,10 +1,10 @@
 """차트 기록 세션 헤드리스 테스트 — 기록 중 쓰기 실패(F066), 시작 실패(N099), 기록 중 앱 종료(F067)의 패널 동작과
-ChartCSVFileHelper 의 실패 경로를 장비·실제 %TEMP% 없이 확인한다.
+ChartCSVFileHelper 의 실패 경로를 장비·실제 4_chart_record 없이 확인한다.
 
     python tools/tests/test_chart_record_headless.py
 
 검사 항목
-  1. ChartCSVFileHelper (tempfile.tempdir 를 격리 폴더로 돌림): 실제 세션 1회 — 헤더 + 행, NaN 은 빈 칸, stop 뒤 두 번째
+  1. ChartCSVFileHelper (작업 폴더 CHART_RECORD_PATH 는 isolate_runtime 이 격리): 실제 세션 1회 — 헤더 + 행, NaN 은 빈 칸, stop 뒤 두 번째
      stop 은 무해; 첫 파일 열기 실패 → OSError 전파 + 세션 폴더가 남지 않음 (N099)
   2. MainChartPanel (오프스크린, 기록기는 모듈 속성 교체, QMessageBox 는 호출을 기록하는 스텁):
      - 시작 실패 → 기록 안 됨, 버튼 Record, 타이머 정지, [Record] ERROR 로그 1건, 경고 대화상자 1회 (N099)
@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import os
 import sys
-import tempfile
 import time
 from typing import NamedTuple
 
@@ -33,16 +32,12 @@ ROOT = _harness.ROOT
 BASE = _harness.isolate_runtime()  # 실제 2_resource/config · 3_log 를 건드리지 않는다 — 매니저 import 전에
 sys.path.insert(0, ROOT)
 
-# 기록기는 tempfile.gettempdir() 아래에 폴더를 만든다 — 실제 %TEMP% 대신 격리 폴더로
-TMP_ROOT = os.path.join(BASE, "tmp")
-os.makedirs(TMP_ROOT, exist_ok=True)
-tempfile.tempdir = TMP_ROOT
-
 app = _harness.make_app()
 _harness.silence_message_boxes()
 
 import resources_rc  # noqa: E402,F401
 from PySide6.QtWidgets import QMessageBox  # noqa: E402
+from b_core.a_define import file_folder_path as path_def  # noqa: E402
 from b_core.c_manager.app_log_manager import AppLogManager, LogCategory  # noqa: E402
 from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper  # noqa: E402
 from c_ui.c_window_ver2.a_main import main_chart_panel as panel_mod  # noqa: E402
@@ -98,7 +93,7 @@ def main() -> int:
     # ---------------------------------------------------------------- 1. ChartCSVFileHelper
     rec = ChartCSVFileHelper()
     base_dir = os.path.dirname(rec.record_dir)
-    rep.check(base_dir == os.path.join(TMP_ROOT, "NVM2App", "chart_record"), f"기록 폴더가 격리 tmp 아래: {rec.record_dir}")
+    rep.check(base_dir == path_def.CHART_RECORD_PATH and base_dir.startswith(BASE), f"기록 폴더 = 격리된 CHART_RECORD_PATH: {rec.record_dir}")
     rec.append([(1700000000000, 1.5, 2.0, 3.25, 4.0, "Torr"), (1700000000200, float("nan"), 2.0, 3.25, 4.0, "Torr")])
     record_dir = rec.stop()
     rep.check(rec.stop() == record_dir, "stop 두 번째 호출은 무해 (같은 경로)")

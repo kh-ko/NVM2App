@@ -4,7 +4,8 @@
 (2026-09-28 코드 검토 보고서 5절 5위). 지금까지 scratchpad 의 _env.py / FakeSerial / Report 복사본으로
 임시로 하던 것을 한 곳에 둔다.
 
-- isolate_runtime()      : 설정·로그·펌웨어 캐시 경로를 임시 폴더로 돌린다 — 실제 2_resource/config 를 더럽히지 않는다.
+- isolate_runtime()      : 설정·로그·펌웨어 캐시·차트 기록·앱 임시 경로를 임시 폴더로 돌린다 — 실제 2_resource/config,
+                           4_chart_record, %TEMP%/NVM2App 를 더럽히지 않는다.
                            매니저 3종(AppLog/LocalSetting/ConnectionSetting)·ServicePort·펌웨어 창은 호출 시점에
                            path_def 를 읽으므로 앱 코드 수정 없이 동작한다. 반드시 b_core 매니저 import 전에 부른다.
                            임시 폴더는 프로세스 종료 때 지우고, 밖에서 죽어(러너 시간 초과 kill, 워치독 os._exit) 남은 것은
@@ -58,7 +59,7 @@ _STALE_RUNTIME_SEC = 3600   # 지난 실행의 격리 폴더로 보는 기준 �
 
 # ------------------------------------------------------------ 런타임 격리
 def isolate_runtime(name: str = "nvm2app_test", copy_config: bool = True) -> str:
-    """path_def 의 설정/로그/펌웨어 캐시 경로를 임시 폴더로 돌리고 그 폴더를 돌려준다 (멱등 — 두 번 부르면 같은 폴더).
+    """path_def 의 설정/로그/펌웨어 캐시/차트 기록/앱 임시 경로를 임시 폴더로 돌리고 그 폴더를 돌려준다 (멱등 — 두 번 부르면 같은 폴더).
 
     copy_config: 실제 2_resource/config 의 json 3개를 사본으로 복사한다 (False 면 빈 폴더 — 매니저가 기본값으로 시작).
     주의: b_core 매니저를 import 하기 전에 불러야 한다. 이미 만들어진 싱글턴은 옛 경로를 캐시하고 있을 수 있다."""
@@ -94,6 +95,10 @@ def isolate_runtime(name: str = "nvm2app_test", copy_config: bool = True) -> str
     path_def.RSRC_APP_CPU2_NEW_FILE = os.path.join(path_def.RSRC_TEMP_PATH, "fcpubn.dlla")
     path_def.RSRC_APP_CPU1_FILE = os.path.join(path_def.RSRC_TEMP_PATH, "fcpua.dlla")
     path_def.RSRC_APP_CPU2_FILE = os.path.join(path_def.RSRC_TEMP_PATH, "fcpub.dlla")
+    # 차트 기록 작업 폴더와 앱 임시 폴더 — 기록 테스트가 실제 4_chart_record 를, 업데이트 테스트가 실제 %TEMP% 를 건드리지 않게
+    path_def.CHART_RECORD_PATH = os.path.join(base, "chart_record")
+    path_def.APP_TEMP_PATH = os.path.join(base, "tmp")
+    path_def.APP_TEMP_UPDATE_PATH = os.path.join(base, "tmp", "update")
     return base
 
 
@@ -123,15 +128,20 @@ def runtime_dir() -> str | None:
 
 
 def assert_isolated() -> None:
-    """실제 2_resource/config · 3_log 를 가리키는 경로 상수가 남아 있으면 AssertionError — 테스트 끝에서 한 번 부른다."""
+    """실제 2_resource/config · 3_log · 4_chart_record · %TEMP%/NVM2App 를 가리키는 경로 상수가 남아 있으면 AssertionError —
+    테스트 끝에서 한 번 부른다."""
     from b_core.a_define import file_folder_path as path_def
 
-    real = os.path.normcase(os.path.join(ROOT, "2_resource"))
+    forbidden = tuple(os.path.normcase(p) for p in (os.path.join(ROOT, "2_resource"), os.path.join(ROOT, "3_log"),
+                                                    os.path.join(ROOT, "4_chart_record"),
+                                                    os.path.join(tempfile.gettempdir(), "NVM2App")))
     for attr in ("LOG_PATH", "RSRC_CONFIG_PATH", "RSRC_LOCAL_SETTING_JSON_FILE",
-                 "RSRC_CONNECTIONS_JSON_FILE", "RSRC_FTP_SETTING_FILE", "RSRC_TEMP_PATH"):
+                 "RSRC_CONNECTIONS_JSON_FILE", "RSRC_FTP_SETTING_FILE", "RSRC_TEMP_PATH",
+                 "CHART_RECORD_PATH", "APP_TEMP_PATH", "APP_TEMP_UPDATE_PATH"):
         value = os.path.normcase(getattr(path_def, attr))
-        assert not value.startswith(real) and not value.startswith(os.path.normcase(os.path.join(ROOT, "3_log"))), \
-            f"{attr} 가 실제 경로를 가리킨다: {value}"
+        # 폴더 경계에서 비교 — %TEMP%\NVM2App 금지가 격리 폴더 %TEMP%\nvm2app_test_* 를 잡지 않게
+        hit = any(value == f or value.startswith(f + os.sep) for f in forbidden)
+        assert not hit, f"{attr} 가 실제 경로를 가리킨다: {value}"
 
 
 def _cleanup_runtime() -> None:

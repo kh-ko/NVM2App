@@ -36,7 +36,7 @@ version_info.txt 형식 (ver1 과 동일, 최신이 위):
     _internal(PyInstaller one-folder 라이브러리)은 통째로 교체되므로 구버전에만 있던 DLL/모듈이 남지 않는다.
 
 ver1 에서 달라진 점:
-- PRESERVED_RELATIVE_DIRS(3_log, 2_resource/temp) 는 패키지에 들어 있어도 배포하지 않는다.
+- PRESERVED_RELATIVE_DIRS(3_log, 4_chart_record, 2_resource/temp) 는 패키지에 들어 있어도 배포하지 않는다.
   그 외(2_resource 의 나머지 포함)는 배포본으로 바뀐다 (사용자 결정 2026-09-09) — 패키지의 최상위 항목이 통째로 교체되므로
   그 안에 있던 로컬 파일은 보존 폴더 외에는 남지 않는다 (ver1 의 xcopy 덮어쓰기와 다른 점).
 - 배치 스크립트는 순수 ASCII 로 저장하고 경로(앱 폴더/exe 이름/패키지)는 환경변수
@@ -57,7 +57,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import zipfile
 from typing import NamedTuple
 
@@ -74,15 +73,15 @@ BINARY_DIR = "binary"
 
 APP_EXE_NAME = "NVM2App.exe"  # build.bat 의 --name NVM2App
 
-# 로컬 작업 폴더 — 다운로드 zip / 압축 해제본 / 설치 스크립트
-WORK_DIR = os.path.join(tempfile.gettempdir(), "NVM2App_update")
+# 로컬 작업 폴더(다운로드 zip / 압축 해제본 / 설치 스크립트)는 path_def.APP_TEMP_UPDATE_PATH — 호출 시점에 읽는다
+# (하네스가 바꿔 끼운다). 지난 실행의 잔재는 기동 때 app_temp_helper 가 지운다
 INSTALL_SCRIPT_NAME = "nvm2app_update.bat"
 
 # 업데이트가 건드리지 않는 앱 폴더 내 상대 경로 — 패키지에 들어 있어도 배포하지 않는다.
-# 사용자 결정(2026-09-09): 로그는 유지하고 2_resource 는 배포본으로 덮어쓴다.
+# 사용자 결정(2026-09-09): 로그는 유지하고 2_resource 는 배포본으로 덮어쓴다. 4_chart_record(차트 기록, 2026-10-16)도 유지.
 # 예외 2_resource/temp (N046): 펌웨어 다운로드 캐시 = Local Files 모드의 원본 — 현장의 마지막 다운로드본을
 # 빌드 시점 파일로 되돌리지 않는다 (build.bat 도 이 폴더를 싣지 않는다)
-PRESERVED_RELATIVE_DIRS = ("3_log", "2_resource/temp")
+PRESERVED_RELATIVE_DIRS = ("3_log", "4_chart_record", "2_resource/temp")
 
 LOCK_WAIT_RETRY = 30    # 앱 종료(exe 잠금 해제) 대기 상한 — 1초 간격
 RESTART_DELAY_S = 5     # 복사 후 재실행까지 대기 (백신 스캔/디스크 동기화 — ver1 현장 조치)
@@ -199,23 +198,23 @@ def remote_package_path(setting: FtpSetting, version: str) -> str:
 
 
 def local_package_path(version: str) -> str:
-    return os.path.join(WORK_DIR, f"{version}.zip")
+    return os.path.join(path_def.APP_TEMP_UPDATE_PATH, f"{version}.zip")
 
 
 def local_extract_dir(version: str) -> str:
-    return os.path.join(WORK_DIR, version)
+    return os.path.join(path_def.APP_TEMP_UPDATE_PATH, version)
 
 
 def download_package(setting: FtpSetting, version: str,
                      progress_cb: ProgressCallback | None = None) -> str:
-    """배포 zip 을 WORK_DIR 로 내려받고 로컬 경로를 반환한다.
+    """배포 zip 을 APP_TEMP_UPDATE_PATH 로 내려받고 로컬 경로를 반환한다.
 
     - .part 에 받은 뒤 os.replace — 중단/실패 시 반쯤 받은 zip 이 남지 않는다.
     - progress_cb(done, total): 서버가 SIZE 를 지원하지 않으면 total=0.
     - progress_cb 가 예외를 던지면 그대로 전파된다 (중단 요청 전달 경로)."""
     remote = remote_package_path(setting, version)
     dest = local_package_path(version)
-    os.makedirs(WORK_DIR, exist_ok=True)
+    os.makedirs(path_def.APP_TEMP_UPDATE_PATH, exist_ok=True)
 
     part_path = dest + ".part"
     try:
@@ -245,7 +244,7 @@ def download_package(setting: FtpSetting, version: str,
 
 
 def extract_package(zip_path: str, version: str) -> str:
-    """zip 을 WORK_DIR/{version}/ 에 풀고 교체 원본 폴더(= 그 폴더)를 반환한다.
+    """zip 을 APP_TEMP_UPDATE_PATH/{version}/ 에 풀고 교체 원본 폴더(= 그 폴더)를 반환한다.
 
     zip 루트에 exe 가 없고 폴더 하나만 있으면(폴더째 압축) 그 안의 내용을 한 단계 올린다 — 패키지 루트가 늘 압축 해제 폴더
     자신이라 설치 스크립트의 정리(rd SRC_DIR)가 전부를 지운다 (F037). exe 를 찾지 못하거나 풀다 실패하면 압축 해제 폴더를 지우고
@@ -316,7 +315,7 @@ def write_install_script(package_root: str) -> str:
 
     _drop_preserved_dirs(package_root)
 
-    script_path = os.path.join(WORK_DIR, INSTALL_SCRIPT_NAME)
+    script_path = os.path.join(path_def.APP_TEMP_UPDATE_PATH, INSTALL_SCRIPT_NAME)
     with open(script_path, "w", encoding="ascii", newline="\r\n") as f:  # 경로는 환경변수로 — 본문은 순수 ASCII
         f.write(_build_install_script())
     return script_path
@@ -340,12 +339,12 @@ def start_install_script(script_path: str, package_root: str) -> None:
     # 문자열 명령줄 + /s — cmd 는 바깥 따옴표 한 쌍만 벗기고 안쪽 "경로" 를 그대로 실행한다.
     # 리스트 인자(["cmd.exe", "/c", path])는 %TEMP% 경로에 & ^ ( ) = , ; 가 있으면 cmd 의
     # /c 따옴표 규칙에 걸려 실행되지 않는다 (N062, 실측). 배치를 직접 넘기는 형태도 같은 이유로 실패.
-    subprocess.Popen(f'cmd.exe /s /c ""{script_path}""', cwd=WORK_DIR, env=env,
+    subprocess.Popen(f'cmd.exe /s /c ""{script_path}""', cwd=path_def.APP_TEMP_UPDATE_PATH, env=env,
                      creationflags=subprocess.CREATE_NEW_CONSOLE)
 
 
 def _drop_preserved_dirs(package_root: str) -> None:
-    """보존 폴더를 패키지에서 지운다. 최상위 항목(3_log)은 패키지에 없으면 교체 루프에 들어가지 않아 앱 폴더의 것이 그대로
+    """보존 폴더를 패키지에서 지운다. 최상위 항목(3_log, 4_chart_record)은 패키지에 없으면 교체 루프에 들어가지 않아 앱 폴더의 것이 그대로
     남고, 교체되는 폴더 안의 항목(2_resource/temp)은 교체 뒤 _preserve_lines 의 줄이 .update_old 에서 되돌려 놓는다."""
     for relative in PRESERVED_RELATIVE_DIRS:
         packaged_dir = os.path.join(package_root, *relative.split("/"))
@@ -356,7 +355,7 @@ def _drop_preserved_dirs(package_root: str) -> None:
 def _preserve_lines() -> tuple[str, str]:
     """교체되는 폴더 안에 있는 보존 폴더(PRESERVED_RELATIVE_DIRS 중 '/' 가 있는 항목)의 배치 줄 —
     (교체 뒤 옛 트리에서 되돌려 놓는 줄, 되돌리기 앞에 옛 트리로 되돌려 보내는 줄).
-    최상위 보존 폴더(3_log)는 패키지에 없어 교체 자체가 일어나지 않으므로 줄이 필요 없다."""
+    최상위 보존 폴더(3_log, 4_chart_record)는 패키지에 없어 교체 자체가 일어나지 않으므로 줄이 필요 없다."""
     after, before_rollback = [], []
     for relative in PRESERVED_RELATIVE_DIRS:
         if "/" not in relative:

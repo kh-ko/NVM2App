@@ -7,16 +7,19 @@ echo ===================================================
 ::       system ANSI codepage (CP949), so UTF-8 Korean comments break parsing.
 ::
 :: Output layout:
-::   0_build\[YYYYMMDD]-v[version]\
-::       NVM2App\  : deploy files (NVM2App.exe + _internal\ + 2_resource)
-::       source\   : project snapshot at build time
-::                   (excludes .git/.venv/.claude/.idea/__pycache__/temp_build/dist/build
-::                    and the firmware download cache 2_resource\temp,
-::                    0_build and 3_log are included as empty folders)
+::   0_build\[YYYYMMDD]-v[version]\                (= release name; also the zip name and the '[VER : x]' entry)
+::       NVM2App\                   : deploy files (NVM2App.exe + _internal\ + 2_resource)
+::       [YYYYMMDD]-v[version].zip  : the NVM2App folder contents zipped flat (NVM2App.exe at the zip root) - upload to FTP binary/
+::       release_note_entry.txt     : '[VER : ...]' header to paste on top of the server's version_info.txt (fill in the notes)
+::       source\                    : project snapshot at build time
+::                                    (excludes .git/.venv/.claude/.idea/__pycache__/temp_build/dist/build, 4_chart_record
+::                                     and the firmware download cache 2_resource\temp; 0_build and 3_log are empty folders)
 ::   2_resource\temp (firmware download cache, untracked, per-PC) is never shipped;
 ::   only 2_resource\firmware (kernels) is a deploy asset.
 :: app_info.py (APP_VERSION / APP_BUILD_DATE injected) is restored to the dev
 :: version after the build. (the snapshot keeps the injected values)
+:: Python-side steps (version check, dates, exe version resource, zip, note stub) live in
+:: tools\build\build_support.py - cmd cannot do regex, non-ASCII text or zip. FTP upload is manual.
 
 :: 1. Check virtual environment
 if not exist ".venv" (
@@ -53,31 +56,39 @@ if exist "temp_build" rd /s /q "temp_build"
 mkdir "temp_build"
 copy /y "b_core\a_define\app_info.py" "temp_build\app_info.py.bak" > nul
 
+:: 3-1. Version format check: X.Y.Z or X.Y.Z-suffix, same name rule as the in-app updater (prints the pure version)
+python tools\build\build_support.py check-version "%USER_VERSION%" > "temp_build\version.txt" || goto :fail
+set /p USER_VERSION=<"temp_build\version.txt"
+
 :: 4. Inject version into app_info.py
 ::    (replaces only the quoted value, keeps trailing comment, count=1)
 python -c "import sys, re; fp='b_core/a_define/app_info.py'; q=chr(34); c=open(fp, encoding='utf-8').read(); c=re.sub('APP_VERSION = ' + q + '[^' + q + ']*' + q, 'APP_VERSION = ' + q + sys.argv[1] + q, c, count=1); open(fp, 'w', encoding='utf-8').write(c)" "%USER_VERSION%"
 if %errorlevel% neq 0 goto :fail
 
-:: 5. Resolve release folder: 0_build\[date]-v[version]\
-::    (0_build accumulates releases - only a same-named folder is recreated)
-for /f %%i in ('python -c "from datetime import datetime; print(datetime.now().strftime('%%Y%%m%%d'))"') do set TODAY=%%i
-set "RELEASE_DIR=0_build\%TODAY%-v%USER_VERSION%"
+:: 5. Dates - one call for both forms, so the folder name and APP_BUILD_DATE cannot disagree at midnight
+python tools\build\build_support.py dates > "temp_build\dates.txt" || goto :fail
+for /f "tokens=1,2" %%a in (temp_build\dates.txt) do (set "TODAY=%%a" & set "TODAY_ISO=%%b")
+::    Release folder: 0_build\[date]-v[version]\  (0_build accumulates releases - only a same-named folder is recreated)
+set "RELEASE_NAME=%TODAY%-v%USER_VERSION%"
+set "RELEASE_DIR=0_build\%RELEASE_NAME%"
 
 :: 5-1. Inject build date into app_info.py (shown in Help > About; dev tree keeps "")
 ::      same replace rule as the version: quoted value only, count=1
-for /f %%i in ('python -c "from datetime import date; print(date.today().isoformat())"') do set TODAY_ISO=%%i
 python -c "import sys, re; fp='b_core/a_define/app_info.py'; q=chr(34); c=open(fp, encoding='utf-8').read(); c=re.sub('APP_BUILD_DATE = ' + q + '[^' + q + ']*' + q, 'APP_BUILD_DATE = ' + q + sys.argv[1] + q, c, count=1); open(fp, 'w', encoding='utf-8').write(c)" "%TODAY_ISO%"
 if %errorlevel% neq 0 goto :fail
+
+:: 5-2. Windows version resource for the exe (Properties > Details) - from the injected app_info (N126)
+python tools\build\build_support.py version-file "%CD%\temp_build\file_version_info.txt" || goto :fail
 if exist "%RELEASE_DIR%" rd /s /q "%RELEASE_DIR%"
 mkdir "%RELEASE_DIR%\source"
 
 :: 6. Build resource file
-echo [1/5] Compiling resource file...
+echo [1/7] Compiling resource file...
 call .venv\Scripts\pyside6-rcc resources.qrc -o resources_rc.py
 if %errorlevel% neq 0 goto :fail
 
 :: 7. Check PyInstaller package
-echo [2/5] Checking PyInstaller...
+echo [2/7] Checking PyInstaller...
 python -m pip show pyinstaller > nul 2>&1
 if %errorlevel% neq 0 python -m pip install pyinstaller
 
@@ -92,8 +103,8 @@ if %errorlevel% neq 0 python -m pip install pyinstaller
 ::    the NVM2App sub-folder itself from --name, so distpath is the release dir.
 ::    Do NOT pre-create that sub-folder: PyInstaller then stops at a
 ::    'Continue? (y/N)' prompt and Enter aborts the build)
-echo [3/5] Running PyInstaller build...
-python -m PyInstaller --noconsole --onedir --name NVM2App --icon="%CD%\a_assets\icons\nova_icon.ico" --add-binary "%CD%\ftd2xx.dll;." --distpath "%RELEASE_DIR%" --workpath "temp_build" --specpath "temp_build" "%CD%\main.py"
+echo [3/7] Running PyInstaller build...
+python -m PyInstaller --noconsole --onedir --name NVM2App --icon="%CD%\a_assets\icons\nova_icon.ico" --add-binary "%CD%\ftd2xx.dll;." --version-file "%CD%\temp_build\file_version_info.txt" --distpath "%RELEASE_DIR%" --workpath "temp_build" --specpath "temp_build" "%CD%\main.py"
 if %errorlevel% neq 0 goto :fail
 if not exist "%RELEASE_DIR%\NVM2App\_internal" (
     echo [ERROR] _internal folder not found - build is not one-folder layout.
@@ -101,7 +112,7 @@ if not exist "%RELEASE_DIR%\NVM2App\_internal" (
 )
 
 :: 9. Copy runtime resources next to exe
-echo [4/5] Copying 2_resource to deploy folder...
+echo [4/7] Copying 2_resource to deploy folder...
 if exist "2_resource" (
     xcopy "2_resource" "%RELEASE_DIR%\NVM2App\2_resource" /E /I /H /R /Y > nul
     rem firmware download cache: per-PC, not a deploy asset (the app update keeps the field's copy)
@@ -113,12 +124,20 @@ if exist "2_resource" (
 
 :: 10. Source snapshot
 ::     robocopy exit codes 0-7 mean success, 8+ mean failure
-echo [5/5] Creating source snapshot...
-robocopy . "%RELEASE_DIR%\source" /E /XD .git .venv .claude .idea __pycache__ temp_build 0_build 3_log dist build "%CD%\2_resource\temp" /XF *.pyc /NFL /NDL /NJH /NJS > nul
+::     dist/build are anchored to the project root ("%CD%\..."): a bare /XD name matches at any depth and would
+::     drop tools\build (build_support.py) from the snapshot - same reason .gitignore uses '/build/'
+echo [5/7] Creating source snapshot...
+robocopy . "%RELEASE_DIR%\source" /E /XD .git .venv .claude .idea __pycache__ temp_build 0_build 3_log 4_chart_record "%CD%\dist" "%CD%\build" "%CD%\2_resource\temp" /XF *.pyc /NFL /NDL /NJH /NJS > nul
 if %errorlevel% geq 8 goto :fail
 mkdir "%RELEASE_DIR%\source\0_build"
 mkdir "%RELEASE_DIR%\source\3_log"
 python -m pip freeze > "%RELEASE_DIR%\source\requirements_snapshot.txt"
+
+:: 10-1. Release zip (flat: NVM2App.exe at the zip root - the layout the in-app updater expects) + release note entry
+echo [6/7] Creating release zip...
+python tools\build\build_support.py zip "%RELEASE_DIR%" "%RELEASE_NAME%" || goto :fail
+echo [7/7] Writing release note entry...
+python tools\build\build_support.py note-stub "%RELEASE_DIR%" "%RELEASE_NAME%" || goto :fail
 
 :: 11. Restore dev app_info.py and clean temp folder
 copy /y "temp_build\app_info.py.bak" "b_core\a_define\app_info.py" > nul
@@ -127,6 +146,8 @@ rd /s /q "temp_build"
 echo ===================================================
 echo  Build completed successfully!
 echo  Deploy : %RELEASE_DIR%\NVM2App\NVM2App.exe
+echo  Zip    : %RELEASE_DIR%\%RELEASE_NAME%.zip        ^(upload to FTP binary/^)
+echo  Note   : %RELEASE_DIR%\release_note_entry.txt   ^(paste on top of version_info.txt^)
 echo  Source : %RELEASE_DIR%\source\
 echo ===================================================
 pause

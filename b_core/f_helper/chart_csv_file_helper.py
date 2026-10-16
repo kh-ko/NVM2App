@@ -6,8 +6,9 @@
 (b_core 폴더 접두사는 가독성 정렬용이며 의존 규칙이 아니다 — 어느 층이든 참조 가능)
 
 쓰기 (인스턴스 — 기록 세션):
-- 생성 = 기록 시작. 임시 폴더(%TEMP%/NVM2App/chart_record/record_<시작시각>)에
-  기록하고, 파일은 파일 시작 시각 기준 1시간마다 롤링한다 (chart_YYYYMMDD_HHMMSS.csv).
+- 생성 = 기록 시작. 작업 폴더 path_def.CHART_RECORD_PATH(앱 폴더/4_chart_record)/record_<시작시각>/ 에
+  기록하고, 파일은 파일 시작 시각 기준 1시간마다 롤링한다 (chart_YYYYMMDD_HHMMSS.csv). 앱 폴더에 두는 이유:
+  Stop 뒤 저장을 취소하면 여기 남기고 경로를 안내하는데, %TEMP% 는 Windows 디스크 정리가 비운다 (2026-10-16 결정).
 - 값은 차트에 그려지는 표시(dp) 단위 그대로이며, 압력은 행마다 표시 단위
   컬럼(pres_unit)을 함께 기록한다 — 기록 중 단위가 바뀌어도 행 단위로
   자기 기술적(self-describing)이라 혼선이 없다.
@@ -26,11 +27,11 @@
 import csv
 import os
 import shutil
-import tempfile
 import time
 
 import numpy as np
 
+from b_core.a_define import file_folder_path as path_def
 from b_core.b_datatype import param_enum as p_enum
 
 _FILE_ROTATE_SEC = 3600  # 1시간 단위 파일 롤링
@@ -46,7 +47,7 @@ class ChartCSVFileHelper:
     def __init__(self):
         self.start_time = time.time()  # 경과 시간 표시용 (패널이 읽는다)
 
-        base_dir = os.path.join(tempfile.gettempdir(), "NVM2App", "chart_record")
+        base_dir = path_def.CHART_RECORD_PATH   # 호출 시점에 읽는다 (하네스 isolate_runtime 이 바꿔 끼운다)
         os.makedirs(base_dir, exist_ok=True)
 
         # 같은 초에 두 번 시작해도 폴더가 섞이지 않게 충돌 가드

@@ -16,6 +16,7 @@
      - 되돌리기 실패(새 항목 안의 파일이 열려 있음): exit 6, 옛 파일은 .update_old 에 유지, 새 설치 시작 안 함; 재실행하면 먼저 되돌림
      - 확정 잔재(저널에 committed 인 .update_old): 되돌리지 않고 삭제; 읽기 전용 exe 도 교체
      재실행은 NVM2APP_SKIP_RESTART 로 건너뛴다 (실제 배포 exe 의 재실행·FTP 경로는 수동 검증).
+  5. app_temp_helper.sweep_stale_update_files: 폴더 없음 → (0, 0); 1시간 넘은 폴더·파일만 삭제, 새 것은 유지
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import zipfile
 
 TOOLS = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -38,6 +40,7 @@ _harness.isolate_runtime()
 sys.path.insert(0, ROOT)
 
 from b_core.a_define import app_info  # noqa: E402
+from b_core.a_define import file_folder_path as path_def  # noqa: E402
 from b_core.f_helper import app_update_helper as helper  # noqa: E402
 
 EXE = helper.APP_EXE_NAME
@@ -133,48 +136,44 @@ def main() -> int:
                            ("v0.0.2\n", False)):
         rep.check(helper.is_valid_version_name(name) is expected, f"valid name {name!r} → {expected} (N061)")
 
-    # ---------------------------------------------------------------- 3. extract_package / discard_package (WORK_DIR 격리)
-    saved_work = helper.WORK_DIR
-    with tempfile.TemporaryDirectory() as tmp:
-        helper.WORK_DIR = os.path.join(tmp, "work")
-        os.makedirs(helper.WORK_DIR)
-        try:
-            def make_zip(version: str, folder_wrapped: bool, with_exe: bool = True) -> str:
-                path = helper.local_package_path(version)
-                prefix = "NVM2App/" if folder_wrapped else ""
-                with zipfile.ZipFile(path, "w") as zf:
-                    if with_exe:
-                        zf.writestr(prefix + EXE, "exe")
-                    zf.writestr(prefix + "_internal/lib.dll", "lib")
-                    zf.writestr(prefix + "2_resource/config/a.json", "cfg")
-                return path
+    # ---------------------------------------------------------------- 3. extract_package / discard_package (작업 폴더는 isolate_runtime 이 격리)
+    os.makedirs(path_def.APP_TEMP_UPDATE_PATH, exist_ok=True)
 
-            root = helper.extract_package(make_zip("flat", False), "flat")
-            rep.check(root == helper.local_extract_dir("flat") and os.path.isfile(os.path.join(root, EXE))
-                      and not os.path.exists(helper.local_package_path("flat")), "평평한 zip: 루트 = 압축 해제 폴더, zip 삭제")
-            root = helper.extract_package(make_zip("wrapped", True), "wrapped")
-            rep.check(root == helper.local_extract_dir("wrapped") and os.path.isfile(os.path.join(root, EXE))
-                      and os.path.isfile(os.path.join(root, "2_resource", "config", "a.json"))
-                      and not os.path.isdir(os.path.join(root, "NVM2App")), "폴더째 zip: 안쪽을 한 단계 올려 루트 = 압축 해제 폴더 (F037)")
-            try:
-                helper.extract_package(make_zip("noexe", False, with_exe=False), "noexe")
-                rep.check(False, "exe 없는 zip → 예외")
-            except RuntimeError:
-                rep.check(not os.path.exists(helper.local_extract_dir("noexe")), "exe 없는 zip → 예외 + 압축 해제 폴더 정리 (F037)")
-            write(helper.local_package_path("left") + ".part", "half")
-            make_zip("left", False)                                        # zip 은 풀지 않은 채 (다운로드 직후 중단 흉내)
-            os.makedirs(helper.local_extract_dir("left"))                  # 폴더도 함께
-            helper.discard_package("left")
-            rep.check(not os.path.exists(helper.local_extract_dir("left")) and not os.path.exists(helper.local_package_path("left"))
-                      and not os.path.exists(helper.local_package_path("left") + ".part"), "discard_package: 폴더·zip·.part 삭제")
-            try:
-                helper.discard_package("never")
-                quiet = True
-            except OSError:
-                quiet = False
-            rep.check(quiet, "discard_package: 없는 이름은 예외 없이 조용히")
-        finally:
-            helper.WORK_DIR = saved_work
+    def make_zip(version: str, folder_wrapped: bool, with_exe: bool = True) -> str:
+        path = helper.local_package_path(version)
+        prefix = "NVM2App/" if folder_wrapped else ""
+        with zipfile.ZipFile(path, "w") as zf:
+            if with_exe:
+                zf.writestr(prefix + EXE, "exe")
+            zf.writestr(prefix + "_internal/lib.dll", "lib")
+            zf.writestr(prefix + "2_resource/config/a.json", "cfg")
+        return path
+
+    rep.check(helper.local_package_path("x").startswith(path_def.APP_TEMP_UPDATE_PATH), "작업 폴더 = path_def.APP_TEMP_UPDATE_PATH (호출 시점)")
+    root = helper.extract_package(make_zip("flat", False), "flat")
+    rep.check(root == helper.local_extract_dir("flat") and os.path.isfile(os.path.join(root, EXE))
+              and not os.path.exists(helper.local_package_path("flat")), "평평한 zip: 루트 = 압축 해제 폴더, zip 삭제")
+    root = helper.extract_package(make_zip("wrapped", True), "wrapped")
+    rep.check(root == helper.local_extract_dir("wrapped") and os.path.isfile(os.path.join(root, EXE))
+              and os.path.isfile(os.path.join(root, "2_resource", "config", "a.json"))
+              and not os.path.isdir(os.path.join(root, "NVM2App")), "폴더째 zip: 안쪽을 한 단계 올려 루트 = 압축 해제 폴더 (F037)")
+    try:
+        helper.extract_package(make_zip("noexe", False, with_exe=False), "noexe")
+        rep.check(False, "exe 없는 zip → 예외")
+    except RuntimeError:
+        rep.check(not os.path.exists(helper.local_extract_dir("noexe")), "exe 없는 zip → 예외 + 압축 해제 폴더 정리 (F037)")
+    write(helper.local_package_path("left") + ".part", "half")
+    make_zip("left", False)                                        # zip 은 풀지 않은 채 (다운로드 직후 중단 흉내)
+    os.makedirs(helper.local_extract_dir("left"))                  # 폴더도 함께
+    helper.discard_package("left")
+    rep.check(not os.path.exists(helper.local_extract_dir("left")) and not os.path.exists(helper.local_package_path("left"))
+              and not os.path.exists(helper.local_package_path("left") + ".part"), "discard_package: 폴더·zip·.part 삭제")
+    try:
+        helper.discard_package("never")
+        quiet = True
+    except OSError:
+        quiet = False
+    rep.check(quiet, "discard_package: 없는 이름은 예외 없이 조용히")
 
     # ---------------------------------------------------------------- 4. 교체 스크립트 (실제 cmd)
     with tempfile.TemporaryDirectory() as root:
@@ -269,6 +268,20 @@ def main() -> int:
         rep.check(rc == 0 and "interrupted" not in out and "3_log/extra.log" not in files and files.get(EXE) == "exe new"
                   and not os.path.exists(os.path.join(app, ".update_old")) and ".update_journal" not in files,
                   f"확정 잔재: 되돌리지 않고 삭제, 읽기 전용 exe 교체 (exit {rc})")
+
+    # ---------------------------------------------------------------- 5. 기동 시 임시 잔재 정리 (app_temp_helper)
+    from b_core.f_helper import app_temp_helper  # noqa: E402
+    upd = path_def.APP_TEMP_UPDATE_PATH
+    shutil.rmtree(upd, ignore_errors=True)
+    rep.check(app_temp_helper.sweep_stale_update_files() == (0, 0), "sweep: 폴더가 없으면 (0, 0)")
+    write(os.path.join(upd, "old_pkg", EXE), "x")
+    write(os.path.join(upd, "old.zip"), "x")
+    write(os.path.join(upd, "fresh.zip"), "x")
+    old = time.time() - app_temp_helper.STALE_AFTER_SEC - 60
+    os.utime(os.path.join(upd, "old_pkg"), (old, old))
+    os.utime(os.path.join(upd, "old.zip"), (old, old))
+    rep.check(app_temp_helper.sweep_stale_update_files() == (2, 0) and sorted(os.listdir(upd)) == ["fresh.zip"],
+              f"sweep: 1시간 넘은 폴더·파일만 삭제, 새 것은 유지: {sorted(os.listdir(upd))}")
 
     _harness.assert_isolated()
     return rep.summary()

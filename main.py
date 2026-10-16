@@ -14,6 +14,7 @@ from b_core.a_define import app_info
 from b_core.a_define import file_folder_path as path_def
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.parameter_manager import ParamManager
+from b_core.f_helper import app_temp_helper
 from c_ui.c_window_ver2.a_main.main_win import MainWin
 from c_ui.c_window_ver2.x_message.startup_message_box import show_schema_load_error
 
@@ -86,6 +87,12 @@ def main():
                                 path_def.RSRC_NV1_SPEC_JSON_FILE],
                                param_manager.load_errors)
         sys.exit(1)
+
+    # [Step 5-1] 지난 실행이 임시 폴더에 남긴 앱 업데이트 잔재 정리 — 기동을 막지 않는다 (실패는 로그만)
+    removed, failed = app_temp_helper.sweep_stale_update_files()
+    if removed or failed:
+        AppLogManager().get_logger("App", is_global=True).info(
+            f"temp sweep: removed {removed}, failed {failed} ({path_def.APP_TEMP_UPDATE_PATH})")
 
     # [Step 6] 메인 윈도우 초기화 및 실행
     window = MainWin()
