@@ -18,7 +18,7 @@
         -> 재연결 후, 업데이트 전 저장한 백업 파일(backup_file_path)이 있을 때만
            RestoreWin(FU 모드) 을 열어 자동 로드한다. 백업이 없으면 완료 안내로 끝난다
         -> 공장 초기화를 Skip 해도 백업 파일이 있으면 RestoreWin 을 연다 (사용자 요청)
-  -> 실패: 오류 메시지, 진행바는 실패 지점에서 멈춘 채 유지
+  -> 실패/Abort: 선택 행·진행바를 비워 초기 상태로 되돌리고 오류 메시지 — Update 로 처음부터 다시
 
 백업 파일 경로는 MainWin 이 넘긴다: Firmware Update 메뉴 -> (연결 중이면) 백업
 질문 -> BackupWin(FU 모드) -> 닫힐 때 경로와 함께 이 창을 띄운다.
@@ -430,9 +430,12 @@ class FactoryFirmwareUpdateWin(ParamWin):
             return
 
         if not ok:
-            # 진행바는 실패 지점에 멈춘 채 둔다 — 세부 사유는 메시지와 LogView 로
+            # 어디서 실패했든(Abort 포함) 한 가지로 — 선택 행·진행바를 비워 초기 상태로 되돌리고 Update 로 처음부터
+            # 다시 하게 한다. 세부 사유는 메시지와 LogView 로. _saved_port_setting 은 재시도의 재연결용으로 그대로 (N055)
+            self._reset_body()
             self._set_stage(_Stage.IDLE)
-            QMessageBox.critical(self, "Firmware Update Failed", msg)
+            QMessageBox.critical(self, "Firmware Update Failed",
+                                 msg + "\n\nRun the update again from the beginning (Update).")
             return
 
         if self._job is not None and self._job.adapter_type == AdapterType.RS232:

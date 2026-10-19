@@ -68,7 +68,7 @@ class MainStatusPanel(ScrolledPanelWidget):
                 bit_pos = member.value
                 description = member.description
 
-                button = BaseButton(glyph = icons.GLYPH_WARN, glyph_color = tokens().warning, text = description)
+                button = BaseButton(glyph = icons.GLYPH_WARN, glyph_color = tokens().danger, text = description)
                 button.setVisible(False)
                 button.clicked.connect(self.on_clicked_warn_err_button)
 

@@ -1,6 +1,6 @@
 """메인 실시간 차트 패널.
 
-CompoundData 스트림(20~30ms 간격 샘플, 200ms 마다 배치 수신)을
+CompoundData 스트림(20~30ms 간격 샘플, 500ms 마다 배치 수신)을
 position(왼쪽 Y축) / pressure(오른쪽 Y축) 4개 곡선으로 그린다.
 X축은 사용자가 선택한 시간창(30s~10min, 그래프 하단 콤보)만 보여주며
 최신 샘플을 따라 슬라이딩한다.
@@ -274,11 +274,11 @@ class MainChartPanel(PanelWidget):
         self._checkboxes[f"{prefix}_chart_enable_target"].sig_edited_by_user.connect(
             self.on_clicked_posi_target_checkbox if prefix == "posi" else self.on_clicked_pres_target_checkbox)
         mode_widget.sig_edited_by_user.connect(
-            self.on_edited_posi_range_widget if prefix == "posi" else self.on_edited_pres_range_widget)
+            self.on_edited_posi_range_mode if prefix == "posi" else self.on_edited_pres_range_mode)
         min_widget.sig_edited_by_user.connect(
-            self.on_edited_posi_range_widget if prefix == "posi" else self.on_edited_pres_range_widget)
+            self.on_edited_posi_range_min if prefix == "posi" else self.on_edited_pres_range_min)
         max_widget.sig_edited_by_user.connect(
-            self.on_edited_posi_range_widget if prefix == "posi" else self.on_edited_pres_range_widget)
+            self.on_edited_posi_range_max if prefix == "posi" else self.on_edited_pres_range_max)
 
         return column
 
@@ -328,7 +328,7 @@ class MainChartPanel(PanelWidget):
         return self._registry.decode_line(param, line_value)
 
     def update_chart(self, data_list):
-        """MainWin 이 200ms 주기로 전달하는 CompoundData 배치를 버퍼에 추가하고 1회 다시 그린다."""
+        """MainWin 이 500ms 주기로 전달하는 CompoundData 배치를 버퍼에 추가하고 1회 다시 그린다."""
         if not data_list:
             return
 
@@ -652,23 +652,25 @@ class MainChartPanel(PanelWidget):
 
         self._update_pres_axis_width()
 
-    def on_edited_posi_range_widget(self, _widget):
-        # 편집된 위젯만이 아니라 그룹 전체를 반영해도 무해하다 (같은 값 대입은 no-op)
-        self._apply_range_widgets("posi")
+    # 편집된 위젯의 설정 하나만 쓴다 — 그룹 전체를 되쓰면 자릿수를 줄인 뒤 건드리지 않은 Min/Max 가
+    # 표시(반올림)값으로 덮어써진다 (N101)
+    def on_edited_posi_range_mode(self):
+        self.local_setting.posi_chart_range_mode = self._range_widgets["posi_chart_range_mode"].get_value()
 
-    def on_edited_pres_range_widget(self, _widget):
-        self._apply_range_widgets("pres")
+    def on_edited_posi_range_min(self):
+        self.local_setting.posi_chart_range_custom_min = self._range_widgets["posi_chart_range_custom_min"].get_value()
 
-    def _apply_range_widgets(self, prefix):
-        for suffix in ("mode", "custom_min", "custom_max"):
-            name = f"{prefix}_chart_range_{suffix}"
-            value = self._range_widgets[name].get_value()
+    def on_edited_posi_range_max(self):
+        self.local_setting.posi_chart_range_custom_max = self._range_widgets["posi_chart_range_custom_max"].get_value()
 
-            # 편집 중간 상태(빈 칸 등)는 반영하지 않는다
-            if value is None:
-                continue
+    def on_edited_pres_range_mode(self):
+        self.local_setting.pres_chart_range_mode = self._range_widgets["pres_chart_range_mode"].get_value()
 
-            setattr(self.local_setting, name, value)
+    def on_edited_pres_range_min(self):
+        self.local_setting.pres_chart_range_custom_min = self._range_widgets["pres_chart_range_custom_min"].get_value()
+
+    def on_edited_pres_range_max(self):
+        self.local_setting.pres_chart_range_custom_max = self._range_widgets["pres_chart_range_custom_max"].get_value()
 
     # ------------------------------------------------------------ 우측 축 폭
     _pres_axis_width_key = None  # 폭 재계산 생략용 캐시 (범위/자리수가 그대로면 스킵)

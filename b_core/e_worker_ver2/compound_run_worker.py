@@ -321,7 +321,8 @@ class CompoundRunWorker(QObject):
         """슬롯 쓰기부터 다시 수행한 뒤 폴링 시작.
 
         호출 시점 판단은 윈도우 몫 — 보통 ParameterRunWorker.sig_finish_refresh
-        수신 시점 (param 초기 읽기가 끝난 뒤 버스를 넘겨받는 순서 보장)."""
+        수신 시점 (param 초기 읽기가 끝난 뒤 버스를 넘겨받는 순서 보장).
+        MainWin.handle_finished_refresh 는 refresh 마다 — 폴링이 켜진 채인 툴바 Refresh 뒤에도 — 이것을 부른다 (F075)."""
         if self._thread is not None:
             self._thread.start_polling()
 

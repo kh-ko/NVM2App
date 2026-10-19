@@ -113,7 +113,7 @@ class MainPressurePanel(PanelWidget):
         self._max_pres_param = param
 
         t = tokens()
-        self.max_pres_widget = ReadOnlyTextValueWidget(label_text="Max Pres. Max", label_width=150, is_vertical_mode = True)
+        self.max_pres_widget = ReadOnlyTextValueWidget(label_text="Pres. Max", label_width=150, is_vertical_mode = True)
         self.max_pres_widget.value_widget.set_boxed(True)
         self.max_pres_widget.value_widget.set_colors(text=t.panel_pres_text, bg=t.panel_pres_bg, border=t.panel_pres_border)
         self.left_layout.insertWidget(2, self.max_pres_widget)

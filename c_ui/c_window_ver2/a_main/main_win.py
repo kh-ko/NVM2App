@@ -284,7 +284,9 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.compound_worker.start()
 
         self.compound_timer = QTimer(self)
-        self.compound_timer.setInterval(200)  # 200ms = 0.2초
+        # 500ms — 9600 연결(왕복 90~115ms)에서도 틱마다 샘플이 4~5개라 scan-rate 쌍 계산이 항상 되고,
+        # 차트·패널 표시값 갱신(과 센서 분석 창의 샘플 원천)이 초당 2회로 줄어드는 것을 감수 (N108, 2026-10-19 사용자 결정)
+        self.compound_timer.setInterval(500)
         self.compound_timer.timeout.connect(self.handle_compound_data)
         self.compound_timer.start()
 
@@ -362,6 +364,13 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.chart_panel.set_source_params(self.act_posi_param, self.target_used_posi_param,
                                            self.act_pres_param, self.target_used_pres_param)
 
+        # 상태바 초기 동기화 — ServiceWin.start() 의 1회 호출과 같다. MainWin 은 WinManager 를 거치지 않아
+        # 첫 connect_info_changed / SN 수신까지 라벨 0('Disconnected')·1('SN:-') 이 빈칸이었다 (F074).
+        # 미연결이면 compound stop_polling / param_worker.handle_disconnected 도 불려 워커가 IDLE → DISCONNECTED 로 가지만,
+        # 어느 경로도 둘을 구분하지 않는다 — ServiceWin.start() 가 모든 창에 주는 것과 같은 초기 상태
+        self.handle_changed_sn_param()
+        self.handle_changed_connection_info(self.svc_port.connect_info)
+
     # 쓰기 정책/refresh (single_param_write / multiple_param_write /
     # start_param_refresh)는 ParamWorkerWinMixin 이 제공한다
 
@@ -411,6 +420,13 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
         self.single_param_write(self.acc_mode_param, f"{p_enum.AccModeEnum.REMOTE.value}")
 
     def on_clicked_refresh_btn(self):
+        # Refresh 는 의도적으로 compound 폴링을 멈추지 않는다 (F075, 2026-10-19 현행 유지 결정) —
+        # refresh 와 폴링이 ServicePort 뮤텍스 아래 한 포트를 번갈아 쓰므로 Refresh 동안 느려지고, 완료 슬롯
+        # (handle_finished_refresh)의 start_polling() 이 슬롯 14건을 다시 쓰는 왕복 14회 동안(9600 에서 1~2초) 폴링이
+        # 멈춰 차트 공백·'scan-rate: -' 가 잠깐 보인다 — 장비 상태에는 무해한 중복이라 감수한다.
+        # 전제: start_polling 이 멱등(이미 폴링 중이어도 슬롯 재쓰기 뒤 계속)이고, 연결 직후 경로
+        # (끊김 → stop_polling → 연결 → refresh → start_polling)와 같은 슬롯을 쓴다는 것 —
+        # start_polling 의 의미나 슬롯 쓰기 조건을 바꾸면 여기와 handle_finished_refresh 를 같이 보라.
         self.start_param_refresh()
 
     def on_clicked_connection_connect(self):
@@ -632,6 +648,11 @@ class MainWin(ParamWorkerWinMixin, QMainWindow):
 
     def handle_finished_refresh(self):
         # refresh가 끝나면 compound는 다시 slot값을 쓰고 폴링 동작을 수행하면 된다.
+        # 툴바 Refresh 뒤에도 여기로 온다 — 폴링을 멈추지 않았으므로 start_polling() 이 켜진 폴링 위에
+        # 슬롯 14건을 다시 쓴다. 장비 상태에는 무해한 중복이지만 그 왕복 14회 동안 폴링이 멈춘다(9600 에서
+        # 1~2초의 차트 공백) — 그대로 두기로 했다 (F075, 2026-10-19 현행 유지 결정).
+        # 전제는 start_polling 이 멱등이고 연결 직후 경로와 같은 슬롯을 쓴다는 것 — start_polling 의 의미나
+        # 슬롯 쓰기 조건을 바꾸면 on_clicked_refresh_btn 과 여기를 같이 보라.
         self.compound_worker.start_polling()
 
     # 재부팅 대기 다이얼로그(handle_started_reboot / handle_finished_reboot /

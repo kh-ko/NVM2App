@@ -8,8 +8,9 @@
      Enable Edit 은 동작 중만 잠김 · 동작이 끝나면 다시 잠김), 파괴 뒤 좀비 연결 없음.
   2. 창 7개(2단계 ②·data-protocol-2): Backup/Restore 는 워커 시퀀스(capture/raw_write)로 돌며 is_working 으로 잠기고 Abort 만 살아 있다 —
      ScriptedTransport 로 끝까지 돌려 재시도 상한·누락 질문·부분 파일·늦은 응답 재시도(F086)·거부 즉시 실패·Abort·끊김 보고를 본다.
+     Restore 의 미연결 로드(현재 장비 값 None)는 장비 검사 생략을 요약에 알린다(N075).
      Restore(FU 모드)의 start() 뒤 자동 로드, Sensor Analysis 의 샘플 타이머가 start() 의 연결 동기화로 시작하고 끊김에 정지, Cluster Monitor 의 set_body 잠금 · Apply
-     표시, Firmware Update 의 폴더 카드 1 · 표시 전용 본문(locks_content=False) · Refresh 없음, About/Update 의 param 워커 없음 · 상태바,
+     표시, Firmware Update 의 폴더 카드 1 · 표시 전용 본문(locks_content=False) · Refresh 없음 · 쓰기 실패 → 초기 상태 복귀(N055), About/Update 의 param 워커 없음 · 상태바,
      Update 의 릴리스 노트 조회가 on_start 에서 시작(FTP 는 스텁), 클래스 기본값·'항상 활성' 오버라이드 잔존 없음,
      파괴 뒤 connect_info_changed 좀비 없음.
 통신은 없다 — 워커 동작은 param_worker.is_working 대입(setter 가 시그널을 낸다)으로, 연결은 _harness.fake_connected 로, 장비 응답은
@@ -52,6 +53,7 @@ from c_ui.c_window_ver2.d_backup_restore import backup_win as backup_win_mod  # 
 from c_ui.c_window_ver2.d_backup_restore.backup_win import BackupWin  # noqa: E402
 from c_ui.c_window_ver2.d_backup_restore.restore_win import RestoreWin  # noqa: E402
 from c_ui.c_window_ver2.f_cluster.cluster_monitor_win import ClusterMonitorWin  # noqa: E402
+from c_ui.c_window_ver2.g_factory import factory_firmware_update_win as fu_mod  # noqa: E402
 from c_ui.c_window_ver2.g_factory.factory_firmware_update_win import FactoryFirmwareUpdateWin  # noqa: E402
 from c_ui.c_window_ver2.h_help import help_nvm_update_win as update_mod  # noqa: E402
 from c_ui.c_window_ver2.h_help.help_about_win import HelpAboutWin  # noqa: E402
@@ -307,6 +309,10 @@ def main() -> int:
             f.write(backup_file_helper.build_header("6.2.3", 0) + "\n")
             for p, pk in zip((pa, pb, pc), packets):
                 f.write(f"{p.path}.{p.name}, {pk}\n")
+        win.load_backup_file(path)   # 미연결 — 현재 장비 값 None 이라 헤더 비교를 건너뛰고 요약에 알린다 (N075)
+        rep.check(len(summaries) == 1 and "device check skipped" in summaries[0] and len(win.loaded_items) == 3,
+                  f"Restore: 미연결 로드 — 요약에 장비 검사 생략 안내: {summaries}")
+        summaries.clear()
         win.is_fu_restore = True   # 헤더 비교 건너뜀 (장비 값 없음)
         win.load_backup_file(path)
         summaries.clear()
@@ -389,6 +395,22 @@ def main() -> int:
     set_worker_busy(win, True)
     rep.check(win.content_widget.isEnabled() and actions(win)["Update"], "FU: 워커 동작 중에도 본문·Update 활성 (표시 전용)")
     set_worker_busy(win, False)
+    # 쓰기 실패/Abort → 선택 행·진행바를 비워 초기 상태로, 'Firmware Update Failed' 박스 1회 (N055)
+    summaries.clear()
+    QMessageBox.critical = staticmethod(lambda parent, title, text: summaries.append(text) or QMessageBox.StandardButton.Ok)
+    win.row_method.set_text("Update Method : Local Files"); win.row_method.set_checked(True)
+    win._steps = [fu_mod.FirmwarePhase.LOAD_FILES, fu_mod.FirmwarePhase.CPU1_KERNEL_DN]
+    win._set_stage(fu_mod._Stage.WRITING)
+    win.handle_write_phase_changed(fu_mod.FirmwarePhase.CPU1_KERNEL_DN)
+    rep.check(actions(win)["Abort"] and not actions(win)["Update"] and win.row_progress.progress.value() == 50,
+              "FU: WRITING — Abort 활성, 진행바 2단계 중 2번째 = 50%")
+    win.handle_write_finished(False, "boom")
+    rep.check(win._stage is fu_mod._Stage.IDLE and actions(win)["Update"] and not actions(win)["Abort"]
+              and win.row_progress.progress.value() == 0 and win._steps == []
+              and win.row_method.check.text() == "Update Method : -" and not win.row_method.check.is_checked(),
+              "FU: 쓰기 실패 → IDLE·Update 활성·진행바 0·선택 행 초기화 (N055)")
+    rep.check(len(summaries) == 1 and summaries[0].startswith("boom") and "Run the update again" in summaries[0],
+              f"FU: 실패 박스 1회 = 사유 + 처음부터 다시 안내: {summaries}")
     _harness.destroy_window(win, app)
 
     # --- HelpAboutWin (param 워커 없음)

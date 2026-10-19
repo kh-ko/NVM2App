@@ -41,7 +41,7 @@ from PySide6.QtGui import QDoubleValidator, QValidator
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit,
                                QSizePolicy)
 
-from b_core.f_helper.float_util import SIG_DIGITS, to_sig_str
+from b_core.f_helper.float_util import to_sig_str
 
 from c_ui.b_control_ver2.a_theme import style
 from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors
@@ -163,6 +163,7 @@ class BaseComboBox(QComboBox, ColorStyled):
 
 class BaseDoubleSpinBox(QDoubleSpinBox, ColorStyled):
     """실수 스핀박스 입력. Enter 입력 시 포커스 해제(편집 세션 종료).
+    휠 스크롤로 값이 바뀌는 사고 방지를 위해 wheelEvent 무시 (BaseComboBox 와 같은 정책).
 
     - border=False 로 생성하면 평시/호버/포커스 테두리 전부 투명.
       (프레임(그룹박스) 안에 놓일 때 테두리가 이중으로 보이는 것 방지)
@@ -245,6 +246,9 @@ class BaseDoubleSpinBox(QDoubleSpinBox, ColorStyled):
             self._assigning = False
         self._user_touched = False
         self.sig_assigned_by_code.emit(self)
+
+    def wheelEvent(self, event):
+        event.ignore()
 
     def _build_qss(self, c: WidgetColors) -> str:
         border = self._effective_border()
@@ -339,10 +343,11 @@ class BaseLineEdit(QLineEdit, ColorStyled):
 class _FloatFixupValidator(QDoubleValidator):
     """BaseFloatLineEdit 전용 — fixup 판단을 위젯의 클램프/포맷 정책에 위임한다.
 
-    유효숫자 모드(위젯의 _decimals 가 None)에서는 소수 자릿수를 제한하지 않는
-    대신(decimals=-1), 유효숫자(float_util.SIG_DIGITS)로 표현할 수 없는
-    정밀도의 입력을 Intermediate 로 판정한다 — 확정(Enter/포커스 아웃) 시
-    fixup 이 유효숫자 자릿수로 반올림해 수습한다."""
+    값은 범위 안이지만 위젯의 표시 포맷(_format)과 다른 텍스트("1.", 고정 자릿수 모드의 "50",
+    유효숫자 모드의 "0.50", 유효숫자 6자리 초과 정밀도)는 Intermediate 로 판정한다 — 확정(Enter/
+    포커스 아웃) 시 fixup 이 위젯 포맷으로 다시 그린다 (N084). 유효숫자 모드
+    (위젯의 _decimals 가 None)는 소수 자릿수를 제한하지 않는 대신(decimals=-1)
+    이 포맷 비교가 유효숫자 정밀도 제한을 겸한다."""
 
     def __init__(self, owner):
         # 기본 범위는 QDoubleSpinBox 와 동일 (0.0~99.99), 자릿수는 무제한(-1) —
@@ -361,13 +366,13 @@ class _FloatFixupValidator(QDoubleValidator):
     def validate(self, text: str, pos: int):
         state, text, pos = super().validate(text, pos)
 
-        # 유효숫자 모드: 6자리로 표현 불가한 정밀도는 확정 불가(Intermediate) —
-        # 자릿수 세기 대신 '6자리 반올림 시 값이 변하는가'로 판정한다
-        # (1000000 처럼 후행 0 만 긴 수는 통과, 0.123456789 는 걸린다)
-        if state == QDoubleValidator.Acceptable and self._owner._decimals is None:
+        # 표시 포맷과 다른 텍스트("1.", 고정 자릿수 모드의 "50", 유효숫자 모드의 "0.50", 6자리 초과 정밀도)는
+        # 확정 불가(Intermediate) — 확정(Enter/포커스 아웃) 시 fixup 이 위젯 포맷으로
+        # 다시 그린다. 유효숫자 모드의 정밀도 제한도 이 비교가 겸한다
+        # (1000000 처럼 후행 0 만 긴 수는 통과, 0.123456789 는 걸린다) (N084)
+        if state == QDoubleValidator.Acceptable:
             try:
-                value = float(text)
-                if float(f"{value:.{SIG_DIGITS}g}") != value:
+                if text != self._owner._format(float(text)):
                     return QDoubleValidator.Intermediate, text, pos
             except ValueError:
                 pass
@@ -383,8 +388,8 @@ class BaseFloatLineEdit(BaseLineEdit):
 
     (QSS 는 BaseLineEdit 선택자가 파생 클래스에도 매칭되므로 재정의 불필요)
 
-    [주의] QDoubleValidator 는 범위 초과 입력을 Invalid 가 아닌 Intermediate 로
-    판정하고, QLineEdit 은 Acceptable 상태가 아니면 editingFinished 를 발화하지
+    [주의] validator 는 범위 초과 입력과 표시 포맷과 다른 텍스트를 Invalid 가 아닌 Intermediate 로
+    판정하고(N084), QLineEdit 은 Acceptable 상태가 아니면 editingFinished 를 발화하지
     않는다. 그래서 fixup() 에서 클램프+재포맷으로 Acceptable 을 보장한다
     (Enter/포커스 아웃 모두 fixup 을 경유) — 덕분에 sig_edited_by_user 발화
     조건이 BaseLineEdit 과 동일하게 유지된다. 해석 불가 텍스트("", "-", ".")로
@@ -495,8 +500,9 @@ class BaseFloatLineEdit(BaseLineEdit):
 class _HexFixupValidator(QValidator):
     """BaseHexLineEdit 전용 — 16진수 문자만 허용, fixup 판단은 위젯 정책에 위임한다.
 
-    QDoubleValidator 의 전략을 그대로 따른다: 범위 초과는 Invalid 가 아닌
-    Intermediate 로 판정해 타이핑을 막지 않고, 확정 시 fixup 클램프로 수습한다."""
+    _FloatFixupValidator 의 전략을 그대로 따른다: 범위 초과와 표시 포맷(대문자·0 패딩)
+    과 다른 텍스트("abc", "00ff")는 Invalid 가 아닌 Intermediate 로 판정해 타이핑을
+    막지 않고, 확정 시 fixup 이 클램프+위젯 포맷으로 다시 그린다 (N084)."""
 
     _HEX_CHARS = set("0123456789abcdefABCDEF")
 
@@ -512,7 +518,10 @@ class _HexFixupValidator(QValidator):
         if any(ch not in self._HEX_CHARS for ch in text):
             return QValidator.Invalid, text, pos
 
-        if self._owner._minimum <= int(text, 16) <= self._owner._maximum:
+        # 범위 안이고 표시 포맷(대문자·0 패딩)과 같을 때만 Acceptable — 그 외는 확정 시
+        # fixup 이 다시 그린다 (N084)
+        value = int(text, 16)
+        if self._owner._minimum <= value <= self._owner._maximum and text == self._owner._format(value):
             return QValidator.Acceptable, text, pos
         return QValidator.Intermediate, text, pos
 
@@ -528,8 +537,8 @@ class BaseHexLineEdit(BaseLineEdit):
     (QSS 는 BaseLineEdit 선택자가 파생 클래스에도 매칭되므로 재정의 불필요)
 
     [주의] QLineEdit 은 Acceptable 상태가 아니면 editingFinished 를 발화하지
-    않는다. validator 는 hex 문자가 아니면 Invalid(타이핑 차단), 범위 초과면
-    Intermediate 로 판정하고, fixup() 에서 클램프+재포맷으로 Acceptable 을
+    않는다. validator 는 hex 문자가 아니면 Invalid(타이핑 차단), 범위 초과·표시 포맷
+    (대문자·0 패딩) 불일치면 Intermediate 로 판정하고(N084), fixup() 에서 클램프+재포맷으로 Acceptable 을
     보장한다 (Enter/포커스 아웃 모두 fixup 을 경유) — 덕분에 sig_edited_by_user
     발화 조건이 BaseLineEdit 과 동일하게 유지된다. 해석 불가 텍스트("")로
     확정을 시도하면 마지막 유효값으로 복원한다 (BaseFloatLineEdit 와 동일).

@@ -245,11 +245,13 @@ class FTDHelper:
             except ftd.DeviceError:
                 return False, "can not program eeprom", False
 
-            # 설정 적용을 위해 USB 재열거 (물리적으로 뽑았다 꽂는 것과 동일)
+            # 설정 적용을 위해 USB 재열거 (물리적으로 뽑았다 꽂는 것과 동일).
+            # 재열거가 안 되면 새 EEPROM 값이 핀에 적용되지 않으므로 여기서 실패시킨다 —
+            # 그대로 진행하면 뒤 단계의 'Autobaud failed' 로만 보인다 (N049)
             try:
                 handle.cyclePort()
             except ftd.DeviceError:
-                return True, "eeprom programmed - please replug device", True
+                return False, "eeprom programmed - unplug and replug the USB adapter", False
 
             return True, "", True
         finally:
@@ -597,7 +599,7 @@ class FirmwareWriteThread(_FirmwareThreadBase):
             raise RuntimeError(f"[Change EEPROM I/O pin] Failed: COM{port_num} : {msg}")
 
         if need_recycle:
-            self.sig_log.emit(bool(msg), f"[Change EEPROM I/O pin] Programmed : COM{port_num} {msg}")
+            self.sig_log.emit(False, f"[Change EEPROM I/O pin] Programmed : COM{port_num}")
         else:
             self.sig_log.emit(False, f"[Change EEPROM I/O pin] Already set : COM{port_num}")
         return need_recycle

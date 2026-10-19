@@ -150,17 +150,21 @@ class ReadWriteFloatValueSpinBoxWidget(ValueWidget):
 
     def set_value(self, value):
         self._sync_enabled()
-        # 스핀박스는 '값 없음'을 표현할 수 없으므로 None 은 0 으로 표시한다 (setValue(None) 은 TypeError)
+        # 스핀박스는 '값 없음'을 표현할 수 없으므로 None 은 0 으로 표시한다 (setValue(None) 은 TypeError).
+        # Not Support 중에는 최솟값(specialValueText 자리)으로 보내 문구를 유지한다 — _no_value_text 와 같은 의도 (N090)
         if value is None:
-            value = 0
+            value = self.value_widget.minimum() if self._is_not_support else 0
         self.value_widget.setValue(value)
 
     def get_value(self):
         return self.value_widget.value()
 
     def _render_not_support(self, is_not_support):
+        # 빈 표시가 없는 스핀박스는 Qt specialValueText 로 최솟값 자리에 문구를 보인다 (다른 RW 위젯의 placeholder 대응).
+        # False 면 문구를 비워 정상 최솟값이 숫자로 보이게 한다 — 값 재표시는 호출측(ParamWidget) 이 한다 (N090)
+        self.value_widget.setSpecialValueText("Not Support" if is_not_support else "")
         if is_not_support:
-            self.set_value(0)  # 스핀박스는 값 없음을 표현할 수 없다 — 0 으로 두고 확정
+            self.set_value(None)  # 최솟값 = 문구 자리 (믹스인 변환은 None 을 그대로 통과시킨다)
             self.commit()
 
     def reg_value_widget_event(self):
@@ -178,7 +182,7 @@ class ReadWriteFloatValueWidget(ValueWidget):
     스핀박스 버전과의 차이 — '값 없음' 상태를 지원한다:
     set_value(None) 은 빈 표시 + placeholder("Unknown"/"Not Support") 로
     나타나고 get_value() 는 None 을 반환한다 (enum 콤보의 -1 과 동일 의미론).
-    스핀박스는 빈 표시가 구조적으로 불가능해 None 을 0 으로 표시한다."""
+    스핀박스는 빈 표시가 구조적으로 불가능해 None 을 0 으로 표시한다 (Not Support 는 specialValueText 문구로 보인다)."""
 
     def __init__(self, label_text="", label_width=150, is_vertical_mode = False, parent=None):
         value_widget = BaseFloatLineEdit()

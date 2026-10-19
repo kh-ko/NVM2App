@@ -120,13 +120,19 @@ class RestoreWin(ServiceWin):
 
         # 헤더가 있으면 현재 장비 정보와 비교 — 다르면 진행 여부를 묻는다.
         # 헤더 없는 파일(구버전 형식)도 허용하되, 장비 일치 확인이 불가함을 알린다.
+        # 현재 장비 값이 아직 없는(미연결 등 한 번도 읽지 못함) 항목은 비교를 건너뛰고 로그·요약에 알린다 (N075)
         # FU 복원은 펌웨어 버전이 달라진 것이 정상이므로 비교를 건너뛴다
         header = backup_file_helper.parse_header(lines[0]) if lines else None
+        unread: list[str] = []   # 현재 장비 값 미확인(한 번도 읽지 못함)으로 비교를 건너뛴 항목 이름
         if header is not None:
             if self.is_fu_restore:
                 self._log.info(f"[Load]: device check skipped (firmware update flow), file header = {header}")
-            elif not self._confirm_header(header):
-                return
+            else:
+                ok, unread = self._confirm_header(header)
+                if not ok:
+                    return
+                if unread:
+                    self._log.warning(f"[Load]: device check skipped ({', '.join(unread)}) — device values not read yet")
 
         if header is None:
             self._log.warning("[Load]: file has no header — device match cannot be verified")
@@ -157,6 +163,8 @@ class RestoreWin(ServiceWin):
                         "\nSee Log View for details.")
         if header is None:
             summary += "\n\nNote: this file has no header, so the device match (firmware / interface) was not verified."
+        if unread:
+            summary += "\n\nNote: device check skipped (device values not read yet) — load the file again after connecting to verify."
 
         self._log.info(f"[File Loaded]: {file_path} — {summary}")
 
@@ -166,29 +174,33 @@ class RestoreWin(ServiceWin):
 
         QMessageBox.information(self, "Success", summary)
 
-    def _confirm_header(self, header: dict) -> bool:
+    def _confirm_header(self, header: dict) -> tuple[bool, list[str]]:
         """헤더의 장비 정보와 현재 값 비교. 불일치 시 사용자에게 진행 여부 질문.
 
         비교는 양쪽 값이 모두 확인된 경우에만 한다 — 파일의 '-'(저장 시점
-        미확인)나 현재 값 미확인(미연결 등)은 비교 불가로 보고 통과시킨다."""
+        미확인)나 현재 값 미확인(미연결 등)은 비교 불가로 보고 통과시킨다.
+        반환 = (진행 여부, 현재 값 미확인으로 비교를 건너뛴 항목 이름들 — 호출측이 로그·요약에 표시) (N075)"""
         mismatches = []
+        unread = []
 
         file_fw = header.get("fw")
         current_fw = self.firmware_version_param.value if self.firmware_version_param is not None else None
-        if file_fw and file_fw != backup_file_helper.UNKNOWN_VALUE and current_fw is not None \
-                and file_fw != str(current_fw):
+        if current_fw is None:
+            unread.append("Firmware Version")
+        elif file_fw and file_fw != backup_file_helper.UNKNOWN_VALUE and file_fw != str(current_fw):
             mismatches.append(f"- Firmware Version: file = {file_fw}, device = {current_fw}")
 
         file_iface = header.get("iface")
         current_iface = self.user_iface_param.value if self.user_iface_param is not None else None
-        if file_iface and file_iface != backup_file_helper.UNKNOWN_VALUE and current_iface is not None \
-                and file_iface != str(current_iface):
+        if current_iface is None:
+            unread.append("User Interface")
+        elif file_iface and file_iface != backup_file_helper.UNKNOWN_VALUE and file_iface != str(current_iface):
             file_desc = p_enum.SysUserInterfaceEnum.get_desc(int(file_iface)) if file_iface.isdigit() else file_iface
             current_desc = p_enum.SysUserInterfaceEnum.get_desc(current_iface)
             mismatches.append(f"- User Interface: file = {file_desc}, device = {current_desc}")
 
         if not mismatches:
-            return True
+            return True, unread
 
         detail = "\n".join(mismatches)
         reply = QMessageBox.question(
@@ -198,7 +210,7 @@ class RestoreWin(ServiceWin):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No)
 
-        return reply == QMessageBox.StandardButton.Yes
+        return reply == QMessageBox.StandardButton.Yes, unread
 
     # ------------------------------------------------------------ 체크박스 트리
     def _rebuild_restore_tree(self):

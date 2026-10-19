@@ -385,6 +385,12 @@ def main() -> int:
     spin = ParamReadWritePresValueSpinBoxWidget(target_pres.full_path)
     rep.check(feq(spin.value_widget.value(), 2000.0) and not spin.is_dirty(),
               f"pres SpinBox 생성 시 범위가 먼저 — 기본 범위(99.99)에 클램프되지 않음: {spin.value_widget.value()}")
+    target_pres.is_not_support = True
+    rep.check(spin.value_widget.text() == "Not Support" and not spin.isEnabled() and not spin.is_dirty(),
+              f"pres SpinBox Not Support → specialValueText 문구·비활성·clean (N090): {spin.value_widget.text()!r}")
+    target_pres.is_not_support = False
+    rep.check(spin.value_widget.text() == "2000.0" and spin.isEnabled(),
+              f"pres SpinBox Not Support 해제 → 숫자 표시 복원: {spin.value_widget.text()!r}")
     speed.value = 55.0
     wdg = ParamReadOnlyScaleValueWidget(speed.full_path)
     rep.check(wdg.value_widget.text() == "55", f"scale RO 위젯 표시 (배율은 codec): {wdg.value_widget.text()!r}")

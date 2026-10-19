@@ -394,7 +394,7 @@ class ParamReadOnlyPosiValueWidget(PosiDisplayMixin, ReadOnlyTextValueWidget):
         self._bind_posi_display()
 
 class ParamReadWritePosiValueWidget(PosiDisplayMixin, ReadWriteFloatValueWidget):
-    """ReadWriteFloatValueWidget(라인에딧) 기반 posi 입력 — 스핀박스 버전과 달리 '값 없음'(Unknown placeholder) / Not Support 표시를
+    """ReadWriteFloatValueWidget(라인에딧) 기반 posi 입력 — 스핀박스 버전과 달리 '값 없음'(Unknown placeholder) 표시를
     지원한다. 스키마 min/max 는 표시 범위 기준이라 변환 없이 그대로 적용한다."""
 
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, parent = None):
@@ -459,7 +459,7 @@ class ParamReadWritePresValueSpinBoxWidget(PresDisplayMixin, ReadWriteFloatValue
         self._bind_pres_display()
 
 class ParamReadWritePresValueWidget(PresDisplayMixin, ReadWriteFloatValueWidget):
-    """ReadWriteFloatValueWidget(라인에딧) 기반 pres 입력 — 스핀박스 버전과 달리 '값 없음'(Unknown placeholder) / Not Support 표시를
+    """ReadWriteFloatValueWidget(라인에딧) 기반 pres 입력 — 스핀박스 버전과 달리 '값 없음'(Unknown placeholder) 표시를
     지원한다. 라벨 단위 표기(is_visible_unit)를 지원하고, 스키마 min/max 는 표시 범위 기준이라 변환 없이 그대로 적용한다."""
 
     def __init__(self, param_full_path : str, force_label_text:str=None, label_width : int = 150, is_vertical_mode = False, is_visible_unit = True, parent = None):

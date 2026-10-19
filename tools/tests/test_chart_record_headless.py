@@ -1,5 +1,5 @@
 """차트 기록 세션 헤드리스 테스트 — 기록 중 쓰기 실패(F066), 시작 실패(N099), 기록 중 앱 종료(F067)의 패널 동작과
-ChartCSVFileHelper 의 실패 경로를 장비·실제 4_chart_record 없이 확인한다.
+ChartCSVFileHelper 의 실패 경로, Range 패널 편집의 설정 반영(N101)을 장비·실제 4_chart_record 없이 확인한다.
 
     python tools/tests/test_chart_record_headless.py
 
@@ -12,6 +12,7 @@ ChartCSVFileHelper 의 실패 경로를 장비·실제 4_chart_record 없이 확
        경고 대화상자 1회 (F066); stop 도 실패하면 ERROR 2건 + 폴더 경로는 record_dir
      - 기록 중 stop_recording_for_exit → stop 1회, WARN 로그에 폴더 경로, 대화상자 0회, 재호출 무해 (F067);
        stop 실패면 ERROR 1건 + WARN 1건, 예외 없음
+     - Range 패널: 자릿수 3 에서 Custom Min/Max 12.345/87.654 → 자릿수 1 → Mode 만 사용자 편집 → Min/Max 설정은 그대로 (N101)
   대화상자 정책(F066 경고 1회 / F067 없음)은 사용자 결정이라 호출 횟수를 센다. 패널 로그는 MainWin 과 같은 source 로 남는다.
 """
 
@@ -38,6 +39,7 @@ _harness.silence_message_boxes()
 import resources_rc  # noqa: E402,F401
 from PySide6.QtWidgets import QMessageBox  # noqa: E402
 from b_core.a_define import file_folder_path as path_def  # noqa: E402
+from b_core.b_datatype import param_enum as p_enum  # noqa: E402
 from b_core.c_manager.app_log_manager import AppLogManager, LogCategory  # noqa: E402
 from b_core.f_helper.chart_csv_file_helper import ChartCSVFileHelper  # noqa: E402
 from c_ui.c_window_ver2.a_main import main_chart_panel as panel_mod  # noqa: E402
@@ -208,6 +210,22 @@ def main() -> int:
                   and len(record_logs(LogCategory.ERROR)) == errors_before + 1 and len(record_logs(LogCategory.WARN)) == warns_before + 1
                   and fake3.record_dir in record_logs(LogCategory.WARN)[-1] and not dialogs,
                   "종료 처리 + 닫기 실패: ERROR 1건 + WARN 1건(경로는 record_dir), 대화상자 없음")
+
+        # 2-d Range 패널 — Mode 만 편집하면 건드리지 않은 Custom Min/Max 가 표시(반올림)값으로 되쓰이지 않는다 (N101)
+        ls = panel.local_setting
+        mode_w = panel._range_widgets["posi_chart_range_mode"]
+        ls.posi_decimal_places = 3
+        ls.posi_chart_range_mode = p_enum.ChartRangeModeEnum.CUSTOM.value
+        ls.posi_chart_range_custom_min = 12.345
+        ls.posi_chart_range_custom_max = 87.654
+        ls.posi_decimal_places = 1   # Min/Max 표시는 12.3/87.7 로 반올림, 설정값은 그대로
+        full_index = mode_w.value_widget.findData(p_enum.ChartRangeModeEnum.FULL.value)
+        mode_w.value_widget.setCurrentIndex(full_index)
+        mode_w.value_widget.activated.emit(full_index)   # 사용자 선택 전용 시그널 → Mode 위젯의 sig_edited_by_user 만
+        rep.check(ls.posi_chart_range_mode == p_enum.ChartRangeModeEnum.FULL.value
+                  and (ls.posi_chart_range_custom_min, ls.posi_chart_range_custom_max) == (12.345, 87.654),
+                  f"Mode 만 편집: mode 반영, Custom Min/Max 는 표시값으로 덮어쓰지 않음 (N101): "
+                  f"{ls.posi_chart_range_custom_min}/{ls.posi_chart_range_custom_max}")
     finally:
         panel_mod.ChartCSVFileHelper = saved_helper
         _harness.destroy_window(panel, app)   # 루프 밖에서는 deleteLater+processEvents 만으로는 파괴되지 않는다
