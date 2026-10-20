@@ -8,7 +8,9 @@
 
 표시 문자열도 같은 정책을 따른다 — to_sig_str() 이 유효숫자 6자리 포맷의
 단일 구현이고(BaseFloatLineEdit 유효숫자 모드 / codec 의 encode / RO 실수 라벨 표시 등이
-쓴다), 고정 자릿수 표시는 to_str_with_decimal_places() 다.
+쓴다), 고정 자릿수 표시는 to_str_with_decimal_places() 가 단일 구현이다(압력·위치 컨버터의
+라벨·버튼 문자열 / BaseFloatLineEdit 고정 자릿수 모드 / BaseDoubleSpinBox 할당값의 사전 반올림 / RO 실수 라벨의
+자릿수 모드가 쓴다 — 유효숫자 15자리로 정리한 십진값을 ROUND_HALF_UP 으로 자른다, F048).
 
 GUI(c_values 의 is_dirty)뿐 아니라 b_core 어디서든 이 함수를 사용한다.
 장비 통신 정밀도가 바뀌면(예: double) 아래 상수만 조정하면 된다.
@@ -16,7 +18,7 @@ GUI(c_values 의 is_dirty)뿐 아니라 b_core 어디서든 이 함수를 사용
 
 import math
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP, localcontext
 
 FLOAT_REL_TOL = 1e-6   # 유효숫자 6자리 (비교)
 FLOAT_ABS_TOL = 1e-9   # 0 근처 안전망
@@ -65,11 +67,22 @@ def snap_float(value: float | None) -> float | None:
 
 
 def to_str_with_decimal_places(value: float | None, decimal_places: int) -> str | None:
-    """고정 소수점 자릿수 표시 문자열. None/해석 불가 입력은 None."""
+    """고정 자릿수 표시 문자열 — 앱의 단일 구현(압력·위치 컨버터, BaseFloatLineEdit, BaseDoubleSpinBox, RO 실수 라벨이 위임).
+
+    값을 유효숫자 15자리(SNAP_SIG_DIGITS)로 정리한 십진수로 읽고 ROUND_HALF_UP 으로 자른다 —
+    장비가 보낸 십진 ASCII(위치 카운트·압력 문자열)가 기준이고, 이진 표현 잡음(2.675 → 2.67499…)이
+    .5 동점의 마지막 자리를 정하지 않는다 (F048). 예: 2.675 → "2.68", 2.665 → "2.67", 0자리 2.5 → "3".
+    15자리를 넘는 자릿수는 0 이 된다(예: 1234567890.123456 → "1234567890.123460") — 장비 float32 정밀도 밖이라 무해.
+    반올림 결과가 0 이면 부호를 뗀다 ("-0.000" → "0.000", N081/N005). None/해석 불가 입력은 None."""
     if value is None:
         return None
 
     try:
-        return f"{value:.{decimal_places}f}"
+        with localcontext() as ctx:
+            ctx.rounding = ROUND_HALF_UP
+            # quantize 는 3.4e38 같은 큰 값에서 정밀도 예외 — format 경로는 자릿수 제한이 없다
+            text = format(Decimal(f"{value:.{SNAP_SIG_DIGITS}g}"), f".{decimal_places}f")
     except Exception:
         return None
+
+    return text[1:] if text.startswith("-") and Decimal(text) == 0 else text

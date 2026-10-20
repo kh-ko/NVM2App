@@ -21,14 +21,12 @@
 
 import threading
 
-from decimal import Decimal
-
 from PySide6.QtCore import Signal, QObject
 
 from b_core.c_manager.app_log_manager import AppLogManager
 from b_core.c_manager.local_setting_manager import LocalSettingManager
 from b_core.c_manager.parameter_manager import ParamManager
-from b_core.f_helper.float_util import snap_float
+from b_core.f_helper.float_util import snap_float, to_str_with_decimal_places
 from b_core.g_protocol import codec as codec_mod
 from b_core.g_protocol.spec_registry import SpecRegistry
 
@@ -184,11 +182,9 @@ class PresConverterManager(QObject):
 
     # ------------------------------------------------------------ 내부 공통
     def _format_dp(self, value: float | None) -> str | None:
-        """표시 단위 값 -> 표시 문자열 (LocalSetting 의 소수점 자리수 적용)."""
-        if value is None:
-            return None
-        fmt_spec = f".{self.pres_decimal_places}f"
-        return format(Decimal(str(value)), fmt_spec)
+        """표시 단위 값 -> 표시 문자열 (LocalSetting 의 소수점 자리수 적용 — 앱 단일 규칙
+        float_util.to_str_with_decimal_places, F048)."""
+        return to_str_with_decimal_places(value, self.pres_decimal_places)
 
     # ------------------------------------------------------------ 단위 환산 (공개 API)
     # 통신 상태와 무관한 정적 계산이므로 외부(차트 분석 윈도우 등)에서도 사용한다.

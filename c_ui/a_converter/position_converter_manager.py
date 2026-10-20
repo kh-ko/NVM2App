@@ -16,10 +16,10 @@
 
 import threading
 
-from decimal import Decimal
 from PySide6.QtCore import Signal, QObject
 
 from b_core.c_manager.local_setting_manager import LocalSettingManager
+from b_core.f_helper.float_util import to_str_with_decimal_places
 
 
 class PosiConverterManager(QObject):
@@ -57,11 +57,8 @@ class PosiConverterManager(QObject):
 
     # ------------------------------------------------------------ 표시 포맷
     def format_dp(self, value: float | None) -> str | None:
-        """백분율 → 고정 자릿수 문자열. None 은 None."""
-        if value is None:
-            return None
-        fmt_spec = f".{self.posi_decimal_places}f"
-        return format(Decimal(str(value)), fmt_spec)
+        """백분율 → 고정 자릿수 문자열 (앱 단일 규칙 float_util.to_str_with_decimal_places, F048). None 은 None."""
+        return to_str_with_decimal_places(value, self.posi_decimal_places)
 
     def parse_dp_str(self, text: str | None) -> float | None:
         if text is None:

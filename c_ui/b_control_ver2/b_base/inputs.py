@@ -41,7 +41,7 @@ from PySide6.QtGui import QDoubleValidator, QValidator
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit,
                                QSizePolicy)
 
-from b_core.f_helper.float_util import to_sig_str
+from b_core.f_helper.float_util import to_sig_str, to_str_with_decimal_places
 
 from c_ui.b_control_ver2.a_theme import style
 from c_ui.b_control_ver2.a_theme.color_styled import ColorStyled, WidgetColors
@@ -220,6 +220,9 @@ class BaseDoubleSpinBox(QDoubleSpinBox, ColorStyled):
             self.sig_edited_by_user.emit(self)
 
     def setValue(self, value: float):
+        # Qt 내부 반올림(이진값 기준, 정확한 동점은 0 에서 먼 쪽으로)이 앱 규칙(HALF_UP)과 갈리지 않게 자릿수를 먼저 맞춘다 —
+        # 이미 N자리인 값에는 Qt 반올림·textFromValue 가 멱등이라 textFromValue 재정의는 두지 않는다 (F048)
+        value = float(to_str_with_decimal_places(value, self.decimals()))
         self._assigning = True
         try:
             super().setValue(value)
@@ -432,7 +435,8 @@ class BaseFloatLineEdit(BaseLineEdit):
 
     def _format(self, value) -> str:
         if self._decimals is not None:
-            return f"{value:.{self._decimals}f}"
+            # 고정 자릿수 모드 — 앱 전역 정책의 단일 구현(float_util.to_str_with_decimal_places, F048)에 위임
+            return to_str_with_decimal_places(value, self._decimals)
 
         # 유효숫자 모드 — 앱 전역 정책의 단일 구현(float_util.to_sig_str)에 위임
         return to_sig_str(value)

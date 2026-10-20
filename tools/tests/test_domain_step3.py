@@ -149,6 +149,12 @@ def main() -> int:
     degenerate_encode = [0]
     pfs_same_as_old = [0]
     pfs_total = [0]
+    # 의도된 편차: 고정 자릿수 표시는 HALF_UP (F048) — 구 사본(Decimal(str) HALF_EVEN)과는 .5 동점에서만 마지막 자리가
+    # 갈린다. 동점 표본은 (unit, min, max, line) → (구 문자열, 새 문자열) 로 명시하고, 그 외는 그대로 완전 일치를 요구한다
+    posi_tie_deviations = {
+        (p_enum.RS232PositionUnitEnum.ZERO_TO_10000.value, None, None, -30.5): ("-0.30", "-0.31"),       # -0.305 %
+        (p_enum.RS232PositionUnitEnum.USER_SPECIFIC.value, -100.0, 100.0, 0.37): ("50.18", "50.19"),    # 50.185 %
+    }
     for unit in range(8):
         ranges = user_ranges if unit == p_enum.RS232PositionUnitEnum.USER_SPECIFIC.value else [(None, None)]
         for lo, hi in ranges:
@@ -158,8 +164,12 @@ def main() -> int:
                 o = old_posi.convert_posi_to_dp(v)
                 n = posi_codec.from_line(v)
                 rep.check(feq(o, n), f"posi unit={unit} range={lo},{hi} line={v}: {o} != {n}")
-                rep.check(seq(old_posi.convert_posi_to_dp_str(v), new_posi.format_dp(n)),
-                          f"posi str unit={unit} line={v}")
+                o_s, n_s = old_posi.convert_posi_to_dp_str(v), new_posi.format_dp(n)
+                tie = posi_tie_deviations.get((unit, lo, hi, v))
+                if tie is not None:
+                    rep.check((o_s, n_s) == tie, f"posi str 동점 HALF_UP unit={unit} range={lo},{hi} line={v}: {o_s} → {n_s}")
+                else:
+                    rep.check(o_s == n_s, f"posi str unit={unit} line={v}: {o_s} != {n_s}")
                 posi_cases += 1
             for dp in dp_samples:
                 n = posi_codec.encode(dp)
@@ -198,6 +208,8 @@ def main() -> int:
                      f"'0' 에서 Closest 값으로 바뀐다 (위젯 쓰기 경로와 통일, {degenerate_encode[0]} 케이스 대조)")
     rep.notes.append(f"의도된 편차(결함 수정): 위치 로컬 설정점 pfs = 백분율 ÷ 100 으로 재정의. 구 식(dp ÷ Open값)과 결과가 같은 경우는 "
                      f"{pfs_same_as_old[0]}/{pfs_total[0]} (Open 값이 100 인 단위만). 100 % 버튼 → 현재 단위의 Open 선로값 확인")
+    rep.notes.append(f"의도된 편차: 고정 자릿수 표시 반올림은 HALF_UP (F048, float_util.to_str_with_decimal_places 단일 구현) — "
+                     f"구 사본(HALF_EVEN)과는 .5 동점 {len(posi_tie_deviations)} 케이스에서 마지막 자리 1단위 차이(명시 표본으로 확인), 나머지는 완전 일치")
 
     # ---------------------------------------------------------------- 2. 압력
     pc = pres_codecs["auto"]
@@ -217,6 +229,7 @@ def main() -> int:
     modes = {"auto": OldType.AUTO, "s1": OldType.SENSOR1, "s2": OldType.SENSOR2}
     pres_cases = 0
     sfs_psig_cases = 0  # psig 는 구 식과 비교하지 않는 의도된 편차 (아래 sfs 블록)
+    sfs_str_total = sfs_str_exact = 0   # 설정점 sfs→dp 문자열의 완전 일치 수 (.5 동점 차이 보고용, F048)
     str_exact = str_total = 0
 
     for unit in range(8):
@@ -245,8 +258,9 @@ def main() -> int:
                         rep.check(feq(o, n), f"pres unit={unit} {cfg_name} iface={imin},{imax} disp={disp_unit} {mode} line={v}: {o} != {n}")
                         o_s = old_pres.convert_iface_pres_to_dp_pres_str(v, old_type)
                         n_s = new_pres.to_display_str(codec.from_line(v))
-                        # Torr 경유 합성 곱은 직접 환산과 1 ulp 차이가 날 수 있어, 정확히 .5 경계에 놓인 값은
-                        # 고정 자릿수 반올림이 마지막 자리 1단위 갈릴 수 있다 — 그 범위까지 허용하고 건수를 보고
+                        # Torr 경유 합성 곱은 직접 환산과 1 ulp 차이가 날 수 있고 새 표시는 HALF_UP(F048)·구 사본은 HALF_EVEN 이라,
+                        # 정확히 .5 경계에 놓인 값은 고정 자릿수 반올림이 마지막 자리 1단위 갈릴 수 있다 — 그 범위까지 허용하고
+                        # 건수를 보고 (음의 0 부호 정리 '-0.000' → '0.000' 도 여기 포함, N081)
                         rep.check(seq(o_s, n_s, decimals=3), f"pres str unit={unit} {cfg_name} disp={disp_unit} {mode} line={v}: {o_s} != {n_s}")
                         str_total += 1
                         str_exact += (o_s == n_s)
@@ -279,8 +293,10 @@ def main() -> int:
                         continue
                     rep.check(feq(old_pres.convert_sfs_to_dp_pres(sfs, OldType.AUTO), new_pres.convert_sfs_to_dp_pres(sfs)),
                               f"sfs→dp unit={unit} {cfg_name} disp={disp_unit} sfs={sfs}")
-                    rep.check(seq(old_pres.convert_sfs_to_dp_pres_str(sfs, OldType.AUTO), new_pres.convert_sfs_to_dp_pres_str(sfs), decimals=3),
-                              f"sfs→dp str unit={unit} {cfg_name} disp={disp_unit} sfs={sfs}")
+                    o_sfs_s, n_sfs_s = old_pres.convert_sfs_to_dp_pres_str(sfs, OldType.AUTO), new_pres.convert_sfs_to_dp_pres_str(sfs)
+                    rep.check(seq(o_sfs_s, n_sfs_s, decimals=3), f"sfs→dp str unit={unit} {cfg_name} disp={disp_unit} sfs={sfs}")
+                    sfs_str_total += 1
+                    sfs_str_exact += (o_sfs_s == n_sfs_s)
                     rep.check(feq(old_pres.convert_dp_pres_to_sfs(sfs * 100, OldType.AUTO), new_pres.convert_dp_pres_to_sfs(sfs * 100)),
                               f"dp→sfs unit={unit} {cfg_name} disp={disp_unit} dp={sfs*100}")
 
@@ -291,7 +307,9 @@ def main() -> int:
     rep.notes.append(f"의도된 편차: psig 표시의 설정점 sfs {sfs_psig_cases} 케이스는 구 식(표시 단위 만압 × sfs)과 비교하지 않고 Torr 기준 계약(to_display(만압 Torr × sfs), 왕복)으로 확인 — 2026-09-30 결정(F049)")
     rep.notes.append(f"압력 차등 {pres_cases:,} 케이스 (인터페이스 단위 8종, USER_SPECIFIC 범위 2조 × 센서 구성 4종, 표시 단위 8종, "
                      f"모드 3종, 선로값 7 / 표시값 6 표본). 표시 문자열 완전 일치 {str_exact:,}/{str_total:,}, "
-                     f"나머지 {str_total - str_exact}건은 .5 반올림 경계에서 마지막 자리 1단위 차이 (값은 1e-15 이내 동일)")
+                     f"나머지 {str_total - str_exact}건은 .5 동점의 반올림 규칙 차이(새 표시 HALF_UP vs 구 사본 HALF_EVEN, 1 ulp 잡음 포함)로 "
+                     f"마지막 자리 1단위 차이 또는 음의 0 부호 정리('-0.000' → '0.000') — 값은 1 ulp 이내(유효숫자 15자리에서 동일) (F048/N081). "
+                     f"설정점 sfs→dp 문자열 완전 일치 {sfs_str_exact}/{sfs_str_total}, 나머지는 같은 .5 동점 차이")
 
     # ---------------------------------------------------------------- 3. 배율
     for name, factor in (("scale100", 100.0), ("scale10000", 10000.0)):
